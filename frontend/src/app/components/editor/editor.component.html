@@ -1,0 +1,42 @@
+<div class="editor-layout">
+
+  <!-- Sidebar: branch management -->
+  <aside class="sidebar">
+    <app-branch-panel
+      [projectId]="projectId"
+      (branchSelected)="onBranchSelected($event)"
+      (compareDrafts)="openDiff($event.from, $event.to)">
+    </app-branch-panel>
+  </aside>
+
+  <!-- Main: live script editor -->
+  <main class="editor-main">
+    <header class="editor-header">
+      <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
+      <span class="branch-pill empty" *ngIf="!activeBranch">no branch selected</span>
+
+      <div class="commit-bar">
+        <input
+          [(ngModel)]="commitMessage"
+          placeholder="Describe this draft…"
+          class="commit-input"
+          (keydown.enter)="saveSnapshot()" />
+        <button class="btn-save" (click)="saveSnapshot()" [disabled]="!activeBranch || !commitMessage.trim()">
+          Save draft
+        </button>
+      </div>
+    </header>
+
+    <!-- ProseMirror mounts here -->
+    <div #prosemirrorMount class="pm-mount"></div>
+  </main>
+
+  <!-- Diff drawer -->
+  <app-diff-viewer
+    *ngIf="showDiff"
+    [fromId]="diffFromId"
+    [toId]="diffToId"
+    (close)="showDiff = false">
+  </app-diff-viewer>
+
+</div>

@@ -1,0 +1,21 @@
+<div class="diff-drawer">
+  <header class="diff-header">
+    <span>Draft comparison</span>
+    <button class="btn-icon" (click)="close.emit()">✕</button>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading diff…</div>
+
+  <div class="diff-body" *ngIf="!loading">
+    <div *ngFor="let line of lines"
+         class="diff-line"
+         [class.insert]="line.op === 'insert'"
+         [class.delete]="line.op === 'delete'"
+         [class.equal]="line.op === 'equal'">
+      <span class="diff-gutter">
+        {{ line.op === 'insert' ? '+' : line.op === 'delete' ? '−' : ' ' }}
+      </span>
+      <span class="diff-text">{{ line.text }}</span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,34 @@
+<div class="panel">
+  <h2 class="panel-title">Drafts</h2>
+
+  <ul class="branch-list">
+    <li *ngFor="let b of branches"
+        class="branch-item"
+        [class.active]="b.id === activeBranch?.id"
+        (click)="selectBranch(b)">
+      <span class="branch-icon">⎇</span> {{ b.name }}
+    </li>
+  </ul>
+
+  <div class="new-branch">
+    <input [(ngModel)]="newBranchName" placeholder="New branch name…" class="input-sm" />
+    <button class="btn-ghost" (click)="createBranch()">Create</button>
+  </div>
+
+  <ng-container *ngIf="history.length > 0">
+    <h3 class="section-label">History</h3>
+    <ul class="history-list">
+      <li *ngFor="let snap of history" class="history-item">
+        <label>
+          <input type="radio" name="snapA" [value]="snap.id" [(ngModel)]="selectedA" />
+          <input type="radio" name="snapB" [value]="snap.id" [(ngModel)]="selectedB" />
+          <span class="snap-msg">{{ snap.message || 'Draft' }}</span>
+          <span class="snap-date">{{ snap.createdAt | date:'HH:mm' }}</span>
+        </label>
+      </li>
+    </ul>
+    <button class="btn-ghost" (click)="compare()" [disabled]="!selectedA || !selectedB">
+      Compare drafts
+    </button>
+  </ng-container>
+</div>
