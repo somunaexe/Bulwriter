@@ -1,4 +1,4 @@
-module scriptflow/backend
+module github.com/somunaexe/bulwriter
 
 go 1.22.2
 

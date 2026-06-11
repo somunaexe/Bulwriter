@@ -202,3 +202,13 @@ html, body {
 .diff-line.delete .diff-text { color: var(--delete-fg); }
 
 .loading { padding: 2rem; text-align: center; color: var(--muted); }
+/* Reset ProseMirror default chrome */
+.ProseMirror-menubar-wrapper,
+.ProseMirror-menubar { display: none !important; }
+
+.ProseMirror-focused { outline: none; }
+
+.pm-mount .ProseMirror {
+  width: 100%;
+  caret-color: var(--accent);
+}

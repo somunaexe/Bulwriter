@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"scriptflow/backend/internal/hub"
-	"scriptflow/backend/internal/snapshot"
+	"github.com/somunaexe/bulwriter/backend/internal/hub"
+	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"

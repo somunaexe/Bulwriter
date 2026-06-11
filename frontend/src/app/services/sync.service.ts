@@ -5,7 +5,12 @@ import { ySyncPlugin, yUndoPlugin, yCursorPlugin } from 'y-prosemirror';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { schema } from 'prosemirror-schema-basic';
-import { exampleSetup } from 'prosemirror-example-setup';
+import { keymap } from 'prosemirror-keymap';
+import { history } from 'prosemirror-history';
+import { baseKeymap } from 'prosemirror-commands';
+import { dropCursor } from 'prosemirror-dropcursor';
+import { gapCursor } from 'prosemirror-gapcursor';
+// import { exampleSetup } from 'prosemirror-example-setup';
 
 export interface CollabSession {
   doc: Y.Doc;
@@ -38,7 +43,10 @@ export class SyncService implements OnDestroy {
         ySyncPlugin(yXmlFragment),
         yCursorPlugin(provider.awareness),
         yUndoPlugin(),
-        ...exampleSetup({ schema, history: false }),
+        history(),
+        keymap(baseKeymap),
+        dropCursor(),
+        gapCursor(),
       ],
     });
 

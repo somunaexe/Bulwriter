@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"scriptflow/backend/internal/api"
-	"scriptflow/backend/internal/hub"
+	"github.com/somunaexe/bulwriter/backend/internal/api"
+	"github.com/somunaexe/bulwriter/backend/internal/hub"
 )
 
 func main() {
@@ -14,6 +14,6 @@ func main() {
 
 	router := api.NewRouter(syncHub)
 
-	log.Println("ScriptFlow backend running on :8080")
+	log.Println("Bulwriter backend running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
