@@ -52,6 +52,6 @@ export class DashboardComponent implements OnInit {
   }
 
   openProject(id: string): void {
-    this.router.navigate(['/project', id, 'script', id]);
+    this.router.navigate(['/projects', id]);
   }
 }

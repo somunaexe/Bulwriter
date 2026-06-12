@@ -1,0 +1,36 @@
+<div class="dashboard">
+
+  <header class="dash-header">
+    <h1 class="logo">Bulwriter</h1>
+    <p class="tagline">Your screenwriting workspace</p>
+  </header>
+
+  <section class="new-project">
+    <input
+      [(ngModel)]="newTitle"
+      placeholder="New script title…"
+      class="input-lg"
+      (keydown.enter)="createScript()" />
+    <button class="btn-save" (click)="createScript()" [disabled]="!newTitle.trim()">
+      Create script
+    </button>
+  </section>
+
+  <section class="project-list">
+
+    <p class="loading-msg" *ngIf="loading">Loading…</p>
+    <p class="error-msg" *ngIf="error">{{ error }}</p>
+
+    <p class="empty-msg" *ngIf="!loading && !error && scripts.length === 0">
+      No scripts yet. Create one above.
+    </p>
+
+    <div class="project-card"
+         *ngFor="let s of scripts"
+         (click)="openScript(s.id)">
+      <div class="project-card-title">{{ s.title }}</div>
+      <div class="project-card-meta">{{ s.createdAt | date:'mediumDate' }}</div>
+    </div>
+
+  </section>
+</div>

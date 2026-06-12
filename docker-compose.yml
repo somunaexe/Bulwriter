@@ -29,6 +29,7 @@ services:
       - "8080:8080"
     environment:
       DATABASE_URL: postgres://bulwriter:Bulwriter6742@db:5432/bulwriter?sslmode=disable
+      CLERK_SECRET_KEY: sk_test_XO36DwSpjisa833skNhmmJ3fqyUNWtP4z2mgJyAfcp
     depends_on:
       db:
         condition: service_healthy  # waits for the healthcheck above to pass

@@ -10,7 +10,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
     "github.com/somunaexe/bulwriter/backend/internal/project"
-
+	"github.com/somunaexe/bulwriter/backend/internal/script"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 
@@ -21,6 +21,7 @@ type router struct {
 	hub		 *hub.Hub
 	store	 *snapshot.Store
 	projects *project.Store
+	scripts	 *script.Store
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
@@ -28,6 +29,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		hub:   h,
 		store: snapshot.NewStore(db),
 		projects: project.NewStore(db),
+		scripts: script.NewStore((db)),
 	}
 
 	mx := mux.NewRouter()
@@ -38,6 +40,11 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	mx.HandleFunc("/api/projects", r.createProject).Methods("POST")
 	mx.HandleFunc("/api/projects/{projectId}", r.getProject).Methods("GET")
 	
+	// Scripts
+	mx.HandleFunc("/api/projects/{projectId}/scripts", r.listScripts).Methods("GET")
+	mx.HandleFunc("/api/projects/{projectId}/scripts", r.createScript).Methods("POST")
+	mx.HandleFunc("/api/projects/{projectId}/scripts/{scriptId}", r.getScript).Methods("GET")
+
 	// Branches
 	mx.HandleFunc("/api/projects/{projectId}/branches", r.listBranches).Methods("GET")
 	mx.HandleFunc("/api/projects/{projectId}/branches", r.createBranch).Methods("POST")
@@ -120,6 +127,43 @@ func (r *router) getProject(w http.ResponseWriter, req *http.Request) {
         return
     }
     writeJSON(w, http.StatusOK, p)
+}
+
+func (r *router) listScripts(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	scripts, err := r.scripts.List(vars["projectId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, scripts)
+}
+
+func (r *router) createScript(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	var body struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Title == "" {
+		writeErr(w, http.StatusBadRequest, "title is required")
+		return
+	}
+	sc, err := r.scripts.Create(vars["projectId"], body.Title)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, sc)
+}
+
+func (r *router) getScript(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	sc, err := r.scripts.Get(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, sc)
 }
 
 func (r *router) listBranches(w http.ResponseWriter, req *http.Request) {

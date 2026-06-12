@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { EditorComponent } from './components/editor/editor.component';
+import { ProjectComponent } from './components/project/project.component';
 
 export const routes: Routes = [
   {
@@ -8,7 +9,11 @@ export const routes: Routes = [
     component: DashboardComponent,
   },
   {
-    path: 'project/:projectId/script/:scriptId',
+    path: 'projects/:projectId',
+    component: ProjectComponent,
+  },
+  {
+    path: 'projects/:projectId/scripts/:scriptId',
     component: EditorComponent,
   },
   {
