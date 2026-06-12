@@ -1,77 +1,57 @@
-// snapshot.go — version control engine
-// Stores immutable script snapshots addressed by a SHA-256 content hash.
-// Branches are named pointers to the latest snapshot on that line of work.
-// Diff computes a human-readable Myers diff between any two snapshots.
-// In production, swap the in-memory store for S3 + Postgres.
 package snapshot
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// ---------- Data types ----------
+// Branch and Snapshot types stay exactly the same as before.
+// The rest of the app depends on these — we never change them.
 
-// Snapshot is an immutable point-in-time capture of a script's full text.
+type Branch struct {
+	ID        string    `json:"id"`
+	ProjectID string    `json:"projectId"`
+	Name      string    `json:"name"`
+	TipID     string    `json:"tipId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type Snapshot struct {
 	ID        string    `json:"id"`
 	ProjectID string    `json:"projectId"`
 	BranchID  string    `json:"branchId"`
-	Hash      string    `json:"hash"`   // SHA-256 of Content
+	Hash      string    `json:"hash"`
 	Content   string    `json:"content"`
-	Message   string    `json:"message"` // human label e.g. "Act II rewrite"
+	Message   string    `json:"message"`
 	AuthorID  string    `json:"authorId"`
-	ParentID  string    `json:"parentId"` // empty for root
+	ParentID  string    `json:"parentId"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-// Branch is a named, mutable pointer to the tip snapshot.
-type Branch struct {
-	ID        string    `json:"id"`
-	ProjectID string    `json:"projectId"`
-	Name      string    `json:"name"` // "main", "alt-ending", etc.
-	TipID     string    `json:"tipId"` // ID of latest Snapshot on this branch
-	CreatedAt time.Time `json:"createdAt"`
-}
-
-// DiffLine represents a single changed line in a diff.
 type DiffLine struct {
-	Op   string `json:"op"`   // "equal" | "insert" | "delete"
+	Op   string `json:"op"`
 	Text string `json:"text"`
 }
 
-// ---------- Store ----------
-
-// Store is an in-memory snapshot and branch registry.
-// Replace with Postgres + S3 for production.
+// Store now holds a *sql.DB instead of in-memory maps.
+// The mutex is gone — Postgres handles concurrency for us.
 type Store struct {
-	mu        sync.RWMutex
-	snapshots map[string]*Snapshot // keyed by Snapshot.ID
-	branches  map[string]*Branch   // keyed by Branch.ID
+	db *sql.DB
 }
 
-func NewStore() *Store {
-	return &Store{
-		snapshots: make(map[string]*Snapshot),
-		branches:  make(map[string]*Branch),
-	}
+func NewStore(db *sql.DB) *Store {
+	return &Store{db: db}
 }
 
-// ---------- Branch operations ----------
+// ── Branches ──────────────────────────────────────────────────────────────
 
-// CreateBranch initialises a new named branch for a project.
-// If fromSnapshotID is provided the branch starts at that snapshot;
-// otherwise it starts empty (first commit will be the root).
 func (s *Store) CreateBranch(projectID, name, fromSnapshotID string) (*Branch, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	b := &Branch{
 		ID:        uuid.New().String(),
 		ProjectID: projectID,
@@ -79,101 +59,184 @@ func (s *Store) CreateBranch(projectID, name, fromSnapshotID string) (*Branch, e
 		TipID:     fromSnapshotID,
 		CreatedAt: time.Now(),
 	}
-	s.branches[b.ID] = b
+
+	// INSERT ... RETURNING created_at lets Postgres echo back the value
+	// it stored, so our struct reflects exactly what's in the database.
+	_, err := s.db.Exec(
+		`INSERT INTO branches (id, project_id, name, tip_id, created_at)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		b.ID, b.ProjectID, b.Name, b.TipID, b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("inserting branch: %w", err)
+	}
 	return b, nil
 }
 
-// GetBranch retrieves a branch by ID.
 func (s *Store) GetBranch(id string) (*Branch, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	b, ok := s.branches[id]
-	if !ok {
+	b := &Branch{}
+	err := s.db.QueryRow(
+		`SELECT id, project_id, name, tip_id, created_at
+		 FROM branches WHERE id = $1`, id,
+	).Scan(&b.ID, &b.ProjectID, &b.Name, &b.TipID, &b.CreatedAt)
+
+	if err == sql.ErrNoRows {
 		return nil, errors.New("branch not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("querying branch: %w", err)
 	}
 	return b, nil
 }
 
-// ListBranches returns all branches for a project.
-func (s *Store) ListBranches(projectID string) []*Branch {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	var out []*Branch
-	for _, b := range s.branches {
-		if b.ProjectID == projectID {
-			out = append(out, b)
-		}
+func (s *Store) ListBranches(projectID string) ([]*Branch, error) {
+	rows, err := s.db.Query(
+		`SELECT id, project_id, name, tip_id, created_at
+		 FROM branches WHERE project_id = $1
+		 ORDER BY created_at ASC`, projectID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying branches: %w", err)
 	}
-	return out
+	// defer rows.Close() is important — if you forget it the connection
+	// is held open and eventually you run out of connections in the pool.
+	defer rows.Close()
+
+	var branches []*Branch
+	for rows.Next() {
+		b := &Branch{}
+		if err := rows.Scan(&b.ID, &b.ProjectID, &b.Name, &b.TipID, &b.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning branch: %w", err)
+		}
+		branches = append(branches, b)
+	}
+	return branches, rows.Err()
 }
 
-// ---------- Snapshot operations ----------
+// updateBranchTip is an internal helper — moves the branch pointer forward
+// after a new commit. Only called from within Commit().
+func (s *Store) updateBranchTip(branchID, snapshotID string) error {
+	_, err := s.db.Exec(
+		`UPDATE branches SET tip_id = $1 WHERE id = $2`,
+		snapshotID, branchID,
+	)
+	return err
+}
 
-// Commit saves a new immutable snapshot and advances the branch tip.
+// ── Snapshots ─────────────────────────────────────────────────────────────
+
 func (s *Store) Commit(projectID, branchID, content, message, authorID string) (*Snapshot, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	branch, ok := s.branches[branchID]
-	if !ok {
-		return nil, errors.New("branch not found")
+	// First verify the branch exists and belongs to this project.
+	branch, err := s.GetBranch(branchID)
+	if err != nil {
+		return nil, err
 	}
 	if branch.ProjectID != projectID {
 		return nil, errors.New("branch does not belong to project")
 	}
 
-	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
-
 	snap := &Snapshot{
 		ID:        uuid.New().String(),
 		ProjectID: projectID,
 		BranchID:  branchID,
-		Hash:      hash,
+		Hash:      fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
 		Content:   content,
 		Message:   message,
 		AuthorID:  authorID,
-		ParentID:  branch.TipID,
+		ParentID:  branch.TipID, // current tip becomes this snapshot's parent
 		CreatedAt: time.Now(),
 	}
 
-	s.snapshots[snap.ID] = snap
-	branch.TipID = snap.ID
+	// We use a transaction here because two things must happen together:
+	// insert the snapshot AND update the branch tip. If either fails,
+	// both are rolled back — the database never ends up in a half-updated state.
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback() // no-op if tx.Commit() already succeeded
+
+	_, err = tx.Exec(
+		`INSERT INTO snapshots
+		 (id, project_id, branch_id, hash, content, message, author_id, parent_id, created_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+		snap.ID, snap.ProjectID, snap.BranchID, snap.Hash,
+		snap.Content, snap.Message, snap.AuthorID, snap.ParentID, snap.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("inserting snapshot: %w", err)
+	}
+
+	_, err = tx.Exec(
+		`UPDATE branches SET tip_id = $1 WHERE id = $2`,
+		snap.ID, branchID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("updating branch tip: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
+
 	return snap, nil
 }
 
-// GetSnapshot retrieves a snapshot by ID.
 func (s *Store) GetSnapshot(id string) (*Snapshot, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	snap, ok := s.snapshots[id]
-	if !ok {
+	snap := &Snapshot{}
+	err := s.db.QueryRow(
+		`SELECT id, project_id, branch_id, hash, content, message, author_id, parent_id, created_at
+		 FROM snapshots WHERE id = $1`, id,
+	).Scan(
+		&snap.ID, &snap.ProjectID, &snap.BranchID, &snap.Hash,
+		&snap.Content, &snap.Message, &snap.AuthorID, &snap.ParentID, &snap.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
 		return nil, errors.New("snapshot not found")
 	}
+	if err != nil {
+		return nil, fmt.Errorf("querying snapshot: %w", err)
+	}
 	return snap, nil
 }
 
-// History returns the linear ancestry of a snapshot back to the root.
 func (s *Store) History(tipID string) ([]*Snapshot, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	// This query uses a recursive CTE (Common Table Expression).
+	// It starts at the tip snapshot and follows parent_id links
+	// back to the root — exactly like git log. Without recursion
+	// you'd need one query per snapshot, which gets slow fast.
+	rows, err := s.db.Query(`
+		WITH RECURSIVE chain AS (
+			SELECT * FROM snapshots WHERE id = $1
+			UNION ALL
+			SELECT s.* FROM snapshots s
+			INNER JOIN chain c ON s.id = c.parent_id
+		)
+		SELECT id, project_id, branch_id, hash, content, message, author_id, parent_id, created_at
+		FROM chain
+		ORDER BY created_at DESC`, tipID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying history: %w", err)
+	}
+	defer rows.Close()
 
 	var chain []*Snapshot
-	id := tipID
-	for id != "" {
-		snap, ok := s.snapshots[id]
-		if !ok {
-			break
+	for rows.Next() {
+		snap := &Snapshot{}
+		if err := rows.Scan(
+			&snap.ID, &snap.ProjectID, &snap.BranchID, &snap.Hash,
+			&snap.Content, &snap.Message, &snap.AuthorID, &snap.ParentID, &snap.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning snapshot: %w", err)
 		}
 		chain = append(chain, snap)
-		id = snap.ParentID
 	}
-	return chain, nil
+	return chain, rows.Err()
 }
 
-// ---------- Diff ----------
+// ── Diff ──────────────────────────────────────────────────────────────────
 
-// Diff computes a line-level Myers diff between two snapshots.
-// Returns a slice of DiffLine with op "equal", "insert", or "delete".
 func (s *Store) Diff(fromID, toID string) ([]DiffLine, error) {
 	from, err := s.GetSnapshot(fromID)
 	if err != nil {
@@ -186,13 +249,9 @@ func (s *Store) Diff(fromID, toID string) ([]DiffLine, error) {
 	return lineDiff(from.Content, to.Content), nil
 }
 
-// lineDiff is a simple line-level diff (LCS-based).
-// For production quality use the go-diff Myers implementation.
 func lineDiff(a, b string) []DiffLine {
 	aLines := strings.Split(a, "\n")
 	bLines := strings.Split(b, "\n")
-
-	// Build LCS table.
 	m, n := len(aLines), len(bLines)
 	dp := make([][]int, m+1)
 	for i := range dp {
@@ -209,7 +268,6 @@ func lineDiff(a, b string) []DiffLine {
 			}
 		}
 	}
-
 	var result []DiffLine
 	i, j := 0, 0
 	for i < m && j < n {

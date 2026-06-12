@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Branch {
   id: string;
@@ -29,7 +30,7 @@ export interface DiffLine {
 
 @Injectable({ providedIn: 'root' })
 export class VersionControlService {
-  private BASE = 'http://localhost:8080/api';
+  private BASE = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -68,7 +69,7 @@ export class VersionControlService {
   }
 
   // ── Diff ──────────────────────────────────────────────────────────
-
+  
   diff(fromId: string, toId: string): Observable<DiffLine[]> {
     return this.http.get<DiffLine[]>(`${this.BASE}/diff?from=${fromId}&to=${toId}`);
   }

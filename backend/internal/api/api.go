@@ -9,25 +9,35 @@ import (
 
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
+    "github.com/somunaexe/bulwriter/backend/internal/project"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+
+	"database/sql"
 )
 
 type router struct {
-	hub   *hub.Hub
-	store *snapshot.Store
+	hub		 *hub.Hub
+	store	 *snapshot.Store
+	projects *project.Store
 }
 
-func NewRouter(h *hub.Hub) http.Handler {
+func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	r := &router{
 		hub:   h,
-		store: snapshot.NewStore(),
+		store: snapshot.NewStore(db),
+		projects: project.NewStore(db),
 	}
 
 	mx := mux.NewRouter()
 
 	// ── Version control ─────────────────────────────────────────────
+	// Projects
+	mx.HandleFunc("/api/projects", r.listProjects).Methods("GET")
+	mx.HandleFunc("/api/projects", r.createProject).Methods("POST")
+	mx.HandleFunc("/api/projects/{projectId}", r.getProject).Methods("GET")
+	
 	// Branches
 	mx.HandleFunc("/api/projects/{projectId}/branches", r.listBranches).Methods("GET")
 	mx.HandleFunc("/api/projects/{projectId}/branches", r.createBranch).Methods("POST")
@@ -46,7 +56,10 @@ func NewRouter(h *hub.Hub) http.Handler {
 
 	// CORS — allow Angular dev server
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:4200"},
+		AllowedOrigins: []string{
+			"http://localhost:4200",
+			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4200.app.github.dev",
+		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
 	})
@@ -73,9 +86,49 @@ func (r *router) wsUpgrade(w http.ResponseWriter, req *http.Request) {
 	r.hub.ServeWS(w, req, vars["scriptId"])
 }
 
+func (r *router) listProjects(w http.ResponseWriter, req *http.Request) {
+    // "anonymous" until auth is added — then this becomes the real user ID
+    projects, err := r.projects.List("anonymous")
+    if err != nil {
+        writeErr(w, http.StatusInternalServerError, err.Error())
+        return
+    }
+    writeJSON(w, http.StatusOK, projects)
+}
+
+func (r *router) createProject(w http.ResponseWriter, req *http.Request) {
+    var body struct {
+        Title string `json:"title"`
+    }
+    if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Title == "" {
+        writeErr(w, http.StatusBadRequest, "title is required")
+        return
+    }
+    p, err := r.projects.Create(body.Title, "anonymous")
+    if err != nil {
+        writeErr(w, http.StatusInternalServerError, err.Error())
+        return
+    }
+    writeJSON(w, http.StatusCreated, p)
+}
+
+func (r *router) getProject(w http.ResponseWriter, req *http.Request) {
+    vars := mux.Vars(req)
+    p, err := r.projects.Get(vars["projectId"])
+    if err != nil {
+        writeErr(w, http.StatusNotFound, err.Error())
+        return
+    }
+    writeJSON(w, http.StatusOK, p)
+}
+
 func (r *router) listBranches(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	branches := r.store.ListBranches(vars["projectId"])
+	branches, err := r.store.ListBranches(vars["projectId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	writeJSON(w, http.StatusOK, branches)
 }
 

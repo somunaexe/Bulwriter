@@ -1,0 +1,37 @@
+<div class="dashboard">
+
+  <header class="dash-header">
+    <h1 class="logo">Bulwriter</h1>
+    <p class="tagline">Your screenwriting workspace</p>
+  </header>
+
+  <section class="new-project">
+    <input
+      [(ngModel)]="newTitle"
+      placeholder="New project title…"
+      class="input-lg"
+      (keydown.enter)="createProject()" />
+    <button class="btn-save" (click)="createProject()" [disabled]="!newTitle.trim()">
+      Create project
+    </button>
+  </section>
+
+  <section class="project-list">
+
+    <p class="loading-msg" *ngIf="loading">Loading…</p>
+    <p class="error-msg" *ngIf="error">{{ error }}</p>
+
+    <p class="empty-msg" *ngIf="!loading && !error && projects.length === 0">
+      No projects yet. Create one above.
+    </p>
+
+    <div class="project-card"
+         *ngFor="let p of projects"
+         (click)="openProject(p.id)">
+      <div class="project-card-title">{{ p.title }}</div>
+      <div class="project-card-meta">{{ p.createdAt | date:'mediumDate' }}</div>
+    </div>
+
+  </section>
+
+</div>

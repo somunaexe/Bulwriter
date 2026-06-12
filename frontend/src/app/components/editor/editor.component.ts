@@ -1,10 +1,26 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Input } from '@angular/core';
+import { OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import {
+  Component, OnDestroy, AfterViewInit,
+  ViewChild, ElementRef, Input
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
 import { SyncService } from '../../services/sync.service';
-import { VersionControlService, Branch, Snapshot } from '../../services/version-control.service';
+import { VersionControlService, Branch } from '../../services/version-control.service';
 import { BranchPanelComponent } from '../branch-panel/branch-panel.component';
 import { DiffViewerComponent } from '../diff-viewer/diff-viewer.component';
+import {
+  screenplaySchema,
+  ScreenplayElement,
+  ELEMENT_LABELS,
+} from '../../editTools/screenplay-schema';
+import { setBlockType } from 'prosemirror-commands';
+
+const ELEMENTS: ScreenplayElement[] = [
+  'scene_heading', 'action', 'character', 'dialogue', 'parenthetical', 'transition',
+];
 
 @Component({
   selector: 'app-editor',
@@ -13,11 +29,12 @@ import { DiffViewerComponent } from '../diff-viewer/diff-viewer.component';
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
-export class EditorComponent implements AfterViewInit, OnDestroy {
-  @Input() projectId = 'demo-project';
-  @Input() scriptId  = 'demo-script';
+export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
+  projectId = '';
+  scriptId  = '';
 
   @ViewChild('prosemirrorMount') mountRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('elementIndicator') indicatorRef!: ElementRef<HTMLDivElement>;
 
   commitMessage = '';
   activeBranch: Branch | null = null;
@@ -25,13 +42,28 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
   diffFromId = '';
   diffToId   = '';
 
+  elements = ELEMENTS;
+  elementLabels = ELEMENT_LABELS;
+
   constructor(
     public sync: SyncService,
     public vc: VersionControlService,
+    private route: ActivatedRoute,
   ) {}
 
+  ngOnInit(): void {
+    // ActivatedRoute.snapshot.params holds the :projectId and :scriptId
+    // values from the current URL — captured by the router automatically
+    this.projectId = this.route.snapshot.params['projectId'];
+    this.scriptId  = this.route.snapshot.params['scriptId'];
+  }
+
   ngAfterViewInit(): void {
-    this.sync.startSession(this.scriptId, this.mountRef.nativeElement);
+    this.sync.startSession(
+      this.scriptId,
+      this.mountRef.nativeElement,
+      this.indicatorRef.nativeElement,
+    );
   }
 
   ngOnDestroy(): void {
@@ -40,6 +72,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy {
 
   onBranchSelected(branch: Branch): void {
     this.activeBranch = branch;
+  }
+
+  setElement(element: ScreenplayElement): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    const nodeType = (screenplaySchema.nodes as any)[element];
+    if (!nodeType) return;
+    setBlockType(nodeType, { element })(view.state, view.dispatch);
+    view.focus();
   }
 
   saveSnapshot(): void {
