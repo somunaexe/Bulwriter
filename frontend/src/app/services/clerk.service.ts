@@ -6,17 +6,22 @@ import { environment } from '../../environments/environment';
 export class ClerkService {
   isSignedIn$ = new BehaviorSubject<boolean>(false);
   userId$ = new BehaviorSubject<string | null>(null);
+  ready$ = new BehaviorSubject<boolean>(false);
 
   private clerk: any = null;
+  private mountEl: HTMLElement | null = null;
 
   async init(): Promise<void> {
-    const clerkModule = await import('@clerk/clerk-js');
-    const Clerk = clerkModule.Clerk ?? clerkModule.default;
-    this.clerk = new Clerk(environment.clerkPublishableKey);
-    await this.clerk.load();
+    this.clerk = (window as any).Clerk;
+
+    await this.clerk.load({
+        routerPush: (to: string) => window.location.href = to,
+        routerReplace: (to: string) => window.location.href = to,
+    });
 
     this.updateState();
     this.clerk.addListener(() => this.updateState());
+    this.ready$.next(true);
   }
 
   private updateState(): void {
@@ -29,8 +34,21 @@ export class ClerkService {
     return this.clerk?.session?.getToken() ?? null;
   }
 
+  setMountElement(el: HTMLElement): void {
+    this.mountEl = el;
+  }
+
   openSignIn(): void {
-    this.clerk?.openSignIn({});
+    if (this.mountEl) {
+        console.log(this.mountEl)
+        this.clerk?.mountSignIn(this.mountEl);
+    } else {
+        this.clerk?.openSignIn({});
+    }
+  }
+
+  mountSignIn(el: HTMLElement): void {
+    this.clerk?.mountSignIn(el);
   }
 
   openSignUp(): void {

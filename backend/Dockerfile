@@ -1,6 +1,6 @@
 # Stage 1 — build the Go binary
 # We use a full Go image to compile, then throw it away
-FROM golang:1.22 AS builder
+FROM golang:1.23 AS builder
 
 WORKDIR /app
 

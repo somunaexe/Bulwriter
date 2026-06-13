@@ -30,6 +30,7 @@ services:
     environment:
       DATABASE_URL: postgres://bulwriter:Bulwriter6742@db:5432/bulwriter?sslmode=disable
       CLERK_SECRET_KEY: sk_test_XO36DwSpjisa833skNhmmJ3fqyUNWtP4z2mgJyAfcp
+      CLERK_FRONTEND_API: https://wanted-gelding-91.clerk.accounts.dev
     depends_on:
       db:
         condition: service_healthy  # waits for the healthcheck above to pass

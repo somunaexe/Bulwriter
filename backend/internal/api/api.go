@@ -11,6 +11,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
     "github.com/somunaexe/bulwriter/backend/internal/project"
 	"github.com/somunaexe/bulwriter/backend/internal/script"
+	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 
@@ -34,28 +35,37 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	mx := mux.NewRouter()
 
+	// Public routes — no auth needed
+	// (none for now, but websocket auth is handled separately)
+
+	// Protected routes — wrap with RequireAuth
+	api := mx.PathPrefix("/api").Subrouter()
+	api.Use(middleware.RequireAuth)
+	// api.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    // 	w.WriteHeader(http.StatusOK)
+	// })
 	// ── Version control ─────────────────────────────────────────────
 	// Projects
-	mx.HandleFunc("/api/projects", r.listProjects).Methods("GET")
-	mx.HandleFunc("/api/projects", r.createProject).Methods("POST")
-	mx.HandleFunc("/api/projects/{projectId}", r.getProject).Methods("GET")
+	api.HandleFunc("/projects", r.listProjects).Methods("GET")
+	api.HandleFunc("/projects", r.createProject).Methods("POST")
+	api.HandleFunc("/projects/{projectId}", r.getProject).Methods("GET")
 	
 	// Scripts
-	mx.HandleFunc("/api/projects/{projectId}/scripts", r.listScripts).Methods("GET")
-	mx.HandleFunc("/api/projects/{projectId}/scripts", r.createScript).Methods("POST")
-	mx.HandleFunc("/api/projects/{projectId}/scripts/{scriptId}", r.getScript).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts", r.listScripts).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts", r.createScript).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}", r.getScript).Methods("GET")
 
 	// Branches
-	mx.HandleFunc("/api/projects/{projectId}/branches", r.listBranches).Methods("GET")
-	mx.HandleFunc("/api/projects/{projectId}/branches", r.createBranch).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/branches", r.listBranches).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/branches", r.createBranch).Methods("POST")
 
 	// Snapshots
-	mx.HandleFunc("/api/projects/{projectId}/branches/{branchId}/commit", r.commit).Methods("POST")
-	mx.HandleFunc("/api/projects/{projectId}/branches/{branchId}/history", r.history).Methods("GET")
-	mx.HandleFunc("/api/snapshots/{snapshotId}", r.getSnapshot).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/branches/{branchId}/commit", r.commit).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/branches/{branchId}/history", r.history).Methods("GET")
+	api.HandleFunc("/snapshots/{snapshotId}", r.getSnapshot).Methods("GET")
 
 	// Diff between two snapshots
-	mx.HandleFunc("/api/diff", r.diff).Methods("GET") // ?from=<id>&to=<id>
+	api.HandleFunc("/diff", r.diff).Methods("GET") // ?from=<id>&to=<id>
 
 	// ── Real-time sync ───────────────────────────────────────────────
 	// Clients connect here: ws://host/ws/{scriptId}
@@ -69,6 +79,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
 	})
 
 	return c.Handler(mx)
@@ -94,8 +105,8 @@ func (r *router) wsUpgrade(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *router) listProjects(w http.ResponseWriter, req *http.Request) {
-    // "anonymous" until auth is added — then this becomes the real user ID
-    projects, err := r.projects.List("anonymous")
+	userID := middleware.UserIDFromContext(req)
+    projects, err := r.projects.List(userID)
     if err != nil {
         writeErr(w, http.StatusInternalServerError, err.Error())
         return
@@ -104,14 +115,15 @@ func (r *router) listProjects(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *router) createProject(w http.ResponseWriter, req *http.Request) {
-    var body struct {
+    userID := middleware.UserIDFromContext(req)
+	var body struct {
         Title string `json:"title"`
     }
     if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Title == "" {
         writeErr(w, http.StatusBadRequest, "title is required")
         return
     }
-    p, err := r.projects.Create(body.Title, "anonymous")
+    p, err := r.projects.Create(body.Title, userID)
     if err != nil {
         writeErr(w, http.StatusInternalServerError, err.Error())
         return

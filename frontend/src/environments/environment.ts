@@ -3,5 +3,4 @@ export const environment = {
   apiUrl: 'https://miniature-space-palm-tree-x6v574xw54rhvr4x-8080.app.github.dev/api',
   wsUrl: 'wss://miniature-space-palm-tree-x6v574xw54rhvr4x-8080.app.github.dev/ws',
   clerkPublishableKey: 'pk_test_d2FudGVkLWdlbGRpbmctOTEuY2xlcmsuYWNjb3VudHMuZGV2JA',
-  clearSecretKey:'sk_test_XO36DwSpjisa833skNhmmJ3fqyUNWtP4z2mgJyAfcp',
 };

@@ -1,0 +1,1 @@
+declare module '@clerk/clerk-js/dist/clerk.browser.js';
