@@ -1,4 +1,4 @@
-# ScriptFlow
+# Bulwriter
 
 Collaborative screenwriting platform with Git-style version control and real-time co-writing.
 
