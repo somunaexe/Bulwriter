@@ -29,7 +29,7 @@ export class SyncService implements OnDestroy {
   startSession(
     scriptId: string,
     mountEl: HTMLElement,
-    indicatorEl?: HTMLElement
+    // indicatorEl?: HTMLElement
   ): CollabSession {
     this.endSession();
 
@@ -48,9 +48,9 @@ export class SyncService implements OnDestroy {
       gapCursor(),
     ];
 
-    if (indicatorEl) {
-      plugins.push(elementIndicatorPlugin(indicatorEl));
-    }
+    // if (indicatorEl) {
+    //   plugins.push(elementIndicatorPlugin(indicatorEl));
+    // }
 
     const state = EditorState.create({
       schema: screenplaySchema,

@@ -1,13 +1,58 @@
-<nav>
-    <button *ngIf="!signedIn$"
-        (click) = "signIn()"
-    >
-        Sign In
-    </button>
+<nav class="navbar">
 
-    <button *ngIf="signedIn$"
-        (click) = "signOut()"
-    >
-        Sign Out
+  <!-- Left: Brand -->
+  <div class="brand">
+    📝 Bulwriter
+  </div>
+
+  <!-- Middle: main nav -->
+  <div class="nav-links" [class.open]="menuOpen">
+
+    <a routerLink="/" (click)="openProjects()">Projects</a>
+
+    <!-- Settings dropdown -->
+    <div class="dropdown">
+      <button (click)="toggleSettings()" class="dropdown-btn">
+        Settings ⚙️
+      </button>
+
+      <div class="dropdown-menu" *ngIf="settingsOpen">
+
+        <a routerLink="/settings/profile">Profile & Account</a>
+
+        <a routerLink="/settings/editor">
+          Editor Settings
+          <small>Tab flow, Enter behavior</small>
+        </a>
+
+        <a routerLink="/settings/writing">
+          Writing Preferences
+          <small>Auto-capitalization, spacing</small>
+        </a>
+
+        <a routerLink="/settings/theme">
+          Theme
+          <small>Dark / Light mode</small>
+        </a>
+
+        <a routerLink="/settings/export">
+          Export Settings
+          <small>PDF, Fountain, Final Draft</small>
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Right: auth -->
+  <div class="auth">
+    <button *ngIf="signedIn$ | async" (click)="signOut()" class="signout">
+        Sign out
     </button>
+    
+    <button class="hamburger" (click)="toggleMenu()">
+      ☰
+    </button>
+  </div>
 </nav>

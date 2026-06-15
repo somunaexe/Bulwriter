@@ -66,6 +66,51 @@ const screenplayNodes: Record<string, NodeSpec> = {
     parseDOM: [{ tag: 'p[data-element="transition"]' }],
     toDOM: () => ['p', { 'data-element': 'transition', class: 'pm-transition' }, 0],
   },
+  
+  // Shot — CLOSE ON JOHN
+  shot: {
+    group: 'block',
+    content: 'inline*',
+    attrs: { element: { default: 'shot' } },
+    parseDOM: [{ tag: 'p[data-element="shot"]' }],
+    toDOM: () => ['p', { 'data-element': 'shot', class: 'pm-shot' }, 0],
+  },
+
+  // Lyrics — ♪ Somewhere over the rainbow ♪
+  lyrics: {
+    group: 'block',
+    content: 'inline*',
+    attrs: { element: { default: 'lyrics' } },
+    parseDOM: [{ tag: 'p[data-element="lyrics"]' }],
+    toDOM: () => ['p', { 'data-element': 'lyrics', class: 'pm-lyrics' }, 0],
+  },
+
+  // Dual Dialogue — simultaneous speech
+  dual_dialogue: {
+    group: 'block',
+    content: 'inline*',
+    attrs: { element: { default: 'dual_dialogue' } },
+    parseDOM: [{ tag: 'p[data-element="dual_dialogue"]' }],
+    toDOM: () => ['p', { 'data-element': 'dual_dialogue', class: 'pm-dual-dialogue' }, 0],
+  },
+
+  // Sequence Heading — TRAINING MONTAGE
+  sequence_heading: {
+    group: 'block',
+    content: 'inline*',
+    attrs: { element: { default: 'sequence_heading' } },
+    parseDOM: [{ tag: 'p[data-element="sequence_heading"]' }],
+    toDOM: () => ['p', { 'data-element': 'sequence_heading', class: 'pm-sequence-heading' }, 0],
+  },
+
+  // Note — internal writer note
+  note: {
+    group: 'block',
+    content: 'inline*',
+    attrs: { element: { default: 'note' } },
+    parseDOM: [{ tag: 'p[data-element="note"]' }],
+    toDOM: () => ['p', { 'data-element': 'note', class: 'pm-note' }, 0],
+  },
 
   // Inline nodes
   text: { group: 'inline' },

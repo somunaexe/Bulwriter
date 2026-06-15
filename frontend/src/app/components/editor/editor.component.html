@@ -27,27 +27,32 @@
       </div>
     </header>
 
-    <div>
-      <p>
-        File, Edit, Format, Share, View, Tools, Reports, Revisions, Production, Customize, Help
-      </p>
-      
-    </div>
+   
     <div class="element-toolbar">
-      <button *ngFor="let el of elements"
+      <div class="el-btns">
+        <button *ngFor="let el of elements"
               class="el-btn"
               [attr.data-element]="el"
+              [class.active]="el === activeElement"
               (click)="setElement(el)">
         {{ elementLabels[el] }}
       </button>
+      </div>
+      
       <span class="kbd-hint">Tab to cycle &nbsp;·&nbsp; ⌘1–6 to set</span>
     </div>
-
     <div class="element-indicator-wrap">
       <div #elementIndicator class="element-indicator"></div>
     </div>
 
-    <div #prosemirrorMount class="pm-mount"></div>
+    <div>
+      <p>
+        File, Edit, Format, Share, View, Tools, Reports, Revisions, Production, Customize, Help
+      </p> 
+    </div>
+    <div #prosemirrorMount class="pm-mount">
+      
+    </div>
 
   </main>
 

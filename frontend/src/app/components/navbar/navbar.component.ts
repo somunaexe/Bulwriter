@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ClerkService } from '../../services/clerk.service';
-import { BehaviorSubject, filter, map, switchMap, take } from 'rxjs';
+import { BehaviorSubject} from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 
@@ -15,6 +15,8 @@ import { Router } from '@angular/router';
 export class NavbarComponent implements OnInit {
   clerk = inject(ClerkService)
   signedIn$ = new BehaviorSubject<boolean>(false);
+  menuOpen: boolean = false;
+  settingsOpen: boolean = false;
 
   constructor(
     private router: Router
@@ -25,10 +27,20 @@ export class NavbarComponent implements OnInit {
   }
 
   signOut(): void {
+    this.signedIn$ = this.clerk.isSignedIn$;
     if (this.signedIn$) this.clerk?.signOut();
+    if (!this.signedIn$) this.router.navigate(['sign-in']);
   }
 
-  signIn(): void {
+  openProjects(): void {
     this.router.navigate(['/']);
+  }
+
+  toggleMenu(): void {
+    this.menuOpen = !this.menuOpen;
+  }
+
+  toggleSettings(): void {
+    this.settingsOpen = !this.settingsOpen;
   }
 }

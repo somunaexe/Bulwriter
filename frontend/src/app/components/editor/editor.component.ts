@@ -19,7 +19,7 @@ import {
 import { setBlockType } from 'prosemirror-commands';
 
 const ELEMENTS: ScreenplayElement[] = [
-  'scene_heading', 'action', 'character', 'dialogue', 'parenthetical', 'transition',
+  'scene_heading', 'action', 'character', 'parenthetical', 'dialogue', 'transition', 'shot', 'lyrics', 'dual_dialogue', 'sequence_heading', 'note',
 ];
 
 @Component({
@@ -35,7 +35,7 @@ export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
   collaborators:[] = []
 
   @ViewChild('prosemirrorMount') mountRef!: ElementRef<HTMLDivElement>;
-  @ViewChild('elementIndicator') indicatorRef!: ElementRef<HTMLDivElement>;
+  // @ViewChild('elementIndicator') indicatorRef!: ElementRef<HTMLDivElement>;
 
   commitMessage = '';
   activeBranch: Branch | null = null;
@@ -45,6 +45,7 @@ export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
   elements = ELEMENTS;
   elementLabels = ELEMENT_LABELS;
+  activeElement: ScreenplayElement | null = null;
 
   constructor(
     public sync: SyncService,
@@ -63,7 +64,7 @@ export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
     this.sync.startSession(
       this.scriptId,
       this.mountRef.nativeElement,
-      this.indicatorRef.nativeElement,
+      // this.indicatorRef.nativeElement,
     );
   }
 
@@ -81,6 +82,8 @@ export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
     const nodeType = (screenplaySchema.nodes as any)[element];
     if (!nodeType) return;
     setBlockType(nodeType, { element })(view.state, view.dispatch);
+    this.activeElement = element
+    console.log(this.activeElement)
     view.focus();
   }
 
