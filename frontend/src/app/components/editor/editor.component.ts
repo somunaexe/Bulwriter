@@ -32,6 +32,7 @@ const ELEMENTS: ScreenplayElement[] = [
 export class EditorComponent implements OnInit, AfterViewInit, OnDestroy {
   projectId = '';
   scriptId  = '';
+  collaborators:[] = []
 
   @ViewChild('prosemirrorMount') mountRef!: ElementRef<HTMLDivElement>;
   @ViewChild('elementIndicator') indicatorRef!: ElementRef<HTMLDivElement>;

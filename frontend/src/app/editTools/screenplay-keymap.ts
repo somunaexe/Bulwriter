@@ -84,12 +84,17 @@ function handleShiftTab(
   if (!el) return false;
   // Reverse cycle: dialogue→character, character→action, anything→scene_heading
   const reverse: Record<ScreenplayElement, ScreenplayElement> = {
-    dialogue:       'character',
-    character:      'action',
-    action:         'scene_heading',
-    scene_heading:  'transition',
-    transition:     'action',
-    parenthetical:  'character',
+    scene_heading: 'note',
+    action: 'scene_heading',
+    character: 'action',
+    parenthetical: 'character',
+    dialogue: 'parenthetical',
+    transition: 'dialogue',
+    shot: 'transition',
+    lyrics: 'shot',
+    dual_dialogue: 'lyrics',
+    sequence_heading: 'dual_dialogue',
+    note: 'sequence_heading',
   };
   return setElement(state, dispatch, reverse[el]);
 }
@@ -134,7 +139,9 @@ export function autoUppercasePlugin(): Plugin {
         if (
           el === 'scene_heading' ||
           el === 'character' ||
-          el === 'transition'
+          el === 'transition' ||
+          el === 'lyrics' ||
+          el === 'shot'
         ) {
           const upper = text.toUpperCase();
           if (upper !== text) {
@@ -166,5 +173,10 @@ export function screenplayKeymap(): Plugin {
     'Mod-4': (state, dispatch) => setElement(state, dispatch, 'dialogue'),
     'Mod-5': (state, dispatch) => setElement(state, dispatch, 'parenthetical'),
     'Mod-6': (state, dispatch) => setElement(state, dispatch, 'transition'),
+    'Mod-7': (state, dispatch) => setElement(state, dispatch, 'shot'),
+    'Mod-8': (state, dispatch) => setElement(state, dispatch, 'lyrics'),
+    'Mod-9': (state, dispatch) => setElement(state, dispatch, 'dual_dialogue'),
+    'Mod-0': (state, dispatch) => setElement(state, dispatch, 'sequence_heading'),
+    'Mod--': (state, dispatch) => setElement(state, dispatch, 'note'),
   });
 }

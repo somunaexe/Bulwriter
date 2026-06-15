@@ -1,5 +1,7 @@
 import { Schema, NodeSpec, MarkSpec } from 'prosemirror-model';
 
+// --------------------------- SCREENPLAY SCHEMA ----------------------------- //
+
 // ---------------------------------------------------------------------------
 // Node specs
 // Each node maps to one screenplay element type.
@@ -98,6 +100,7 @@ export const screenplaySchema = new Schema({
   marks: screenplayMarks,
 });
 
+// ---------------------------  ----------------------------- //
 // Element type helpers
 export type ScreenplayElement =
   | 'scene_heading'
@@ -105,33 +108,53 @@ export type ScreenplayElement =
   | 'character'
   | 'dialogue'
   | 'parenthetical'
-  | 'transition';
+  | 'transition'
+  | 'shot'
+  | 'lyrics'
+  | 'dual_dialogue'
+  | 'sequence_heading'
+  | 'note';
 
 export const ELEMENT_LABELS: Record<ScreenplayElement, string> = {
-  scene_heading:  'Scene heading',
-  action:         'Action',
-  character:      'Character',
-  dialogue:       'Dialogue',
-  parenthetical:  'Parenthetical',
-  transition:     'Transition',
+  scene_heading:    'Scene heading',
+  action:           'Action',
+  character:        'Character',
+  dialogue:         'Dialogue',
+  parenthetical:    'Parenthetical',
+  transition:       'Transition',
+  shot:             'Shot',
+  lyrics:           'Lyrics',
+  dual_dialogue:    'Dual Dialogue',
+  sequence_heading: 'Sequence Heading',
+  note:             'Note'
 };
 
 // Tab cycles through this sequence
 export const TAB_CYCLE: Record<ScreenplayElement, ScreenplayElement> = {
-  action:        'character',
-  character:     'dialogue',
-  dialogue:      'action',
-  parenthetical: 'dialogue',
-  scene_heading: 'action',
-  transition:    'action',
+  scene_heading:    'action',
+  action:           'character',
+  character:        'parenthetical',
+  parenthetical:    'dialogue',
+  dialogue:         'transition',
+  transition:       'shot',
+  shot:             'lyrics',
+  lyrics:           'dual_dialogue',
+  dual_dialogue:    'sequence_heading',
+  sequence_heading: 'note',
+  note:             'scene_heading',
 };
 
 // What pressing Enter creates after each element
 export const ENTER_CREATES: Record<ScreenplayElement, ScreenplayElement> = {
-  scene_heading:  'action',
-  action:         'action',
-  character:      'dialogue',
-  dialogue:       'action',      // overridden to 'character' by Tab
-  parenthetical:  'dialogue',
-  transition:     'scene_heading',
+  action:           'character',
+  character:        'parenthetical',
+  dialogue:         'action',    //  overriden to 'character' by Tab
+  parenthetical:    'dialogue',
+  scene_heading:    'action',
+  transition:       'scene_heading',
+  shot:             'action',
+  lyrics:           'action',
+  dual_dialogue:    'character',
+  sequence_heading: 'scene_heading',
+  note:             'action',
 };

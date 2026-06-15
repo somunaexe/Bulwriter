@@ -1,0 +1,13 @@
+<nav>
+    <button *ngIf="!signedIn$"
+        (click) = "signIn()"
+    >
+        Sign In
+    </button>
+
+    <button *ngIf="signedIn$"
+        (click) = "signOut()"
+    >
+        Sign Out
+    </button>
+</nav>

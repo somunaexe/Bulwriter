@@ -1,0 +1,89 @@
+<section class="settings-section">
+  <h2>Account & Profile</h2>
+
+  <div class="input-group">
+    <label for="displayName">Display Name</label>
+    <input
+      id="displayName"
+      type="text"
+      [(ngModel)]="displayName"
+      placeholder="Enter display name"
+    />
+  </div>
+
+  <div class="input-group">
+    <label for="email">Email Address</label>
+    <input
+      id="email"
+      type="email"
+      [(ngModel)]="email"
+      placeholder="Enter email"
+    />
+  </div>
+
+  <div class="input-group">
+    <label for="timezone">Time Zone</label>
+    <select id="timezone" [(ngModel)]="timezone">
+      <option value="Europe/London">Europe/London</option>
+      <option value="America/New_York">America/New_York</option>
+      <option value="America/Los_Angeles">America/Los_Angeles</option>
+      <option value="Asia/Tokyo">Asia/Tokyo</option>
+    </select>
+  </div>
+
+  <div class="input-group">
+    <label>Profile Picture</label>
+
+    <div class="avatar-section">
+      <img
+        [src]="profileImageUrl"
+        alt="Profile Picture"
+        class="profile-avatar"
+      />
+
+      <input
+        type="file"
+        accept="image/*"
+        (change)="onAvatarSelected($event)"
+      />
+    </div>
+  </div>
+
+  <div class="input-group">
+    <label>Connected Accounts</label>
+
+    <div class="connected-account">
+      <span>Google</span>
+      <button type="button">Connect</button>
+    </div>
+
+    <div class="connected-account">
+      <span>GitHub</span>
+      <button type="button">Connect</button>
+    </div>
+  </div>
+
+  <div class="input-actions">
+    <button type="button" class="btn-primary">
+      Save Changes
+    </button>
+
+    <button type="button" class="btn-secondary">
+      Change Password
+    </button>
+  </div>
+
+  <hr />
+
+  <div class="danger-zone">
+    <h3>Danger Zone</h3>
+
+    <p>
+      Permanently delete your account and all associated data.
+    </p>
+
+    <button type="button" class="btn-danger">
+      Delete Account
+    </button>
+  </div>
+</section>
