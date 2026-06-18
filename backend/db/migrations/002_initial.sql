@@ -1,7 +1,7 @@
 -- branches: named pointers to the tip of a line of work
 CREATE TABLE IF NOT EXISTS branches (
     id         TEXT PRIMARY KEY,
-    project_id TEXT        NOT NULL,
+    script_id  TEXT        NOT NULL,
     name       TEXT        NOT NULL,
     tip_id     TEXT        NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS branches (
 -- snapshots: immutable point-in-time captures of a script
 CREATE TABLE IF NOT EXISTS snapshots (
     id         TEXT PRIMARY KEY,
-    project_id TEXT        NOT NULL,
     branch_id  TEXT        NOT NULL,
     hash       TEXT        NOT NULL,
     content    TEXT        NOT NULL,
@@ -21,7 +20,7 @@ CREATE TABLE IF NOT EXISTS snapshots (
 );
 
 -- index so listing branches by project is fast
-CREATE INDEX IF NOT EXISTS idx_branches_project ON branches(project_id);
+CREATE INDEX IF NOT EXISTS idx_branches_project ON branches(script_id);
 
 -- index so fetching history by branch is fast  
 CREATE INDEX IF NOT EXISTS idx_snapshots_branch ON snapshots(branch_id);

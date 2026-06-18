@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/somunaexe/bulwriter/backend/internal/hub"
-	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
-    "github.com/somunaexe/bulwriter/backend/internal/project"
-	"github.com/somunaexe/bulwriter/backend/internal/script"
-	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/somunaexe/bulwriter/backend/internal/hub"
+	"github.com/somunaexe/bulwriter/backend/internal/middleware"
+	"github.com/somunaexe/bulwriter/backend/internal/project"
+	"github.com/somunaexe/bulwriter/backend/internal/script"
+	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 
 	"database/sql"
 )
@@ -35,15 +35,25 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	mx := mux.NewRouter()
 
-	// Public routes — no auth needed
-	// (none for now, but websocket auth is handled separately)
-
+	// Public routes — no auth needed	
+	// CORS — allow Angular dev server
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{
+			"http://localhost:4301",
+			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4301.app.github.dev",
+		},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+	
 	// Protected routes — wrap with RequireAuth
 	api := mx.PathPrefix("/api").Subrouter()
-	api.Use(middleware.RequireAuth)
 	// api.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     // 	w.WriteHeader(http.StatusOK)
 	// })
+
+	api.Use(middleware.RequireAuth)
 	// ── Version control ─────────────────────────────────────────────
 	// Projects
 	api.HandleFunc("/projects", r.listProjects).Methods("GET")
@@ -70,17 +80,6 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// ── Real-time sync ───────────────────────────────────────────────
 	// Clients connect here: ws://host/ws/{scriptId}
 	mx.HandleFunc("/ws/{scriptId}", r.wsUpgrade)
-
-	// CORS — allow Angular dev server
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{
-			"http://localhost:4200",
-			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4200.app.github.dev",
-		},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
-	})
 
 	return c.Handler(mx)
 }
@@ -160,11 +159,27 @@ func (r *router) createScript(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusBadRequest, "title is required")
 		return
 	}
+	// Create script
 	sc, err := r.scripts.Create(vars["projectId"], body.Title)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Create branch
+	br, err := r.store.CreateBranch(sc.ID, "main", "")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, br)
+	// snap, err := r.store.Commit(sc.ID, br.ID, "", "Once upon a time...", userID)
+	// if err != nil {
+	// 	writeErr(w, http.StatusInternalServerError, err.Error())
+	// 	return
+	// }
+	
 	writeJSON(w, http.StatusCreated, sc)
 }
 
@@ -180,7 +195,7 @@ func (r *router) getScript(w http.ResponseWriter, req *http.Request) {
 
 func (r *router) listBranches(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	branches, err := r.store.ListBranches(vars["projectId"])
+	branches, err := r.store.ListBranches(vars["scriptId"])
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -198,7 +213,7 @@ func (r *router) createBranch(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	branch, err := r.store.CreateBranch(vars["projectId"], body.Name, body.FromSnapshotID)
+	branch, err := r.store.CreateBranch(vars["scriptId"], body.Name, body.FromSnapshotID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -217,7 +232,7 @@ func (r *router) commit(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	snap, err := r.store.Commit(vars["projectId"], vars["branchId"], body.Content, body.Message, body.AuthorID)
+	snap, err := r.store.Commit(vars["scriptId"], vars["branchId"], body.Content, body.Message, body.AuthorID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

@@ -1,0 +1,11 @@
+<div class="menu-dropdown">
+  <button class="menu-trigger" (click)="toggle()" [class.active]="open">
+    {{ label }}
+  </button>
+
+  <div class="menu-panel" *ngIf="open" (click)="close()">
+    <!-- ng-content projects whatever was placed between
+         <app-menu-dropdown> tags in the parent template -->
+    <ng-content></ng-content>
+  </div>
+</div>
