@@ -37,15 +37,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	// Public routes — no auth needed	
 	// CORS — allow Angular dev server
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{
-			"http://localhost:4301",
-			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4301.app.github.dev",
-		},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
-	})
+	
 	
 	// Protected routes — wrap with RequireAuth
 	api := mx.PathPrefix("/api").Subrouter()
@@ -81,6 +73,16 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// Clients connect here: ws://host/ws/{scriptId}
 	mx.HandleFunc("/ws/{scriptId}", r.wsUpgrade)
 
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{
+			"http://localhost:4301",
+			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4301.app.github.dev",
+		},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+	
 	return c.Handler(mx)
 }
 
