@@ -9,9 +9,9 @@ import { baseKeymap } from 'prosemirror-commands';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { gapCursor } from 'prosemirror-gapcursor';
 
-import { screenplaySchema } from '../editTools/screenplay-schema';
-import { screenplayKeymap, autoUppercasePlugin } from '../editTools/screenplay-keymap';
-import { elementIndicatorPlugin } from '../editTools/element-indicator.plugin';
+import { screenplaySchema } from '../editor/screenplay-schema';
+import { screenplayKeymap, autoUppercasePlugin } from '../editor/screenplay-keymap';
+import { elementIndicatorPlugin } from '../editor/element-indicator.plugin';
 import { environment } from '../../environments/environment';
 
 export interface CollabSession {

@@ -1,66 +1,136 @@
 <div class="editor-layout">
 
-  <aside class="sidebar">
-    <app-branch-panel
-      [projectId]="projectId"
-      (branchSelected)="onBranchSelected($event)"
-      (compareDrafts)="openDiff($event.from, $event.to)">
-    </app-branch-panel>
-  </aside>
+  <!-- Loading state while role is being fetched -->
+  <div *ngIf="!roleLoaded" class="editor-layout">
+    <p style="padding: 2rem; color: var(--muted)">Loading…</p>
+  </div>
 
-  <main class="editor-main">
+  <!-- Unauthorized -->
+  <div *ngIf="roleLoaded && !roles.includes(myRole)" class="editor-layout">
+    You do not have permission to access this project.
+  </div>
 
-    <header class="editor-header">
-      <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
-      <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
+  <!-- Authorized -->
+  <div *ngIf="roleLoaded && roles.includes(myRole)" class="editor-layout">
+    <aside class="sidebar">
+      <app-branch-panel
+        [projectId]="projectId"
+        (branchSelected)="onBranchSelected($event)"
+        (compareDrafts)="openDiff($event.from, $event.to)">
+      </app-branch-panel>
+    </aside>
 
-      <div class="commit-bar">
-        <input [(ngModel)]="commitMessage"
-               placeholder="Describe this draft…"
-               class="commit-input"
-               (keydown.enter)="saveSnapshot()" />
-        <button class="btn-save"
-                (click)="saveSnapshot()"
-                [disabled]="!activeBranch || !commitMessage.trim()">
-          Save draft
+    <main class="editor-main">
+
+      <!-- Menu bar -->
+      <nav class="menu-bar">
+        <app-menu-dropdown label="File">
+          <button (click)="saveSnapshot()" [disabled]="!activeBranch || !canEdit">Save draft</button>
+          <div class="menu-divider"></div>
+          <button (click)="importFountain()" [disabled]="!canEdit">Import Fountain…</button>
+          <button (click)="exportFountain()">Export as Fountain…</button>
+          <button (click)="exportPDF()" disabled>Export as PDF…</button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Edit">
+          <button (click)="undo()">Undo</button>
+          <button (click)="redo()">Redo</button>
+          <div class="menu-divider"></div>
+          <button (click)="openFindReplace()" disabled>Find &amp; Replace…</button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Format">
+          <button *ngFor="let el of elements" (click)="setElement(el)">
+            {{ elementLabels[el] }}
+          </button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="View">
+          <button (click)="toggleIndicator()">
+            {{ showIndicator ? 'Hide' : 'Show' }} element indicator
+          </button>
+          <button (click)="toggleToolbar()">
+            {{ showToolbar ? 'Hide' : 'Show' }} format toolbar
+          </button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Share">
+          <button (click)="goToCollaborators()" *ngIf="isOwner">Manage collaborators…</button>
+          <button disabled *ngIf="!isOwner">View only access</button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Revisions">
+          <button (click)="scrollToHistory()">View history</button>
+          <button (click)="createBranchPrompt()">New branch…</button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Tools">
+          <button disabled>Word count</button>
+          <button disabled>Script statistics</button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Reports">
+          <button disabled>Scene list</button>
+          <button disabled>Character list</button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Production">
+          <button disabled>Scene breakdown</button>
+        </app-menu-dropdown>
+
+        <app-menu-dropdown label="Help">
+          <button (click)="openShortcuts()">Keyboard shortcuts</button>
+        </app-menu-dropdown>
+      </nav>
+
+      <header class="editor-header">
+        <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
+        <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
+
+        <div class="commit-bar" *ngIf="canEdit">
+          <input [(ngModel)]="commitMessage"
+                placeholder="Describe this draft…"
+                class="commit-input"
+                (keydown.enter)="saveSnapshot()"
+          />
+          <button class="btn-save"
+                  (click)="saveSnapshot()"
+                  [disabled]="!activeBranch || !commitMessage.trim()">
+            Save draft
+          </button>
+        </div>
+
+        <!-- Viewers see a read-only badge instead -->
+        <span class="role-badge" *ngIf="!canEdit">View only</span>
+      </header>
+    
+      <div class="element-toolbar">
+        <div class="el-btns">
+          <button *ngFor="let el of elements"
+                class="el-btn"
+                [attr.data-element]="el"
+                [class.active]="el === activeElement"
+                (click)="setElement(el)">
+          {{ elementLabels[el] }}
         </button>
+        </div>
+        
+        <span class="kbd-hint">Tab to cycle &nbsp;·&nbsp; ⌘1–0 to set</span>
       </div>
-    </header>
-
-   
-    <div class="element-toolbar">
-      <div class="el-btns">
-        <button *ngFor="let el of elements"
-              class="el-btn"
-              [attr.data-element]="el"
-              [class.active]="el === activeElement"
-              (click)="setElement(el)">
-        {{ elementLabels[el] }}
-      </button>
+      <div class="element-indicator-wrap">
+        <div #elementIndicator class="element-indicator"></div>
       </div>
-      
-      <span class="kbd-hint">Tab to cycle &nbsp;·&nbsp; ⌘1–0 to set</span>
-    </div>
-    <div class="element-indicator-wrap">
-      <div #elementIndicator class="element-indicator"></div>
-    </div>
 
-    <div>
-      <p>
-        File, Edit, Format, Share, View, Tools, Reports, Revisions, Production, Customize, Help
-      </p> 
-    </div>
-    <div #prosemirrorMount class="pm-mount">
-      
-    </div>
+      <div #prosemirrorMount class="pm-mount">
+        
+      </div>
+    </main>
 
-  </main>
-
-  <app-diff-viewer
-    *ngIf="showDiff"
-    [fromId]="diffFromId"
-    [toId]="diffToId"
-    (close)="showDiff = false">
-  </app-diff-viewer>
+    <app-diff-viewer
+      *ngIf="showDiff"
+      [fromId]="diffFromId"
+      [toId]="diffToId"
+      (close)="showDiff = false">
+    </app-diff-viewer>
 
 </div>

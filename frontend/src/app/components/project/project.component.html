@@ -5,7 +5,8 @@
     <p class="tagline">Your screenwriting workspace</p>
   </header>
 
-  <section class="new-project">
+  <!-- Only editors and owners can create scripts -->
+  <section class="new-project" *ngIf="canEdit">
     <input
       [(ngModel)]="newTitle"
       placeholder="New script title…"
@@ -32,5 +33,37 @@
       <div class="project-card-meta">{{ s.createdAt | date:'mediumDate' }}</div>
     </div>
 
+  </section>
+
+  <section class="collaborators">
+    <h2 class="section-label">Collaborators</h2>
+
+    <ul class="member-list">
+      <li *ngFor="let m of members" class="member-item">
+        <span class="member-id">{{ m.userId }}</span>
+        <span class="member-role">{{ m.role }}</span>
+      </li>
+    </ul>
+
+    <ul class="invite-list" *ngIf="invites.length > 0">
+      <li *ngFor="let inv of invites" class="invite-item">
+        <span class="invite-email">{{ inv.email }}</span>
+        <span class="invite-status" [class.pending]="inv.status === 'pending'">{{ inv.status }}</span>
+      </li>
+    </ul>
+
+    <!-- Only owners can invite -->
+    <div class="invite-form" *ngIf="isOwner">
+      <input
+        [(ngModel)]="inviteEmail"
+        placeholder="Invite by email…"
+        class="input-sm"
+        (keydown.enter)="sendInvite()" />
+      <button class="btn-ghost" (click)="sendInvite()" [disabled]="!inviteEmail.trim()">
+        Invite
+      </button>
+    </div>
+
+    <p class="error-msg" *ngIf="inviteError">{{ inviteError }}</p>
   </section>
 </div>
