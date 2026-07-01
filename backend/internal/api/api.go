@@ -37,10 +37,29 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	mx := mux.NewRouter()
 
-	// Public routes — no auth needed	
+	// Public routes — no auth needed
+	
+	// Public health check
+	mx.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}).Methods("GET")
+
 	// CORS — allow Angular dev server
-	
-	
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{
+			"http://localhost:4301",
+			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4301.app.github.dev",
+		},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	// ── Real-time sync ───────────────────────────────────────────────
+	// Clients connect here: ws://host/ws/{scriptId}
+	mx.HandleFunc("/ws/{scriptId}", r.wsUpgrade)
+
 	// Protected routes — wrap with RequireAuth
 	api := mx.PathPrefix("/api").Subrouter()
 	// api.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -78,19 +97,6 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	// Roles
 	api.HandleFunc("/projects/{projectId}/my-role", r.getMyRole).Methods("GET")
-	// ── Real-time sync ───────────────────────────────────────────────
-	// Clients connect here: ws://host/ws/{scriptId}
-	mx.HandleFunc("/ws/{scriptId}", r.wsUpgrade)
-
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{
-			"http://localhost:4301",
-			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4301.app.github.dev",
-		},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
-	})
 	
 	return c.Handler(mx)
 }

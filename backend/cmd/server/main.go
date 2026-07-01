@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/somunaexe/bulwriter/backend/internal/api"
@@ -35,6 +36,12 @@ func main() {
 	// Pass the database down into the router so handlers can use it
 	router := api.NewRouter(syncHub, database)
 
-	log.Println("Bulwriter backend running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	// Railway sets PORT — fall back to 8080 for local dev
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("Bulwriter backend running on :%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }
