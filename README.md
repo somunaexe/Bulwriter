@@ -80,3 +80,4 @@ Open two browser tabs — both connect to the same script room and sync live.
 | Auth (production) | Clerk or Auth0 |
 | Database (production) | Postgres |
 | Object storage (production) | S3 / Cloudflare R2 |
+| Automation & Workflows | Github Actions |
