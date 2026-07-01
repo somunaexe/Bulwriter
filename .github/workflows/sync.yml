@@ -43,7 +43,12 @@ jobs:
           aws s3 cp ./dist/frontend/browser/index.html s3://bulwriter/index.html \
             --cache-control "no-store, no-cache, must-revalidate" \
             --content-type "text/html"
-            
+      
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
           # aws s3 cp ./dist/frontend/browser/index.html s3://bulwriter/ --cache-control "no-store, no-cache, must-revalidate" --content-type "text/html"
           # aws s3 cp ./dist/frontend/browser s3://bulwriter/ --recursive --exclude "*" --include "*.css" --cache-control "max-age=31536000, immutable" --content-type "text/css"
           # aws s3 sync ./dist/frontend/browser s3://bulwriter/ --exclude "index.html" --exclude "*.css" --cache-control "max-age=31536000, immutable" --delete
