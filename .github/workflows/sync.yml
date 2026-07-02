@@ -1,6 +1,6 @@
 name: Sync to S3
 description: "Brings the website on S3 up-to-date"
-#  run 3
+#  run 4
 on:
   push:
     branches:
