@@ -41,7 +41,7 @@ export class ProjectComponent implements OnInit{
         this.loading = false;
       },
       error: err => {
-        this.error = 'Could not load projects.';
+        this.error = 'Could not load scripts.';
         this.loading = false;
       },
     });

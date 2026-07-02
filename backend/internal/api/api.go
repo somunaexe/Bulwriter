@@ -48,8 +48,8 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// CORS — allow Angular dev server
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
-			"http://localhost:4301",
-			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4301.app.github.dev",
+			"http://localhost:4200",
+			"https://crispy-train-699xr7p9449cxvx6-4200.app.github.dev",
 			"https://d1hspb5r4tyd4l.cloudfront.net",
 		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
