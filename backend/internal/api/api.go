@@ -50,7 +50,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		AllowedOrigins: []string{
 			"http://localhost:4301",
 			"https://miniature-space-palm-tree-x6v574xw54rhvr4x-4301.app.github.dev",
-			"d1hspb5r4tyd4l.cloudfront.net",
+			"https://d1hspb5r4tyd4l.cloudfront.net",
 		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
