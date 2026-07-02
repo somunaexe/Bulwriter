@@ -47,7 +47,6 @@ export class BranchPanelComponent implements OnInit {
       this.selectBranch(b);
     });
   }
-
   compare(): void {
     if (this.selectedA && this.selectedB) {
       this.compareDrafts.emit({ from: this.selectedA, to: this.selectedB });

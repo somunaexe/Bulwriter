@@ -224,13 +224,13 @@ func (r *router) createScript(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Create branch
-	br, err := r.store.CreateBranch(sc.ID, "main", "")
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	// br, err := r.store.CreateBranch(sc.ID, "main", "")
+	// if err != nil {
+	// 	writeErr(w, http.StatusInternalServerError, err.Error())
+	// 	return
+	// }
 
-	writeJSON(w, http.StatusCreated, br)
+	// writeJSON(w, http.StatusCreated, br)
 	// snap, err := r.store.Commit(sc.ID, br.ID, "", "Once upon a time...", userID)
 	// if err != nil {
 	// 	writeErr(w, http.StatusInternalServerError, err.Error())
