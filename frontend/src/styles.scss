@@ -35,6 +35,15 @@ html, body {
   display: grid;
   grid-template-columns: 260px 1fr;
   height: 100vh;
+  width: 100vw;  /* ← add this */
+  overflow: hidden;
+}
+
+.editor-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;  /* ← critical — without this, grid items don't shrink below content size */
+  height: 100%;
   overflow: hidden;
 }
 
@@ -84,14 +93,14 @@ html, body {
 .snap-msg  { color: var(--text); }
 .snap-date { color: var(--muted); margin-left: .5rem; }
 
-/* ── Editor main ── */
-.editor-main {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
+// /* ── Editor main ── */
+// .editor-main {
+//   display: flex;
+//   flex-direction: column;
+//   width: 100%;
+//   height: 100%;
+//   overflow: hidden;
+// }
 
 .editor-header {
   display: flex;
