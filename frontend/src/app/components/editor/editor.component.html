@@ -16,8 +16,10 @@
       <app-branch-panel
         [projectId]="projectId"
         [scriptId]="scriptId"
+        [latestSnapContent]="latestSnapContent"
         (branchSelected)="onBranchSelected($event)"
-        (compareDrafts)="openDiff($event.from, $event.to)">
+        (compareDrafts)="openDiff($event.from, $event.to)"
+        >
       </app-branch-panel>
     </aside>
 

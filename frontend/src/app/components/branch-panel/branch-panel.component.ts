@@ -15,6 +15,7 @@ export class BranchPanelComponent implements OnInit {
   @Input() scriptId = '';
   @Output() branchSelected = new EventEmitter<Branch>();
   @Output() compareDrafts  = new EventEmitter<{ from: string; to: string }>();
+  @Output() latestSnapContent = '';
 
   branches: Branch[]     = [];
   history: Snapshot[]    = [];
@@ -37,6 +38,7 @@ export class BranchPanelComponent implements OnInit {
     this.activeBranch = branch;
     this.branchSelected.emit(branch);
     this.vc.history(this.projectId, this.scriptId, branch.id).subscribe(h => (this.history = h));
+    this.latestSnapContent = this.history.reduce((prev, curr) => new Date(curr.createdAt) > new Date(prev.createdAt) ? curr : prev).content;
   }
 
   createBranch(): void {

@@ -56,6 +56,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     }
   }
 
+  latestSnapContent = '';
   commitMessage = '';
   activeBranch: Branch | null = null;
   showDiff = false;
@@ -101,14 +102,6 @@ export class EditorComponent implements OnInit, OnDestroy {
       }
     });
   }
-
-  // ngAfterViewInit(): void {
-  //   this.sync.startSession(
-  //     this.scriptId,
-  //     this.mountRef.nativeElement,
-  //     // this.indicatorRef.nativeElement,
-  //   );
-  // }
 
   ngOnDestroy(): void {
     this.sync.endSession();
@@ -290,6 +283,34 @@ export class EditorComponent implements OnInit, OnDestroy {
       if (!view) return;
       view.setProps({ editable: () => false });
     }, 100);
+  }
+
+  applySnapshotContent(): void {
+    // Implement auto save
+    const session = (this.sync as any).session;
+    if (!session) return;
+
+    const view = session.view;
+    const ydoc: Y.Doc = session.doc;
+
+    // Parse Fountain into structured elements
+    // const parsed = parseFountain(text);
+    // const newDoc = fountainToPMDoc(parsed);
+
+    // Instead of replacing ProseMirror state directly, we update
+    // the Yjs document — ySyncPlugin will then sync the new content
+    // into ProseMirror automatically.
+    //
+    // We do this by applying a ProseMirror transaction that replaces
+    // the entire document content, wrapped in a Yjs transaction so
+    // the change is tracked by the CRDT.
+    ydoc.transact(() => {
+      const { tr } = view.state;
+      tr.replaceWith(0, view.state.doc.content.size, this.latestSnapContent);
+      view.dispatch(tr);
+    });
+
+    view.focus();
   }
   
   // Convenience getters used in the template to show/hide UI
