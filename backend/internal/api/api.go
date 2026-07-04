@@ -81,8 +81,8 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}", r.getScript).Methods("GET")
 
 	// Branches
-	api.HandleFunc("/projects/{projectId}/branches", r.listBranches).Methods("GET")
-	api.HandleFunc("/projects/{projectId}/branches", r.createBranch).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches", r.listBranches).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches", r.createBranch).Methods("POST")
 
 	// Snapshots
 	api.HandleFunc("/projects/{projectId}/branches/{branchId}/commit", r.commit).Methods("POST")
@@ -281,16 +281,17 @@ func (r *router) createBranch(w http.ResponseWriter, req *http.Request) {
 
 func (r *router) commit(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
 	var body struct {
 		Content  string `json:"content"`
 		Message  string `json:"message"`
-		AuthorID string `json:"authorId"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	snap, err := r.store.Commit(vars["scriptId"], vars["branchId"], body.Content, body.Message, body.AuthorID)
+	snap, err := r.store.Commit(vars["scriptId"], vars["branchId"], body.Content, body.Message, userID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

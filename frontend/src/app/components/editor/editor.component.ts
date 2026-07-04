@@ -133,7 +133,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     if (!this.activeBranch || !this.commitMessage.trim()) return;
     const content = this.sync.getContent();
     this.vc
-      .commit(this.projectId, this.activeBranch.id, content, this.commitMessage)
+      .commit(this.projectId, this.scriptId, this.activeBranch.id, content, this.commitMessage)
       .subscribe(snap => {
         console.log('Snapshot saved:', snap.id);
         this.commitMessage = '';

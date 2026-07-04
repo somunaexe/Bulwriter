@@ -15,6 +15,7 @@
     <aside class="sidebar">
       <app-branch-panel
         [projectId]="projectId"
+        [scriptId]="scriptId"
         (branchSelected)="onBranchSelected($event)"
         (compareDrafts)="openDiff($event.from, $event.to)">
       </app-branch-panel>

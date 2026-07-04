@@ -125,13 +125,13 @@ func (s *Store) ListBranches(scriptID string) ([]*Branch, error) {
 // ── Snapshots ─────────────────────────────────────────────────────────────
 
 func (s *Store) Commit(scriptID, branchID, content, message, authorID string) (*Snapshot, error) {
-	// First verify the branch exists and belongs to this project.
+	// First verify the branch exists and belongs to this script.
 	branch, err := s.GetBranch(branchID)
 	if err != nil {
 		return nil, err
 	}
 	if branch.ScriptID != scriptID {
-		return nil, errors.New("branch does not belong to project")
+		return nil, errors.New("branch does not belong to script")
 	}
 
 	snap := &Snapshot{
@@ -140,7 +140,7 @@ func (s *Store) Commit(scriptID, branchID, content, message, authorID string) (*
 		Hash:      fmt.Sprintf("%x", sha256.Sum256([]byte(content))),
 		Content:   content,
 		Message:   message,
-		// AuthorID:  authorID,
+		AuthorID:  authorID,
 		ParentID:  branch.TipID, // current tip becomes this snapshot's parent
 		CreatedAt: time.Now(),
 	}

@@ -12,6 +12,7 @@ import { VersionControlService, Branch, Snapshot } from '../../services/version-
 })
 export class BranchPanelComponent implements OnInit {
   @Input() projectId = '';
+  @Input() scriptId = '';
   @Output() branchSelected = new EventEmitter<Branch>();
   @Output() compareDrafts  = new EventEmitter<{ from: string; to: string }>();
 
@@ -29,19 +30,19 @@ export class BranchPanelComponent implements OnInit {
   }
 
   loadBranches(): void {
-    this.vc.listBranches(this.projectId).subscribe(b => (this.branches = b));
+    this.vc.listBranches(this.projectId, this.scriptId).subscribe(b => (this.branches = b));
   }
 
   selectBranch(branch: Branch): void {
     this.activeBranch = branch;
     this.branchSelected.emit(branch);
-    this.vc.history(this.projectId, branch.id).subscribe(h => (this.history = h));
+    this.vc.history(this.projectId, this.scriptId, branch.id).subscribe(h => (this.history = h));
   }
 
   createBranch(): void {
     if (!this.newBranchName.trim()) return;
     const fromId = this.activeBranch?.tipId ?? '';
-    this.vc.createBranch(this.projectId, this.newBranchName, fromId).subscribe(b => {
+    this.vc.createBranch(this.projectId, this.scriptId, this.newBranchName, fromId).subscribe(b => {
       this.branches.push(b);
       this.newBranchName = '';
       this.selectBranch(b);

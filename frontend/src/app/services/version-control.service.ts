@@ -36,12 +36,12 @@ export class VersionControlService {
 
   // ── Branches ──────────────────────────────────────────────────────
 
-  listBranches(projectId: string): Observable<Branch[]> {
-    return this.http.get<Branch[]>(`${this.BASE}/projects/${projectId}/branches`);
+  listBranches(projectId: string, scriptId: string): Observable<Branch[]> {
+    return this.http.get<Branch[]>(`${this.BASE}/projects/${projectId}/scripts/${scriptId}/branches`);
   }
 
-  createBranch(projectId: string, name: string, fromSnapshotId = ''): Observable<Branch> {
-    return this.http.post<Branch>(`${this.BASE}/projects/${projectId}/branches`, {
+  createBranch(projectId: string, scriptId: string, name: string, fromSnapshotId = ''): Observable<Branch> {
+    return this.http.post<Branch>(`${this.BASE}/projects/${projectId}/scripts/${scriptId}/branches`, {
       name,
       fromSnapshotId,
     });
@@ -50,17 +50,17 @@ export class VersionControlService {
   // ── Snapshots ─────────────────────────────────────────────────────
 
   /** Save a named snapshot (commit) on a branch. */
-  commit(projectId: string, branchId: string, content: string, message: string): Observable<Snapshot> {
+  commit(projectId: string, scriptId: string, branchId: string, content: string, message: string): Observable<Snapshot> {
     return this.http.post<Snapshot>(
-      `${this.BASE}/projects/${projectId}/branches/${branchId}/commit`,
+      `${this.BASE}/projects/${projectId}/scripts/${scriptId}/branches/${branchId}/commit`,
       { content, message, authorId: 'current-user' } // swap authorId for real auth later
     );
   }
 
   /** Fetch the linear history of a branch back to its root. */
-  history(projectId: string, branchId: string): Observable<Snapshot[]> {
+  history(projectId: string, scriptId: string, branchId: string): Observable<Snapshot[]> {
     return this.http.get<Snapshot[]>(
-      `${this.BASE}/projects/${projectId}/branches/${branchId}/history`
+      `${this.BASE}/projects/${projectId}/scripts/${scriptId}/branches/${branchId}/history`
     );
   }
 
