@@ -87,7 +87,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// Snapshots
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches/{branchId}/commit", r.commit).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches/{branchId}/history", r.history).Methods("GET")
-	api.HandleFunc("/snapshots/{snapshotId}", r.getSnapshot).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches/{branchId}/snapshots/{snapshotId}", r.getSnapshot).Methods("GET")
 
 	// Diff between two snapshots
 	api.HandleFunc("/diff", r.diff).Methods("GET") // ?from=<id>&to=<id>
