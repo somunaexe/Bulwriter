@@ -75,7 +75,7 @@ func (s *Store) CreateBranch(scriptID, name, fromSnapshotID string) (*Branch, er
 func (s *Store) GetBranch(id string) (*Branch, error) {
 	b := &Branch{}
 	err := s.db.QueryRow(
-		`SELECT id, project_id, name, tip_id, created_at
+		`SELECT id, script_id, name, tip_id, created_at
 		 FROM branches WHERE id = $1`, id,
 	).Scan(&b.ID, &b.ScriptID, &b.Name, &b.TipID, &b.CreatedAt)
 
