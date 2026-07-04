@@ -51,6 +51,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 			"http://localhost:4200",
 			"https://crispy-train-699xr7p9449cxvx6-4200.app.github.dev",
 			"https://d1hspb5r4tyd4l.cloudfront.net",
+			// it's here
 		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
