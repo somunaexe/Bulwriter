@@ -13,13 +13,12 @@
   <!-- Authorized -->
   <div *ngIf="roleLoaded && roles.includes(myRole)" class="editor-layout">
     <aside class="sidebar">
-      <app-branch-panel>
+      <app-branch-panel
         [projectId]="projectId"
         [scriptId]="scriptId"
-        <!-- [latestSnapContent]="latestSnapContent" -->
         (branchSelected)="onBranchSelected($event)"
         (compareDrafts)="openDiff($event.from, $event.to)"
-        >
+      >
       </app-branch-panel>
     </aside>
 
