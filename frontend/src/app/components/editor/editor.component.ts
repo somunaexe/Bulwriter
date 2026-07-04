@@ -308,7 +308,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     // the change is tracked by the CRDT.
     ydoc.transact(() => {
       const { tr } = view.state;
-      tr.replaceWith(0, view.state.doc.content.size, this.latestSnapContent);
+      tr.replaceWith(0, view.state.doc.content.size, "hafa");
       view.dispatch(tr);
     });
 
