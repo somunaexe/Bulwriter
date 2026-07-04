@@ -89,7 +89,7 @@ html, body {
 .input-sm:focus { border-color: var(--accent); }
 
 .history-list { list-style: none; }
-.history-item { padding: .3rem 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.history-item { padding: .3rem 0; border-bottom: 1px solid var(--border); font-size: 12px; display: flex; justify-content: space-between;}
 .snap-msg  { color: var(--text); }
 .snap-date { color: var(--muted); margin-left: .5rem; }
 

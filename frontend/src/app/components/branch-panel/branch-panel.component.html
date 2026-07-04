@@ -20,8 +20,10 @@
     <ul class="history-list">
       <li *ngFor="let snap of history" class="history-item">
         <label>
-          <input type="radio" name="snapA" [value]="snap.id" [(ngModel)]="selectedA" />
-          <input type="radio" name="snapB" [value]="snap.id" [(ngModel)]="selectedB" />
+          <div>
+            <input type="radio" name="snapA" [value]="snap.id" [(ngModel)]="selectedA" />
+            <input type="radio" name="snapB" [value]="snap.id" [(ngModel)]="selectedB" />
+          </div>
           <span class="snap-msg">{{ snap.message || 'Draft' }}</span>
           <span class="snap-date">{{ snap.createdAt | date:'HH:mm' }}</span>
         </label>
