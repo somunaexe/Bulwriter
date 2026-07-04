@@ -110,6 +110,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   onBranchSelected(branch: Branch): void {
     this.activeBranch = branch;
     this.applySnapshotContent()
+    console.log(this.latestSnapContent)
   }
 
   setElement(element: ScreenplayElement): void {
