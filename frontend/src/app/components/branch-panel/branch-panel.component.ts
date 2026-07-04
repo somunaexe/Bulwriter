@@ -15,7 +15,7 @@ export class BranchPanelComponent implements OnInit {
   @Input() scriptId = '';
   @Output() branchSelected = new EventEmitter<Branch>();
   @Output() compareDrafts  = new EventEmitter<{ from: string; to: string }>();
-  @Output() latestSnapContent = '';
+  // @Output() latestSnapContent = '';
 
   branches: Branch[]     = [];
   history: Snapshot[]    = [];

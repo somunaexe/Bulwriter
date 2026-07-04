@@ -56,7 +56,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  latestSnapContent = '';
+  // latestSnapContent = '';
   commitMessage = '';
   activeBranch: Branch | null = null;
   showDiff = false;
@@ -109,8 +109,8 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   onBranchSelected(branch: Branch): void {
     this.activeBranch = branch;
-    this.applySnapshotContent()
-    console.log(this.latestSnapContent)
+    // this.applySnapshotContent()
+    // console.log(this.latestSnapContent)
   }
 
   setElement(element: ScreenplayElement): void {
@@ -287,33 +287,33 @@ export class EditorComponent implements OnInit, OnDestroy {
     }, 100);
   }
 
-  applySnapshotContent(): void {
-    // Implement auto save
-    const session = (this.sync as any).session;
-    if (!session) return;
+  // applySnapshotContent(): void {
+  //   // Implement auto save
+  //   const session = (this.sync as any).session;
+  //   if (!session) return;
 
-    const view = session.view;
-    const ydoc: Y.Doc = session.doc;
+  //   const view = session.view;
+  //   const ydoc: Y.Doc = session.doc;
 
-    // Parse Fountain into structured elements
-    // const parsed = parseFountain(text);
-    // const newDoc = fountainToPMDoc(parsed);
+  //   // Parse Fountain into structured elements
+  //   // const parsed = parseFountain(text);
+  //   // const newDoc = fountainToPMDoc(parsed);
 
-    // Instead of replacing ProseMirror state directly, we update
-    // the Yjs document — ySyncPlugin will then sync the new content
-    // into ProseMirror automatically.
-    //
-    // We do this by applying a ProseMirror transaction that replaces
-    // the entire document content, wrapped in a Yjs transaction so
-    // the change is tracked by the CRDT.
-    ydoc.transact(() => {
-      const { tr } = view.state;
-      tr.replaceWith(0, view.state.doc.content.size, "hafa");
-      view.dispatch(tr);
-    });
+  //   // Instead of replacing ProseMirror state directly, we update
+  //   // the Yjs document — ySyncPlugin will then sync the new content
+  //   // into ProseMirror automatically.
+  //   //
+  //   // We do this by applying a ProseMirror transaction that replaces
+  //   // the entire document content, wrapped in a Yjs transaction so
+  //   // the change is tracked by the CRDT.
+  //   ydoc.transact(() => {
+  //     const { tr } = view.state;
+  //     tr.replaceWith(0, view.state.doc.content.size, "hafa");
+  //     view.dispatch(tr);
+  //   });
 
-    view.focus();
-  }
+  //   view.focus();
+  // }
   
   // Convenience getters used in the template to show/hide UI
   get isOwner(): boolean { return this.myRole === 'owner'; }
