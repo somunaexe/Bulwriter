@@ -311,6 +311,9 @@ func (r *router) history(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if chain == nil {
+		chain = []*snapshot.Snapshot{}
+	}
 	writeJSON(w, http.StatusOK, chain)
 }
 
