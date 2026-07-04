@@ -38,7 +38,7 @@ export class BranchPanelComponent implements OnInit {
     this.activeBranch = branch;
     this.branchSelected.emit(branch);
     this.vc.history(this.projectId, this.scriptId, branch.id).subscribe(h => (this.history = h));
-    // this.latestSnapContent = this.history.reduce((prev, curr) => new Date(curr.createdAt) > new Date(prev.createdAt) ? curr : prev).content;
+    this.latestSnapContent = this.history.reduce((prev, curr) => new Date(curr.createdAt) > new Date(prev.createdAt) ? curr : prev).content;
   }
 
   createBranch(): void {
