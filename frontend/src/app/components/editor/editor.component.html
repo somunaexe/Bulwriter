@@ -13,7 +13,7 @@
   <!-- Authorized -->
   <div *ngIf="roleLoaded && roles.includes(myRole)" class="editor-layout">
     <aside class="sidebar">
-      <app-branch-panel
+      <app-branch-panel>
         [projectId]="projectId"
         [scriptId]="scriptId"
         <!-- [latestSnapContent]="latestSnapContent" -->
