@@ -27,6 +27,7 @@ import { toFountain, downloadFountain } from '../../editor/fountain-export';
 import { MenuDropdownComponent } from '../menu-dropdown/menu-dropdown.component';
 import { fountainToPMDoc, parseFountain } from '../../editor/fountain-import';
 import { MembershipService } from '../../services/membership.service';
+import { AutoSaveService } from '../../services/autosave.service';
 
 @Component({
   selector: 'app-editor',
@@ -53,6 +54,23 @@ export class EditorComponent implements OnInit, OnDestroy {
       );
       // Apply read-only if role already loaded by this point
       if (this.myRole === 'viewer') this.makeEditorReadOnly();
+      if (this.myRole !== 'viewer') {
+        // Give auto-save a function that saves the current content
+        // to whichever branch is currently active
+        this.autoSave.setSaveFn(async () => {
+          if (!this.activeBranch) return;
+            const content = this.sync.getContent();
+            await this.vc.commit(
+              this.projectId,
+              this.scriptId,
+              this.activeBranch.id,
+              content,
+              `Auto-save-${Math.floor(1000 + Math.random() * 9000)}`,
+            );
+          });
+
+          this.autoSave.start();
+      }
     }
   }
 
@@ -74,10 +92,13 @@ export class EditorComponent implements OnInit, OnDestroy {
   myRole = '';
   roleLoaded = false;
 
+  autoSaveState$ = this.autoSave.state$;
+
   constructor(
     public sync: SyncService,
     public vc: VersionControlService,
-    private membership: MembershipService,  // ← add this
+    private membership: MembershipService,
+    private autoSave: AutoSaveService,  // ← add this
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -105,14 +126,56 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sync.endSession();
+    this.autoSave.stop()
+  }
+
+  applySnapshotContent(branch: Branch): void {
+    // Implement auto save
+    this.vc.getSnapshot(branch.tipId).subscribe(snap => {
+      if (!snap?.content) return;
+
+      const session = (this.sync as any).session;
+      if (!session) return;
+
+      const view = session.view;
+      const ydoc: Y.Doc = session.doc;
+
+      // Parse Fountain into structured elements
+      const parsed = parseFountain(snap.content);
+      const newDoc = fountainToPMDoc(parsed);
+
+      // Instead of replacing ProseMirror state directly, we update
+      // the Yjs document — ySyncPlugin will then sync the new content
+      // into ProseMirror automatically.
+      //
+      // We do this by applying a ProseMirror transaction that replaces
+      // the entire document content, wrapped in a Yjs transaction so
+      // the change is tracked by the CRDT.
+      ydoc.transact(() => {
+        const { tr } = view.state;
+        tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
+        view.dispatch(tr);
+      });
+    });
   }
 
   onBranchSelected(branch: Branch): void {
     this.activeBranch = branch;
-    // this.applySnapshotContent()
-    // console.log(this.latestSnapContent)
+
+    // If there's no tip snapshot, nothing to load
+    if (!branch.tipId) return;
+
+    this.applySnapshotContent(branch)
   }
 
+  toggleAutoSave(): void {
+    const current = this.autoSave.state$.getValue().enabled;
+    this.autoSave.setEnabled(!current);
+  }
+
+  setAutoSaveInterval(minutes: 1 | 2 | 5 | 10): void {
+    this.autoSave.setInterval(minutes);
+  }
   setElement(element: ScreenplayElement): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
@@ -286,34 +349,6 @@ export class EditorComponent implements OnInit, OnDestroy {
       view.setProps({ editable: () => false });
     }, 100);
   }
-
-  // applySnapshotContent(): void {
-  //   // Implement auto save
-  //   const session = (this.sync as any).session;
-  //   if (!session) return;
-
-  //   const view = session.view;
-  //   const ydoc: Y.Doc = session.doc;
-
-  //   // Parse Fountain into structured elements
-  //   // const parsed = parseFountain(text);
-  //   // const newDoc = fountainToPMDoc(parsed);
-
-  //   // Instead of replacing ProseMirror state directly, we update
-  //   // the Yjs document — ySyncPlugin will then sync the new content
-  //   // into ProseMirror automatically.
-  //   //
-  //   // We do this by applying a ProseMirror transaction that replaces
-  //   // the entire document content, wrapped in a Yjs transaction so
-  //   // the change is tracked by the CRDT.
-  //   ydoc.transact(() => {
-  //     const { tr } = view.state;
-  //     tr.replaceWith(0, view.state.doc.content.size, "hafa");
-  //     view.dispatch(tr);
-  //   });
-
-  //   view.focus();
-  // }
   
   // Convenience getters used in the template to show/hide UI
   get isOwner(): boolean { return this.myRole === 'owner'; }

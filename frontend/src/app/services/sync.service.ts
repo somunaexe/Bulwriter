@@ -74,7 +74,12 @@ export class SyncService implements OnDestroy {
   }
 
   getContent(): string {
-    return this.session?.doc.getXmlFragment('script').toString() ?? '';
+    const view = (this as any).session?.view;
+    if (!view) return '';
+
+    // Import toFountain dynamically to avoid circular deps
+    const { toFountain } = require('../editor/fountain-export');
+    return toFountain(view.state.doc);
   }
 
   endSession(): void {

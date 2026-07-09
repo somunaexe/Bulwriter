@@ -13,6 +13,18 @@
   <!-- Authorized -->
   <div *ngIf="roleLoaded && roles.includes(myRole)" class="editor-layout">
     <aside class="sidebar">
+      <!-- Auto-save status -->
+      <div class="autosave-status" *ngIf="autoSaveState$ | async as state">
+        <span *ngIf="state.saving" class="status-saving">Saving…</span>
+        <span *ngIf="!state.saving && state.lastSaved" class="status-saved">
+          Saved {{ state.lastSaved | date:'HH:mm' }}
+        </span>
+        <span *ngIf="!state.saving && !state.lastSaved && state.enabled" class="status-pending">
+          Auto-save on
+        </span>
+        <span *ngIf="!state.enabled" class="status-off">Auto-save off</span>
+      </div>
+
       <app-branch-panel
         [projectId]="projectId"
         [scriptId]="scriptId"
@@ -67,6 +79,15 @@
         </app-menu-dropdown>
 
         <app-menu-dropdown label="Tools">
+          <button (click)="toggleAutoSave()">
+            {{ (autoSaveState$ | async)?.enabled ? 'Disable' : 'Enable' }} auto-save
+          </button>
+          <div class="menu-divider"></div>
+          <button (click)="setAutoSaveInterval(1)">Auto-save every 1 min</button>
+          <button (click)="setAutoSaveInterval(2)">Auto-save every 2 mins</button>
+          <button (click)="setAutoSaveInterval(5)">Auto-save every 5 mins</button>
+          <button (click)="setAutoSaveInterval(10)">Auto-save every 10 mins</button>
+          
           <button disabled>Word count</button>
           <button disabled>Script statistics</button>
         </app-menu-dropdown>
