@@ -32,3 +32,5 @@ go.work.sum
 # .vscode/
 frontend/node_modules
 frontend/.angular
+
+SP*
