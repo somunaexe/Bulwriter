@@ -161,7 +161,8 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   onBranchSelected(branch: Branch): void {
     this.activeBranch = branch;
-
+    this.saveSnapshot();
+    
     // If there's no tip snapshot, nothing to load
     if (!branch.tipId) return;
 
@@ -176,6 +177,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   setAutoSaveInterval(minutes: 1 | 2 | 5 | 10): void {
     this.autoSave.setInterval(minutes);
   }
+
   setElement(element: ScreenplayElement): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
