@@ -131,7 +131,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   applySnapshotContent(branch: Branch): void {
     // Implement auto save
-    this.vc.getSnapshot(branch.tipId).subscribe(snap => {
+    this.vc.getSnapshot(this.projectId, this.scriptId, branch.id, branch.tipId).subscribe(snap => {
       if (!snap?.content) return;
 
       const session = (this.sync as any).session;

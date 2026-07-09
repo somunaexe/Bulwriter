@@ -64,8 +64,8 @@ export class VersionControlService {
     );
   }
 
-  getSnapshot(snapshotId: string): Observable<Snapshot> {
-    return this.http.get<Snapshot>(`${this.BASE}/snapshots/${snapshotId}`);
+  getSnapshot(projectId: string, scriptId: string, branchId: string, snapshotId: string): Observable<Snapshot> {
+    return this.http.get<Snapshot>(`${this.BASE}/projects/${projectId}/scripts/${scriptId}/branches/${branchId}/snapshots/${snapshotId}`);
   }
 
   // ── Diff ──────────────────────────────────────────────────────────
