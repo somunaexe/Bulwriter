@@ -2,7 +2,7 @@
 
 Collaborative screenwriting platform with Git-style version control and real-time co-writing.
 
-Live Website: [text](https://d1hspb5r4tyd4l.cloudfront.net/)
+Live Website: [Bulwriter](https://d1hspb5r4tyd4l.cloudfront.net/)
 
 ## Architecture
 
