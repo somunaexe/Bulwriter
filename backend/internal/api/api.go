@@ -49,7 +49,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
  			"http://localhost:4200",
-+			"https://*.app.github.dev",
+			"https://*.app.github.dev",
  			"https://d1hspb5r4tyd4l.cloudfront.net",
 		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
