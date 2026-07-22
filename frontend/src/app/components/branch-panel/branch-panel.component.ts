@@ -13,6 +13,16 @@ import { VersionControlService, Branch, Snapshot } from '../../services/version-
 export class BranchPanelComponent implements OnInit {
   @Input() projectId = '';
   @Input() scriptId = '';
+  @Input() canEdit = false;
+
+  // The commit message text lives here (the sidebar), but committing
+  // reads the live document content from SyncService, which only the
+  // editor has — so message state round-trips to the parent while the
+  // actual save stays owned by EditorComponent.
+  @Input() commitMessage = '';
+  @Output() commitMessageChange = new EventEmitter<string>();
+  @Output() saveSnapshot = new EventEmitter<void>();
+
   @Output() branchSelected = new EventEmitter<Branch>();
   @Output() compareDrafts  = new EventEmitter<{ from: string; to: string }>();
 

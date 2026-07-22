@@ -15,31 +15,52 @@
     <button class="btn-ghost" (click)="createBranch()">Create</button>
   </div>
 
-  <ng-container *ngIf="history.length > 0">
+  <ng-container *ngIf="activeBranch">
     <h3 class="section-label">History</h3>
-    <p class="diff-hint">Pick two drafts to compare — A (older) and B (newer).</p>
-    <ul class="history-list">
-      <li *ngFor="let snap of history"
-          class="history-item"
-          [class.selected]="snap.id === selectedA || snap.id === selectedB">
-        <div class="diff-toggle">
-          <label class="diff-radio diff-radio-a" [class.active]="snap.id === selectedA">
-            <input type="radio" name="snapA" [value]="snap.id" [ngModel]="selectedA" (ngModelChange)="selectA(snap.id)" />
-            <span>A</span>
-          </label>
-          <label class="diff-radio diff-radio-b" [class.active]="snap.id === selectedB">
-            <input type="radio" name="snapB" [value]="snap.id" [ngModel]="selectedB" (ngModelChange)="selectB(snap.id)" />
-            <span>B</span>
-          </label>
-        </div>
-        <div class="snap-info">
-          <span class="snap-msg">{{ snap.message || 'Draft' }}</span>
-          <span class="snap-date">{{ snap.createdAt | date:'HH:mm' }}</span>
-        </div>
-      </li>
-    </ul>
-    <button class="btn-ghost btn-compare" (click)="compare()" [disabled]="!selectedA || !selectedB || selectedA === selectedB">
-      Compare drafts
-    </button>
+
+    <!-- Creating a new snapshot sits directly above the list it's
+         about to join — the newest entry always lands at the top. -->
+    <div class="snapshot-bar"
+         *ngIf="canEdit"
+         title="Saves the current content as a new snapshot on this branch — not a regular autosave">
+      <input [ngModel]="commitMessage"
+             (ngModelChange)="commitMessageChange.emit($event)"
+             placeholder="Describe this snapshot…"
+             class="snapshot-input"
+             (keydown.enter)="saveSnapshot.emit()"
+      />
+      <button class="btn-snapshot"
+              (click)="saveSnapshot.emit()"
+              [disabled]="!commitMessage.trim()">
+        <span class="snapshot-icon">⎇</span>New snapshot
+      </button>
+    </div>
+
+    <ng-container *ngIf="history.length > 0">
+      <p class="diff-hint">Pick two drafts to compare — A (older) and B (newer).</p>
+      <ul class="history-list">
+        <li *ngFor="let snap of history"
+            class="history-item"
+            [class.selected]="snap.id === selectedA || snap.id === selectedB">
+          <div class="diff-toggle">
+            <label class="diff-radio diff-radio-a" [class.active]="snap.id === selectedA">
+              <input type="radio" name="snapA" [value]="snap.id" [ngModel]="selectedA" (ngModelChange)="selectA(snap.id)" />
+              <span>A</span>
+            </label>
+            <label class="diff-radio diff-radio-b" [class.active]="snap.id === selectedB">
+              <input type="radio" name="snapB" [value]="snap.id" [ngModel]="selectedB" (ngModelChange)="selectB(snap.id)" />
+              <span>B</span>
+            </label>
+          </div>
+          <div class="snap-info">
+            <span class="snap-msg">{{ snap.message || 'Draft' }}</span>
+            <span class="snap-date">{{ snap.createdAt | date:'HH:mm' }}</span>
+          </div>
+        </li>
+      </ul>
+      <button class="btn-ghost btn-compare" (click)="compare()" [disabled]="!selectedA || !selectedB || selectedA === selectedB">
+        Compare drafts
+      </button>
+    </ng-container>
   </ng-container>
 </div>

@@ -2,10 +2,11 @@
  * Wraps ONLY the menu bar (File/Edit/Format/...) into a sheet the same
  * width as the manuscript page below it, sitting directly on top of it
  * — the header (branch pill/snapshot) and format toolbar stay generic
- * full-width app chrome above this, unaffected. Width matches the menu
- * bar's own natural content width (~6.57in measured), not the page's
- * literal 8.5in print size — see --script-width in styles.scss, shared
- * by both this and .pm-mount .ProseMirror so they always line up.
+ * full-width app chrome above this, unaffected. Width is --script-width
+ * (styles.scss), shared with .pm-mount .ProseMirror so they always line
+ * up — both must also stay free of their own horizontal padding/margin
+ * beyond auto-centering, or their max-width:100% caps diverge the
+ * instant the viewport gets narrower than --script-width.
  * The --text/--muted/etc. overrides cascade into the menu-bar's
  * app-menu-dropdown children, since CSS custom properties inherit
  * through the DOM regardless of Angular's view encapsulation.

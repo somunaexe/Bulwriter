@@ -30,6 +30,10 @@
       <app-branch-panel
         [projectId]="projectId"
         [scriptId]="scriptId"
+        [canEdit]="canEdit"
+        [commitMessage]="commitMessage"
+        (commitMessageChange)="commitMessage = $event"
+        (saveSnapshot)="saveSnapshot()"
         (branchSelected)="onBranchSelected($event)"
         (compareDrafts)="openDiff($event.from, $event.to)"
       >
@@ -43,21 +47,6 @@
 
         <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
         <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
-
-        <div class="header-spacer"></div>
-
-        <div class="snapshot-bar" *ngIf="canEdit" title="Saves the current content as a new snapshot on this branch — not a regular autosave">
-          <input [(ngModel)]="commitMessage"
-                placeholder="Describe this snapshot…"
-                class="snapshot-input"
-                (keydown.enter)="saveSnapshot()"
-          />
-          <button class="btn-snapshot"
-                  (click)="saveSnapshot()"
-                  [disabled]="!activeBranch || !commitMessage.trim()">
-            <span class="snapshot-icon">⎇</span>New snapshot
-          </button>
-        </div>
 
         <!-- Viewers see a read-only badge instead -->
         <span class="role-badge" *ngIf="!canEdit">View only</span>

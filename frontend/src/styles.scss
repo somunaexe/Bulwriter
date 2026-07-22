@@ -22,11 +22,10 @@
   --page-bg:   #f5f3ee;
   --page-text: #1b1a17;
 
-  /* The page and the menu-bar sheet above it share this width — it's
-     the menu bar's own natural content width (10 items, ~6.57in
-     measured) plus a little breathing room, not the literal 8.5in
-     print page size, so the two always line up visually. */
-  --script-width: 6.75in;
+  /* The page and the menu-bar sheet above it always share this width —
+     see .page-chrome / .pm-mount .ProseMirror. 816px == 8.5in exactly
+     at 96 CSS px/in, i.e. the literal US-Letter page width. */
+  --script-width: 816px;
 
   --navbar-h: 56px;
 }
@@ -226,24 +225,29 @@ html, body {
 }
 .branch-pill.empty { background: transparent; color: var(--muted); border-color: var(--border); }
 
-.header-spacer { flex: 1; }
-
 /*
  * The snapshot control — deliberately NOT styled like a generic "Save"
- * button. It's compact (doesn't stretch across the header, unlike the
- * old .commit-bar), pill-shaped and gold-accented like the branch pill
- * next to it, and uses a branch glyph + "New snapshot" wording rather
- * than a save icon — this creates a new version-controlled draft, it
- * isn't autosave or a generic file save.
+ * button, and lives in the sidebar directly above the history list
+ * (not the header) so a new snapshot visibly precedes the list it
+ * joins. Stacked full-width to fit the sidebar's ~260px column,
+ * pill-shaped and gold-accented like the branch pill in the header,
+ * with a branch glyph + "New snapshot" wording rather than a save
+ * icon — this creates a new version-controlled draft, it isn't
+ * autosave or a generic file save.
  */
-.snapshot-bar { display: flex; align-items: center; gap: .5rem; }
+.snapshot-bar {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin: .75rem 0 1.25rem;
+}
 
 .snapshot-input {
-  width: 190px;
+  width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: .35rem .6rem;
+  padding: .4rem .6rem;
   font-size: 12.5px;
   color: var(--text);
   outline: none;
@@ -253,11 +257,12 @@ html, body {
 .btn-snapshot {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: .35rem;
-  flex-shrink: 0;
+  width: 100%;
   white-space: nowrap;
 
-  padding: .35rem .8rem;
+  padding: .45rem .8rem;
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 600;
@@ -300,7 +305,11 @@ html, body {
   overflow-y: auto;
   display: flex;
   justify-content: center;
-  padding: .5rem 2rem 3rem; /* small top gap — the page sits close under .page-chrome */
+  /* No horizontal padding here — .page-chrome has none either, so both
+     compute max-width:100% against the exact same available width and
+     never drift apart once the viewport gets narrow enough for that
+     100% cap to actually bind. */
+  padding: .5rem 0 3rem;
   width: 100%;
 }
 
@@ -309,7 +318,7 @@ html, body {
   max-width: 100%;
   min-height: 11in;
   margin: 0 auto;
-  padding: .75in .75in .75in 1in; /* top right bottom left — scaled down from the literal 1in/1.5in print margins to match --script-width */
+  padding: 1in 1in 1in 1.5in; /* top right bottom left — 1in all round, 1.5in left for binding (--script-width is the true 8.5in page width) */
   /* A real border (not a box-shadow "ring") so it's counted in the
      border-box width like .page-chrome's border — a box-shadow paints
      outside the box uncounted, which made the page ~2px wider than
@@ -442,6 +451,7 @@ html, body {
   inset: 0;
   background: rgba(0, 0, 0, .4);
   z-index: 90; /* below .diff-drawer (100), above everything else */
+  animation: diff-backdrop-fade-in .22s ease-out;
 }
 
 .diff-drawer {
@@ -456,6 +466,17 @@ html, body {
   flex-direction: column;
   z-index: 100;
   box-shadow: -4px 0 24px rgba(0,0,0,.4);
+  animation: diff-drawer-slide-in .22s ease-out;
+}
+
+@keyframes diff-drawer-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes diff-backdrop-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .diff-header {
@@ -582,16 +603,11 @@ html, body {
     justify-content: center;
   }
 
-  /* Header wraps onto two rows: toggle+branch pill first, snapshot
-     control below it at full width instead of being squeezed. */
   .editor-header {
     flex-wrap: wrap;
     row-gap: .6rem;
     padding: .6rem .85rem;
   }
-  .header-spacer { flex-basis: 100%; height: 0; }
-  .snapshot-bar { width: 100%; }
-  .snapshot-input { flex: 1; width: auto; min-width: 0; }
 
   /* .page-chrome's own width/margin responsive tweak lives in
      editor.component.scss — component-scoped rules there get an
@@ -601,8 +617,9 @@ html, body {
 
   /* The page itself: keep the white "paper" look and Courier font, but
      industry margins only make sense on a real printable page — shrink
-     them to something a phone can actually show text in. */
-  .pm-mount { padding: 1rem .5rem; }
+     them to something a phone can actually show text in. No horizontal
+     padding here either, for the same reason as the desktop rule above. */
+  .pm-mount { padding: 1rem 0; }
   .pm-mount .ProseMirror {
     min-height: auto;
     padding: 1.25rem 1rem;
