@@ -310,7 +310,12 @@ html, body {
   min-height: 11in;
   margin: 0 auto;
   padding: .75in .75in .75in 1in; /* top right bottom left — scaled down from the literal 1in/1.5in print margins to match --script-width */
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .15), 0 12px 34px rgba(0, 0, 0, .4);
+  /* A real border (not a box-shadow "ring") so it's counted in the
+     border-box width like .page-chrome's border — a box-shadow paints
+     outside the box uncounted, which made the page ~2px wider than
+     the menu bar sheet above it despite both using --script-width. */
+  border: 1px solid rgba(0, 0, 0, .15);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .4);
 
   font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
   font-size: 12pt;
