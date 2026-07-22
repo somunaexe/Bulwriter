@@ -16,6 +16,7 @@ import {
   screenplaySchema,
   ScreenplayElement,
   ELEMENT_LABELS,
+  TITLE_PAGE_KEYS,
 } from '../../editor/screenplay-schema';
 import { setBlockType } from 'prosemirror-commands';
 
@@ -43,14 +44,20 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   private _mountRef!: ElementRef<HTMLDivElement>;
 
+  @ViewChild('elementIndicator') indicatorRef?: ElementRef<HTMLDivElement>;
+
   @ViewChild('prosemirrorMount')
   set mountRef(el: ElementRef<HTMLDivElement>) {
     if (el && !this._mountRef) {
       this._mountRef = el;
-      // Start the session the moment the element appears in the DOM
+      // Start the session the moment the element appears in the DOM.
+      // The indicator element + callback keep the floating label and the
+      // toolbar's highlighted button in sync with wherever the cursor is.
       this.sync.startSession(
         this.scriptId,
         el.nativeElement,
+        this.indicatorRef?.nativeElement,
+        (element) => { this.activeElement = element; },
       );
       // Apply read-only if role already loaded by this point
       if (this.myRole === 'viewer') this.makeEditorReadOnly();
@@ -233,6 +240,24 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   // ── File menu ────────────────────────────────────────────────────
+
+  insertTitlePage(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+
+    const first = view.state.doc.firstChild;
+    if (first && first.attrs['element'] === 'title_page_field') {
+      alert('This script already has a title page.');
+      return;
+    }
+
+    const fieldType = screenplaySchema.nodes['title_page_field'];
+    const nodes = TITLE_PAGE_KEYS.slice(0, 3).map(key =>  // Title, Credit, Author
+      fieldType.create({ element: 'title_page_field', key })
+    );
+    view.dispatch(view.state.tr.insert(0, nodes));
+    view.focus();
+  }
 
   exportFountain(): void {
     const view = (this.sync as any).session?.view;

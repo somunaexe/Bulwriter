@@ -112,6 +112,28 @@ const screenplayNodes: Record<string, NodeSpec> = {
     toDOM: () => ['p', { 'data-element': 'note', class: 'pm-note' }, 0],
   },
 
+  // Title page field — Title, Credit, Author, Contact, etc. Lives at the
+  // very start of the doc, outside the flowing screenplay body. `key`
+  // holds the field name (what Fountain writes as "Key: value").
+  title_page_field: {
+    group: 'block',
+    content: 'inline*',
+    attrs: { element: { default: 'title_page_field' }, key: { default: 'Title' } },
+    parseDOM: [{
+      tag: 'p[data-element="title_page_field"]',
+      getAttrs: (dom) => ({ key: (dom as HTMLElement).getAttribute('data-key') || 'Title' }),
+    }],
+    toDOM: (node) => [
+      'p',
+      {
+        'data-element': 'title_page_field',
+        'data-key': String(node.attrs['key'] || 'Title').toLowerCase(),
+        class: 'pm-title-page-field',
+      },
+      0,
+    ],
+  },
+
   // Inline nodes
   text: { group: 'inline' },
 
@@ -158,7 +180,8 @@ export type ScreenplayElement =
   | 'lyrics'
   | 'dual_dialogue'
   | 'sequence_heading'
-  | 'note';
+  | 'note'
+  | 'title_page_field';
 
 export const ELEMENT_LABELS: Record<ScreenplayElement, string> = {
   scene_heading:    'Scene heading',
@@ -171,10 +194,17 @@ export const ELEMENT_LABELS: Record<ScreenplayElement, string> = {
   lyrics:           'Lyrics',
   dual_dialogue:    'Dual Dialogue',
   sequence_heading: 'Sequence Heading',
-  note:             'Note'
+  note:             'Note',
+  title_page_field: 'Title Page Field',
 };
 
-// Tab cycles through this sequence
+// Common title page field names, in the order a real title page presents
+// them. Used by "Insert title page" and to label the field CSS.
+export const TITLE_PAGE_KEYS = ['Title', 'Credit', 'Author', 'Draft date', 'Contact'] as const;
+
+// Tab cycles through this sequence. title_page_field is intentionally left
+// out of the toolbar/Tab cycle — it's structural (Title/Author/etc.), not
+// something you freely retype a line as.
 export const TAB_CYCLE: Record<ScreenplayElement, ScreenplayElement> = {
   scene_heading:    'action',
   action:           'character',
@@ -187,6 +217,7 @@ export const TAB_CYCLE: Record<ScreenplayElement, ScreenplayElement> = {
   dual_dialogue:    'sequence_heading',
   sequence_heading: 'note',
   note:             'scene_heading',
+  title_page_field: 'action',
 };
 
 // What pressing Enter creates after each element
@@ -202,4 +233,5 @@ export const ENTER_CREATES: Record<ScreenplayElement, ScreenplayElement> = {
   dual_dialogue:    'character',
   sequence_heading: 'scene_heading',
   note:             'action',
+  title_page_field: 'title_page_field',
 };

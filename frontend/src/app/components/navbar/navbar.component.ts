@@ -1,38 +1,46 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnInit } from '@angular/core';
 import { ClerkService } from '../../services/clerk.service';
-import { BehaviorSubject} from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss'
 })
 
 export class NavbarComponent implements OnInit {
-  clerk = inject(ClerkService)
-  signedIn$ = new BehaviorSubject<boolean>(false);
-  menuOpen: boolean = false;
-  settingsOpen: boolean = false;
+  clerk = inject(ClerkService);
+
+  signedIn$ = this.clerk.isSignedIn$;
+  user$ = this.clerk.user$;
+
+  menuOpen = false;
+  accountOpen = false;
+  aboutOpen = false;
 
   constructor(
-    private router: Router
+    private router: Router,
+    private host: ElementRef<HTMLElement>,
   ) {}
 
-  ngOnInit(): void {
-    this.signedIn$ = this.clerk.isSignedIn$;
+  ngOnInit(): void {}
+
+  async signOut(): Promise<void> {
+    await this.clerk.signOut();
+    this.accountOpen = false;
+    this.router.navigate(['sign-in']);
   }
 
-  signOut(): void {
-    this.signedIn$ = this.clerk.isSignedIn$;
-    if (this.signedIn$) this.clerk?.signOut();
-    if (!this.signedIn$) this.router.navigate(['sign-in']);
+  openAccount(): void {
+    this.accountOpen = false;
+    this.clerk.openUserProfile();
   }
 
   openProjects(): void {
+    this.menuOpen = false;
     this.router.navigate(['/']);
   }
 
@@ -40,7 +48,29 @@ export class NavbarComponent implements OnInit {
     this.menuOpen = !this.menuOpen;
   }
 
-  toggleSettings(): void {
-    this.settingsOpen = !this.settingsOpen;
+  toggleAccount(): void {
+    this.accountOpen = !this.accountOpen;
+  }
+
+  toggleAbout(): void {
+    this.aboutOpen = !this.aboutOpen;
+    this.accountOpen = false;
+  }
+
+  initials(name: string): string {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('') || '?';
+  }
+
+  // Close the account dropdown when clicking anywhere outside it.
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.accountOpen && !this.host.nativeElement.contains(event.target as Node)) {
+      this.accountOpen = false;
+    }
   }
 }

@@ -1,5 +1,5 @@
 /* ── Bulwriter global styles ── */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
 
 :root {
   --bg:        #0f0f11;
@@ -14,6 +14,11 @@
   --delete-fg: #e0635a;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+
+  /* The manuscript page itself — industry format is a white page with
+     dark Courier text, regardless of the app's own dark theme chrome. */
+  --page-bg:   #f5f3ee;
+  --page-text: #1b1a17;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -154,23 +159,34 @@ html, body {
 .btn-icon  { background: transparent; color: var(--muted); font-size: 16px; padding: .2rem .5rem; }
 .btn-icon:hover { color: var(--text); }
 
-/* ── ProseMirror mount ── */
+/* ── ProseMirror mount ──
+   The manuscript itself is rendered as a literal 8.5x11in page — a
+   white/cream sheet with dark Courier text, per industry convention
+   (Final Draft, WriterDuet, etc. all show a white page regardless of
+   the app's own theme) — sitting inside the app's dark chrome. */
 .pm-mount {
   flex: 1;
   overflow-y: auto;
-  padding: 3rem 4rem;
-  max-width: 860px;
-  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 3rem 2rem;
   width: 100%;
 }
 
 .pm-mount .ProseMirror {
-  font-family: var(--font-mono);
-  font-size: 14px;
+  width: 8.5in;
+  max-width: 100%;
+  min-height: 11in;
+  margin: 0 auto;
+  padding: 1in 1in 1in 1.5in; /* top right bottom left — 1in all round, 1.5in left for binding */
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .15), 0 12px 34px rgba(0, 0, 0, .4);
+
+  font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
+  font-size: 12pt;
   line-height: 1.9;
   outline: none;
-  color: var(--text);
-  min-height: 600px;
+  background: var(--page-bg);
+  color: var(--page-text);
   white-space: pre-wrap;
 }
 
@@ -242,6 +258,36 @@ html, body {
   font-style: italic;
   color: var(--muted);
   font-size: 0.92em;
+}
+
+/*
+ * Title page — Title/Credit/Author etc. render as their own centered
+ * page above the body, matching the classic industry layout (title
+ * roughly a third of the way down, credit + author beneath it).
+ */
+.pm-mount .ProseMirror [data-element="title_page_field"] {
+  max-width: 100%;
+  text-align: center;
+  margin-left: 0;
+}
+
+.pm-mount .ProseMirror [data-element="title_page_field"][data-key="title"] {
+  margin-top: 2in;
+  font-size: 1.3em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pm-mount .ProseMirror [data-element="title_page_field"][data-key="credit"] {
+  margin-top: 1.5em;
+}
+
+.pm-mount .ProseMirror [data-element="title_page_field"][data-key="contact"],
+.pm-mount .ProseMirror [data-element="title_page_field"][data-key="draft date"] {
+  margin-top: 3in;
+  font-size: 0.85em;
+  color: var(--muted);
 }
 
 /* Cursor colours for collaborators */

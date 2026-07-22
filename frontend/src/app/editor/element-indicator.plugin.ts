@@ -13,23 +13,29 @@ function getElement(view: EditorView): ScreenplayElement | null {
 /**
  * A ProseMirror plugin that renders a small element-type indicator
  * above the current line. It reads the current block's element attribute
- * and updates a DOM node passed in at construction time.
+ * and updates a DOM node passed in at construction time. An optional
+ * callback also fires on every change, so Angular state (e.g. which
+ * toolbar button to highlight) can stay in sync with the cursor.
  */
 export function elementIndicatorPlugin(
-  indicatorEl: HTMLElement
+  indicatorEl: HTMLElement | null,
+  onElementChange?: (element: ScreenplayElement | null) => void
 ): Plugin {
   return new Plugin({
     key: indicatorKey,
     view(editorView) {
       function update() {
         const el = getElement(editorView);
-        if (el) {
-          indicatorEl.textContent = ELEMENT_LABELS[el];
-          indicatorEl.setAttribute('data-element', el);
-          indicatorEl.style.display = 'block';
-        } else {
-          indicatorEl.style.display = 'none';
+        if (indicatorEl) {
+          if (el) {
+            indicatorEl.textContent = ELEMENT_LABELS[el];
+            indicatorEl.setAttribute('data-element', el);
+            indicatorEl.style.display = 'block';
+          } else {
+            indicatorEl.style.display = 'none';
+          }
         }
+        onElementChange?.(el);
       }
       update();
       return { update };

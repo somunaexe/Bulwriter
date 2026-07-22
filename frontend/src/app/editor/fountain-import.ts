@@ -4,6 +4,7 @@ import { Node as PMNode } from 'prosemirror-model';
 interface ParsedLine {
   element: ScreenplayElement;
   text: string;
+  key?: string; // only set for element === 'title_page_field'
 }
 
 interface InlineRun {
@@ -66,10 +67,68 @@ function parseInlineFountain(raw: string): InlineRun[] {
   return runs.filter(r => r.text.length > 0);
 }
 
+const TITLE_PAGE_KEY = /^[A-Za-z][A-Za-z0-9 ]*:\s*(.*)$/;
+
+/**
+ * Strips a leading Fountain title page — a run of `Key: value` pairs
+ * (Title, Credit, Author, Draft date, etc.), optionally with indented
+ * continuation lines, ending at a blank line and an optional '===' page
+ * break. Title pages are metadata, not screenplay body content, so they
+ * must not be imported as action paragraphs.
+ */
+interface TitleField { key: string; value: string; }
+interface TitlePageResult { fields: TitleField[]; rest: string[]; }
+
+function stripTitlePage(lines: string[]): TitlePageResult {
+  let i = 0;
+  if (i >= lines.length || !TITLE_PAGE_KEY.test(lines[i])) return { fields: [], rest: lines };
+
+  const fields: TitleField[] = [];
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim() === '') {
+      // A blank line only ends the title page if nothing after it looks
+      // like another key/value pair — title pages may have blank lines
+      // between entries.
+      const rest = lines.slice(i + 1).find(l => l.trim() !== '');
+      if (rest && TITLE_PAGE_KEY.test(rest)) { i++; continue; }
+      break;
+    }
+    const kv = line.match(TITLE_PAGE_KEY);
+    if (kv) {
+      fields.push({ key: line.slice(0, line.indexOf(':')).trim(), value: kv[1].trim() });
+      i++;
+      continue;
+    }
+    if (/^[ \t]/.test(line) && fields.length > 0) {
+      // Indented continuation line — append to the previous field's value.
+      fields[fields.length - 1].value =
+        (fields[fields.length - 1].value + ' ' + line.trim()).trim();
+      i++;
+      continue;
+    }
+    break;
+  }
+
+  while (i < lines.length && lines[i].trim() === '') i++;
+  if (i < lines.length && lines[i].trim() === '===') {
+    i++;
+    while (i < lines.length && lines[i].trim() === '') i++;
+  }
+
+  return { fields, rest: lines.slice(i) };
+}
+
 export function parseFountain(fountain: string): ParsedLine[] {
   const rawLines = fountain.split('\n');
-  const lines = rawLines.map(l => l.trimEnd());
-  const parsed: ParsedLine[] = [];
+  const { fields, rest } = stripTitlePage(rawLines.map(l => l.trimEnd()));
+  const lines = rest;
+  const parsed: ParsedLine[] = fields.map(f => ({
+    element: 'title_page_field' as const,
+    text: f.value,
+    key: f.key,
+  }));
 
   let i = 0;
   while (i < lines.length) {
@@ -135,6 +194,13 @@ export function parseFountain(fountain: string): ParsedLine[] {
         const dLine = lines[i];
         if (dLine.trim().startsWith('(') && dLine.trim().endsWith(')')) {
           parsed.push({ element: 'parenthetical', text: dLine.trim() });
+        } else if (dLine.startsWith('~')) {
+          let lyric = dLine.slice(1).trim();
+          if (lyric.endsWith('~')) lyric = lyric.slice(0, -1).trim();
+          parsed.push({ element: 'lyrics', text: lyric });
+        } else if (dLine.trim().startsWith('[[') && dLine.trim().endsWith(']]')) {
+          const inner = dLine.trim();
+          parsed.push({ element: 'note', text: inner.slice(2, -2).trim() });
         } else {
           parsed.push({ element: 'dialogue', text: dLine.trim() });
         }
@@ -160,7 +226,10 @@ export function fountainToPMDoc(parsed: ParsedLine[]): PMNode {
         const marks = r.marks.map(m => (screenplaySchema.marks as any)[m].create());
         return screenplaySchema.text(r.text, marks);
       });
-      return nodeType.create({ element: p.element }, inline.length ? inline : []);
+      const attrs = p.element === 'title_page_field'
+        ? { element: p.element, key: p.key ?? 'Title' }
+        : { element: p.element };
+      return nodeType.create(attrs, inline.length ? inline : []);
     });
 
   if (nodes.length === 0) {

@@ -41,6 +41,8 @@
         <app-menu-dropdown label="File">
           <button (click)="saveSnapshot()" [disabled]="!activeBranch || !canEdit">Save draft</button>
           <div class="menu-divider"></div>
+          <button (click)="insertTitlePage()" [disabled]="!canEdit">Insert title page…</button>
+          <div class="menu-divider"></div>
           <button (click)="importFountain()" [disabled]="!canEdit">Import Fountain…</button>
           <button (click)="exportFountain()">Export as Fountain…</button>
           <button (click)="exportPDF()" disabled>Export as PDF…</button>

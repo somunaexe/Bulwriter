@@ -95,6 +95,7 @@ function handleShiftTab(
     dual_dialogue: 'lyrics',
     sequence_heading: 'dual_dialogue',
     note: 'sequence_heading',
+    title_page_field: 'action',
   };
   return setElement(state, dispatch, reverse[el]);
 }

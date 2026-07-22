@@ -11,7 +11,7 @@ import { baseKeymap } from 'prosemirror-commands';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { gapCursor } from 'prosemirror-gapcursor';
 
-import { screenplaySchema } from '../editor/screenplay-schema';
+import { screenplaySchema, ScreenplayElement } from '../editor/screenplay-schema';
 import { screenplayKeymap, autoUppercasePlugin } from '../editor/screenplay-keymap';
 import { elementIndicatorPlugin } from '../editor/element-indicator.plugin';
 import { environment } from '../../environments/environment';
@@ -31,7 +31,8 @@ export class SyncService implements OnDestroy {
   startSession(
     scriptId: string,
     mountEl: HTMLElement,
-    // indicatorEl?: HTMLElement
+    indicatorEl?: HTMLElement | null,
+    onElementChange?: (element: ScreenplayElement | null) => void,
   ): CollabSession {
     this.endSession();
 
@@ -50,9 +51,9 @@ export class SyncService implements OnDestroy {
       gapCursor(),
     ];
 
-    // if (indicatorEl) {
-    //   plugins.push(elementIndicatorPlugin(indicatorEl));
-    // }
+    if (indicatorEl || onElementChange) {
+      plugins.push(elementIndicatorPlugin(indicatorEl ?? null, onElementChange));
+    }
 
     const state = EditorState.create({
       schema: screenplaySchema,

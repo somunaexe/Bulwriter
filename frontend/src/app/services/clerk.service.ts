@@ -1,10 +1,17 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
+export interface ClerkUserInfo {
+  name: string;
+  email: string | null;
+  imageUrl: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ClerkService {
   isSignedIn$ = new BehaviorSubject<boolean>(false);
   userId$ = new BehaviorSubject<string | null>(null);
+  user$ = new BehaviorSubject<ClerkUserInfo | null>(null);
   ready$ = new BehaviorSubject<boolean>(false);
 
   private clerk: any = null;
@@ -27,6 +34,16 @@ export class ClerkService {
     const user = this.clerk?.user;
     this.isSignedIn$.next(!!user);
     this.userId$.next(user?.id ?? null);
+    this.user$.next(user ? {
+      name: user.fullName || user.firstName || user.primaryEmailAddress?.emailAddress || 'Account',
+      email: user.primaryEmailAddress?.emailAddress ?? null,
+      imageUrl: user.imageUrl ?? null,
+    } : null);
+  }
+
+  /** Opens Clerk's own hosted account-management modal (profile, security, etc). */
+  openUserProfile(): void {
+    this.clerk?.openUserProfile();
   }
 
   async getToken(): Promise<string | null> {
@@ -54,7 +71,7 @@ export class ClerkService {
     this.clerk?.openSignUp({});
   }
 
-  signOut(): void {
-    this.clerk?.signOut();
+  async signOut(): Promise<void> {
+    await this.clerk?.signOut();
   }
 }

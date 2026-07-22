@@ -43,9 +43,32 @@ function serializeInline(node: PMNode): string {
 export function toFountain(doc: PMNode): string {
   const lines: string[] = [];
 
-  // doc.forEach iterates over the document's direct children —
-  // each one is a block (scene heading, action, dialogue, etc.)
-  doc.forEach(node => {
+  // Split off a leading run of title_page_field nodes (Title/Credit/
+  // Author/etc.) — Fountain title pages are 'Key: value' lines at the
+  // very top of the file, followed by a blank line and '==='.
+  const children: PMNode[] = [];
+  doc.forEach(n => children.push(n));
+
+  let bodyStart = 0;
+  while (bodyStart < children.length && children[bodyStart].attrs['element'] === 'title_page_field') {
+    bodyStart++;
+  }
+  const titleNodes = children.slice(0, bodyStart);
+  const bodyNodes = children.slice(bodyStart);
+
+  const titleFields = titleNodes
+    .map(n => ({ key: String(n.attrs['key'] || 'Title'), value: serializeInline(n) }))
+    .filter(f => f.value.trim() !== '');
+
+  if (titleFields.length > 0) {
+    for (const f of titleFields) lines.push(`${f.key}: ${f.value}`);
+    lines.push('');
+    lines.push('===');
+    lines.push('');
+  }
+
+  // Walk the remaining top-level blocks (scene heading, action, dialogue, etc.)
+  bodyNodes.forEach(node => {
     const element = node.attrs['element'] as ScreenplayElement | undefined;
     const plainText = node.textContent; // used for structural checks (blank/paren detection)
 
@@ -57,13 +80,16 @@ export function toFountain(doc: PMNode): string {
     const text = serializeInline(node); // marked-up text actually written out
 
     switch (element) {
-      case 'scene_heading':
-        // Fountain recognises INT./EXT. automatically — our text
-        // already includes that since auto-uppercase doesn't add it,
-        // the writer types it. We just ensure a blank line before.
+      case 'scene_heading': {
+        // Fountain recognises INT./EXT./EST./I-E automatically. Anything
+        // else (a forced heading the writer typed via a leading '.') needs
+        // that '.' re-added on export — otherwise re-importing the file
+        // won't recognise it as a scene heading any more.
         lines.push('');
-        lines.push(text);
+        const looksLikeSlug = /^(INT|EXT|INT\.\/EXT|I\/E|EST)[\.\s]/i.test(plainText);
+        lines.push(looksLikeSlug ? text : `.${text}`);
         break;
+      }
 
       case 'action':
         lines.push(text);
