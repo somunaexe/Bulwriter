@@ -174,7 +174,10 @@ export function parseFountain(fountain: string): ParsedLine[] {
     }
 
     if (line.trim().startsWith('(') && line.trim().endsWith(')')) {
-      parsed.push({ element: 'parenthetical', text: line.trim() });
+      // Parentheses are chrome (added back on display/export), not
+      // content — store just the inner text.
+      const trimmed = line.trim();
+      parsed.push({ element: 'parenthetical', text: trimmed.slice(1, -1).trim() });
       i++; continue;
     }
 
@@ -193,7 +196,8 @@ export function parseFountain(fountain: string): ParsedLine[] {
       while (i < lines.length && lines[i].trim() !== '') {
         const dLine = lines[i];
         if (dLine.trim().startsWith('(') && dLine.trim().endsWith(')')) {
-          parsed.push({ element: 'parenthetical', text: dLine.trim() });
+          const trimmed = dLine.trim();
+          parsed.push({ element: 'parenthetical', text: trimmed.slice(1, -1).trim() });
         } else if (dLine.startsWith('~')) {
           let lyric = dLine.slice(1).trim();
           if (lyric.endsWith('~')) lyric = lyric.slice(0, -1).trim();

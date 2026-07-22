@@ -44,19 +44,18 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   private _mountRef!: ElementRef<HTMLDivElement>;
 
-  @ViewChild('elementIndicator') indicatorRef?: ElementRef<HTMLDivElement>;
-
   @ViewChild('prosemirrorMount')
   set mountRef(el: ElementRef<HTMLDivElement>) {
     if (el && !this._mountRef) {
       this._mountRef = el;
       // Start the session the moment the element appears in the DOM.
-      // The indicator element + callback keep the floating label and the
-      // toolbar's highlighted button in sync with wherever the cursor is.
+      // The callback keeps the toolbar's highlighted button in sync with
+      // wherever the cursor is — the element type is already visible
+      // there, so there's no separate floating indicator to maintain too.
       this.sync.startSession(
         this.scriptId,
         el.nativeElement,
-        this.indicatorRef?.nativeElement,
+        null,
         (element) => { this.activeElement = element; },
       );
       // Apply read-only if role already loaded by this point
@@ -92,7 +91,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   elementLabels = ELEMENT_LABELS;
   activeElement: ScreenplayElement | null = null;
 
-  showIndicator = true;
   showToolbar = true;
   sidebarOpen = false; // off-canvas on mobile; CSS keeps the sidebar always visible on wider screens
 
@@ -351,10 +349,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   // ── View menu ────────────────────────────────────────────────────
-
-  toggleIndicator(): void {
-    this.showIndicator = !this.showIndicator;
-  }
 
   toggleToolbar(): void {
     this.showToolbar = !this.showToolbar;

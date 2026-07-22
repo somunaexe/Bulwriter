@@ -203,9 +203,8 @@ html, body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: .75rem 1.5rem;
+  padding: .6rem 1rem;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
   flex-shrink: 0;
 }
 
@@ -294,7 +293,7 @@ html, body {
   overflow-y: auto;
   display: flex;
   justify-content: center;
-  padding: 3rem 2rem;
+  padding: .5rem 2rem 3rem; /* small top gap — the page sits close under .page-chrome */
   width: 100%;
 }
 
@@ -313,6 +312,7 @@ html, body {
   background: var(--page-bg);
   color: var(--page-text);
   white-space: pre-wrap;
+  overflow-wrap: break-word; /* a long run of characters with no spaces must wrap, not force the page wider */
 }
 
 /* Screenplay element colours */
@@ -354,6 +354,11 @@ html, body {
   margin-left: 16ch;
   max-width: 26ch;
 }
+/* Parentheses are chrome, not content the writer types — stored text
+   is just the inner words (see fountain-import.ts), matching how
+   Final Draft/WriterDuet auto-wrap this element. */
+.pm-mount .ProseMirror [data-element="parenthetical"]::before { content: "("; }
+.pm-mount .ProseMirror [data-element="parenthetical"]::after  { content: ")"; }
 
 .pm-mount .ProseMirror [data-element="dialogue"] {
   margin-left: 10ch;
@@ -468,34 +473,18 @@ html, body {
 }
 
 /*
- * File/Edit/Format/View etc. — width-matched and centered on the page
- * itself (like WriterDuet), not stretched full-width like generic app
- * chrome, so it visually reads as "this menu belongs to this script."
- * Paper-colored to match the page it sits on; the --text/--muted/etc.
- * overrides here cascade (via CSS custom property inheritance) into
- * app-menu-dropdown's encapsulated styles without needing to fight
- * Angular's view encapsulation, since custom properties inherit
- * through the DOM regardless of component style scoping.
+ * File/Edit/Format/View etc. — sits inside .page-chrome (editor
+ * component styles), which owns the width-matching, paper background,
+ * and light-theme variable overrides now. This is just the row layout.
  */
 .menu-bar {
   display: flex;
   align-items: center;
   gap: 2px;
   flex-wrap: wrap;
-
-  width: 8.5in;
-  max-width: 100%;
-  margin: 1.25rem auto 0;
   padding: .4rem .6rem;
-  border: 1px solid rgba(0, 0, 0, .15);
-  border-radius: 10px 10px 0 0;
-  background: var(--page-bg);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-
-  --text: var(--page-text);
-  --muted: #6f6d64;
-  --border: rgba(0, 0, 0, .15);
-  --surface-2: #ffffff;
 }
 
 .role-badge {
@@ -577,10 +566,11 @@ html, body {
   .snapshot-bar { width: 100%; }
   .snapshot-input { flex: 1; width: auto; min-width: 0; }
 
-  .menu-bar {
-    margin: .75rem auto 0;
-    padding: .3rem .4rem;
-  }
+  /* .page-chrome's own width/margin responsive tweak lives in
+     editor.component.scss — component-scoped rules there get an
+     [_ngcontent] attribute that out-specifies a plain global class
+     selector here, so an override placed in *this* stylesheet
+     wouldn't reliably win against the component's own base rule. */
 
   /* The page itself: keep the white "paper" look and Courier font, but
      industry margins only make sense on a real printable page — shrink

@@ -38,6 +38,11 @@
 
     <main class="editor-main">
 
+      <!-- Everything from the menu bar down to the format toolbar is one
+           attached "sheet" the same width as the page below it, rather
+           than generic full-width app chrome. -->
+      <div class="page-chrome">
+
       <!-- Menu bar -->
       <nav class="menu-bar">
         <app-menu-dropdown label="File">
@@ -64,9 +69,6 @@
         </app-menu-dropdown>
 
         <app-menu-dropdown label="View">
-          <button (click)="toggleIndicator()">
-            {{ showIndicator ? 'Hide' : 'Show' }} element indicator
-          </button>
           <button (click)="toggleToolbar()">
             {{ showToolbar ? 'Hide' : 'Show' }} format toolbar
           </button>
@@ -148,12 +150,11 @@
         
         <span class="kbd-hint">Tab to cycle &nbsp;·&nbsp; ⌘1–0 to set</span>
       </div>
-      <div class="element-indicator-wrap">
-        <div #elementIndicator class="element-indicator"></div>
-      </div>
+
+      </div> <!-- /.page-chrome -->
 
       <div #prosemirrorMount class="pm-mount">
-        
+
       </div>
     </main>
 
