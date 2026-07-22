@@ -155,6 +155,8 @@
       </div>
     </main>
 
+    <div class="diff-backdrop" *ngIf="showDiff" (click)="showDiff = false"></div>
+
     <app-diff-viewer
       *ngIf="showDiff"
       [fromId]="diffFromId"

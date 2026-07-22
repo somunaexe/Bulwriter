@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VersionControlService, DiffLine } from '../../services/version-control.service';
 
@@ -18,6 +18,11 @@ export class DiffViewerComponent implements OnChanges {
   loading = false;
 
   constructor(private vc: VersionControlService) {}
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.close.emit();
+  }
 
   ngOnChanges(): void {
     if (this.fromId && this.toId) {

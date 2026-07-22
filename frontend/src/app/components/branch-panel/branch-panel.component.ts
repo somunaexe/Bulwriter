@@ -47,8 +47,22 @@ export class BranchPanelComponent implements OnInit {
       this.newBranchName = '';
       this.selectBranch(b);
     });
-  }  compare(): void {
-    if (this.selectedA && this.selectedB) {
+  }
+
+  // A snapshot can't be compared to itself — picking it on one side
+  // clears it from the other if it's already selected there.
+  selectA(id: string): void {
+    this.selectedA = id;
+    if (this.selectedB === id) this.selectedB = '';
+  }
+
+  selectB(id: string): void {
+    this.selectedB = id;
+    if (this.selectedA === id) this.selectedA = '';
+  }
+
+  compare(): void {
+    if (this.selectedA && this.selectedB && this.selectedA !== this.selectedB) {
       this.compareDrafts.emit({ from: this.selectedA, to: this.selectedB });
     }
   }

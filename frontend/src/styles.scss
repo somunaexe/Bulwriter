@@ -437,6 +437,13 @@ html, body {
 .ProseMirror .collaboration-cursor__label { background: #ff6b6b; color: #fff; font-size: 11px; border-radius: 3px; padding: 0 4px; }
 
 /* ── Diff drawer ── */
+.diff-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .4);
+  z-index: 90; /* below .diff-drawer (100), above everything else */
+}
+
 .diff-drawer {
   position: fixed;
   right: 0;
@@ -459,6 +466,16 @@ html, body {
   border-bottom: 1px solid var(--border);
   font-weight: 500;
   font-size: 14px;
+}
+
+.diff-header .btn-icon {
+  font-size: 18px;
+  line-height: 1;
+  padding: .35rem .6rem;
+  border-radius: 6px;
+}
+.diff-header .btn-icon:hover {
+  background: rgba(255, 255, 255, .08);
 }
 
 .diff-body { flex: 1; overflow-y: auto; font-family: var(--font-mono); font-size: 12.5px; }
