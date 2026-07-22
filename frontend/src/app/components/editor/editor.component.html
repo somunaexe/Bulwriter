@@ -112,16 +112,18 @@
         <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
         <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
 
-        <div class="commit-bar" *ngIf="canEdit">
+        <div class="header-spacer"></div>
+
+        <div class="snapshot-bar" *ngIf="canEdit" title="Saves the current content as a new snapshot on this branch — not a regular autosave">
           <input [(ngModel)]="commitMessage"
-                placeholder="Describe this draft…"
-                class="commit-input"
+                placeholder="Describe this snapshot…"
+                class="snapshot-input"
                 (keydown.enter)="saveSnapshot()"
           />
-          <button class="btn-save"
+          <button class="btn-snapshot"
                   (click)="saveSnapshot()"
                   [disabled]="!activeBranch || !commitMessage.trim()">
-            Save draft
+            <span class="snapshot-icon">⎇</span>New snapshot
           </button>
         </div>
 
