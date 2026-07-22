@@ -11,7 +11,9 @@
   </div>
 
   <!-- Authorized -->
-  <div *ngIf="roleLoaded && roles.includes(myRole)" class="editor-layout">
+  <div *ngIf="roleLoaded && roles.includes(myRole)" class="editor-layout" [class.sidebar-open]="sidebarOpen">
+    <div class="sidebar-backdrop" *ngIf="sidebarOpen" (click)="sidebarOpen = false"></div>
+
     <aside class="sidebar">
       <!-- Auto-save status -->
       <div class="autosave-status" *ngIf="autoSaveState$ | async as state">
@@ -109,6 +111,8 @@
       </nav>
 
       <header class="editor-header">
+        <button class="sidebar-toggle" (click)="sidebarOpen = !sidebarOpen" aria-label="Toggle drafts panel">☰</button>
+
         <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
         <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
 

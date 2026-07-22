@@ -94,6 +94,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   showIndicator = true;
   showToolbar = true;
+  sidebarOpen = false; // off-canvas on mobile; CSS keeps the sidebar always visible on wider screens
 
   roles: string[] = ['owner', 'editor', 'viewer']
   myRole = '';
@@ -167,6 +168,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   onBranchSelected(branch: Branch): void {
+    this.sidebarOpen = false; // auto-close the off-canvas drafts panel on mobile
     const previousBranch = this.activeBranch;
 
     const switchTo = () => {

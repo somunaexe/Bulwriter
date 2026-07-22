@@ -4,7 +4,8 @@
   align-items: center;
   gap: 20px;
 
-  padding: 10px 24px;
+  height: var(--navbar-h);
+  padding: 0 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   color: var(--text);
