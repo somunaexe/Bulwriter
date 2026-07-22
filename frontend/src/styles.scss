@@ -22,6 +22,12 @@
   --page-bg:   #f5f3ee;
   --page-text: #1b1a17;
 
+  /* The page and the menu-bar sheet above it share this width — it's
+     the menu bar's own natural content width (10 items, ~6.57in
+     measured) plus a little breathing room, not the literal 8.5in
+     print page size, so the two always line up visually. */
+  --script-width: 6.75in;
+
   --navbar-h: 56px;
 }
 
@@ -203,8 +209,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: .6rem 1rem;
+  padding: .75rem 1.5rem;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
   flex-shrink: 0;
 }
 
@@ -298,11 +305,11 @@ html, body {
 }
 
 .pm-mount .ProseMirror {
-  width: 8.5in;
+  width: var(--script-width);
   max-width: 100%;
   min-height: 11in;
   margin: 0 auto;
-  padding: 1in 1in 1in 1.5in; /* top right bottom left — 1in all round, 1.5in left for binding */
+  padding: .75in .75in .75in 1in; /* top right bottom left — scaled down from the literal 1in/1.5in print margins to match --script-width */
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .15), 0 12px 34px rgba(0, 0, 0, .4);
 
   font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
@@ -468,7 +475,6 @@ html, body {
 .ProseMirror-focused { outline: none; }
 
 .pm-mount .ProseMirror {
-  width: 100%;
   caret-color: var(--accent);
 }
 
@@ -483,7 +489,6 @@ html, body {
   gap: 2px;
   flex-wrap: wrap;
   padding: .4rem .6rem;
-  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 

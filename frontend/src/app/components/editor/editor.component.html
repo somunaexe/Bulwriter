@@ -38,80 +38,6 @@
 
     <main class="editor-main">
 
-      <!-- Everything from the menu bar down to the format toolbar is one
-           attached "sheet" the same width as the page below it, rather
-           than generic full-width app chrome. -->
-      <div class="page-chrome">
-
-      <!-- Menu bar -->
-      <nav class="menu-bar">
-        <app-menu-dropdown label="File">
-          <button (click)="saveSnapshot()" [disabled]="!activeBranch || !canEdit">Save draft</button>
-          <div class="menu-divider"></div>
-          <button (click)="insertTitlePage()" [disabled]="!canEdit">Insert title page…</button>
-          <div class="menu-divider"></div>
-          <button (click)="importFountain()" [disabled]="!canEdit">Import Fountain…</button>
-          <button (click)="exportFountain()">Export as Fountain…</button>
-          <button (click)="exportPDF()" disabled>Export as PDF…</button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Edit">
-          <button (click)="undo()">Undo</button>
-          <button (click)="redo()">Redo</button>
-          <div class="menu-divider"></div>
-          <button (click)="openFindReplace()" disabled>Find &amp; Replace…</button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Format">
-          <button *ngFor="let el of elements" (click)="setElement(el)">
-            {{ elementLabels[el] }}
-          </button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="View">
-          <button (click)="toggleToolbar()">
-            {{ showToolbar ? 'Hide' : 'Show' }} format toolbar
-          </button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Share">
-          <button (click)="goToCollaborators()" *ngIf="isOwner">Manage collaborators…</button>
-          <button disabled *ngIf="!isOwner">View only access</button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Revisions">
-          <button (click)="scrollToHistory()">View history</button>
-          <button (click)="createBranchPrompt()">New branch…</button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Tools">
-          <button (click)="toggleAutoSave()">
-            {{ (autoSaveState$ | async)?.enabled ? 'Disable' : 'Enable' }} auto-save
-          </button>
-          <div class="menu-divider"></div>
-          <button (click)="setAutoSaveInterval(1)">Auto-save every 1 min</button>
-          <button (click)="setAutoSaveInterval(2)">Auto-save every 2 mins</button>
-          <button (click)="setAutoSaveInterval(5)">Auto-save every 5 mins</button>
-          <button (click)="setAutoSaveInterval(10)">Auto-save every 10 mins</button>
-          
-          <button disabled>Word count</button>
-          <button disabled>Script statistics</button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Reports">
-          <button disabled>Scene list</button>
-          <button disabled>Character list</button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Production">
-          <button disabled>Scene breakdown</button>
-        </app-menu-dropdown>
-
-        <app-menu-dropdown label="Help">
-          <button (click)="openShortcuts()">Keyboard shortcuts</button>
-        </app-menu-dropdown>
-      </nav>
-
       <header class="editor-header">
         <button class="sidebar-toggle" (click)="sidebarOpen = !sidebarOpen" aria-label="Toggle drafts panel">☰</button>
 
@@ -136,7 +62,7 @@
         <!-- Viewers see a read-only badge instead -->
         <span class="role-badge" *ngIf="!canEdit">View only</span>
       </header>
-    
+
       <div class="element-toolbar">
         <div class="el-btns">
           <button *ngFor="let el of elements"
@@ -147,11 +73,82 @@
           {{ elementLabels[el] }}
         </button>
         </div>
-        
+
         <span class="kbd-hint">Tab to cycle &nbsp;·&nbsp; ⌘1–0 to set</span>
       </div>
 
-      </div> <!-- /.page-chrome -->
+      <!-- Only the menu bar itself is attached to the page below it —
+           same width, sitting directly on top of it, rather than
+           stretching full-width like the header/toolbar above. -->
+      <div class="page-chrome">
+        <nav class="menu-bar">
+          <app-menu-dropdown label="File">
+            <button (click)="saveSnapshot()" [disabled]="!activeBranch || !canEdit">Save draft</button>
+            <div class="menu-divider"></div>
+            <button (click)="insertTitlePage()" [disabled]="!canEdit">Insert title page…</button>
+            <div class="menu-divider"></div>
+            <button (click)="importFountain()" [disabled]="!canEdit">Import Fountain…</button>
+            <button (click)="exportFountain()">Export as Fountain…</button>
+            <button (click)="exportPDF()" disabled>Export as PDF…</button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Edit">
+            <button (click)="undo()">Undo</button>
+            <button (click)="redo()">Redo</button>
+            <div class="menu-divider"></div>
+            <button (click)="openFindReplace()" disabled>Find &amp; Replace…</button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Format">
+            <button *ngFor="let el of elements" (click)="setElement(el)">
+              {{ elementLabels[el] }}
+            </button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="View">
+            <button (click)="toggleToolbar()">
+              {{ showToolbar ? 'Hide' : 'Show' }} format toolbar
+            </button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Share">
+            <button (click)="goToCollaborators()" *ngIf="isOwner">Manage collaborators…</button>
+            <button disabled *ngIf="!isOwner">View only access</button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Revisions">
+            <button (click)="scrollToHistory()">View history</button>
+            <button (click)="createBranchPrompt()">New branch…</button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Tools">
+            <button (click)="toggleAutoSave()">
+              {{ (autoSaveState$ | async)?.enabled ? 'Disable' : 'Enable' }} auto-save
+            </button>
+            <div class="menu-divider"></div>
+            <button (click)="setAutoSaveInterval(1)">Auto-save every 1 min</button>
+            <button (click)="setAutoSaveInterval(2)">Auto-save every 2 mins</button>
+            <button (click)="setAutoSaveInterval(5)">Auto-save every 5 mins</button>
+            <button (click)="setAutoSaveInterval(10)">Auto-save every 10 mins</button>
+
+            <button disabled>Word count</button>
+            <button disabled>Script statistics</button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Reports">
+            <button disabled>Scene list</button>
+            <button disabled>Character list</button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Production">
+            <button disabled>Scene breakdown</button>
+          </app-menu-dropdown>
+
+          <app-menu-dropdown label="Help">
+            <button (click)="openShortcuts()">Keyboard shortcuts</button>
+          </app-menu-dropdown>
+        </nav>
+      </div>
 
       <div #prosemirrorMount class="pm-mount">
 
