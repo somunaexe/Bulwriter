@@ -30,13 +30,13 @@ export class BranchPanelComponent implements OnInit {
   }
 
   loadBranches(): void {
-    this.vc.listBranches(this.projectId, this.scriptId).subscribe(b => (this.branches = b));
+    this.vc.listBranches(this.projectId, this.scriptId).subscribe(b => (this.branches = b ?? []));
   }
 
   selectBranch(branch: Branch): void {
     this.activeBranch = branch;
     this.branchSelected.emit(branch);
-    this.vc.history(this.projectId, this.scriptId, branch.id).subscribe(h => (this.history = h));
+    this.vc.history(this.projectId, this.scriptId, branch.id).subscribe(h => (this.history = h ?? []));
   }
 
   createBranch(): void {

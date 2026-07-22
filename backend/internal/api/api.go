@@ -257,6 +257,9 @@ func (r *router) listBranches(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if branches == nil {
+		branches = []*snapshot.Branch{}
+	}
 	writeJSON(w, http.StatusOK, branches)
 }
 
