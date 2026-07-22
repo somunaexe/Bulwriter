@@ -2,6 +2,39 @@ import { Node as PMNode } from 'prosemirror-model';
 import { ScreenplayElement } from './screenplay-schema';
 
 /**
+ * Escapes literal `*` / `_` in plain text so they survive a round trip
+ * without being mistaken for Fountain emphasis markers on re-import.
+ */
+function escapeFountainInline(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/\*/g, '\\*').replace(/_/g, '\\_');
+}
+
+/**
+ * Serializes a block node's inline content (text + strong/em/underline
+ * marks) into Fountain's emphasis syntax: *italic*, **bold**,
+ * ***bold italic***, _underline_.
+ */
+function serializeInline(node: PMNode): string {
+  let out = '';
+  node.forEach(child => {
+    let seg = escapeFountainInline(child.text ?? '');
+    const markNames = child.marks.map(m => m.type.name);
+    const hasStrong = markNames.includes('strong');
+    const hasEm = markNames.includes('em');
+    const hasUnderline = markNames.includes('underline');
+
+    if (hasStrong && hasEm) seg = `***${seg}***`;
+    else if (hasStrong) seg = `**${seg}**`;
+    else if (hasEm) seg = `*${seg}*`;
+
+    if (hasUnderline) seg = `_${seg}_`;
+
+    out += seg;
+  });
+  return out;
+}
+
+/**
  * Converts a ProseMirror screenplay document into Fountain-format text.
  *
  * Walks each top-level block node, reads its `element` attribute,
@@ -14,12 +47,14 @@ export function toFountain(doc: PMNode): string {
   // each one is a block (scene heading, action, dialogue, etc.)
   doc.forEach(node => {
     const element = node.attrs['element'] as ScreenplayElement | undefined;
-    const text = node.textContent; // the plain text inside this block
+    const plainText = node.textContent; // used for structural checks (blank/paren detection)
 
-    if (!element || text.trim() === '') {
+    if (!element || plainText.trim() === '') {
       lines.push(''); // preserve blank lines for spacing
       return;
     }
+
+    const text = serializeInline(node); // marked-up text actually written out
 
     switch (element) {
       case 'scene_heading':
@@ -44,7 +79,7 @@ export function toFountain(doc: PMNode): string {
       case 'parenthetical':
         // Fountain requires parentheses — our schema doesn't store them,
         // so we add them if the writer didn't type them
-        lines.push(text.startsWith('(') ? text : `(${text})`);
+        lines.push(plainText.startsWith('(') ? text : `(${text})`);
         break;
 
       case 'dialogue':
@@ -59,6 +94,30 @@ export function toFountain(doc: PMNode): string {
         // The '>' prefix forces Fountain to treat it as a transition
         // even if it doesn't end in "TO:".
         lines.push(`> ${text}`);
+        break;
+
+      case 'shot':
+      case 'sequence_heading':
+        // Treated like a heading — its own line, set off by blank lines.
+        lines.push('');
+        lines.push(text);
+        break;
+
+      case 'lyrics':
+        // Fountain's lyric syntax: each line prefixed with '~'.
+        lines.push(`~${text}`);
+        break;
+
+      case 'dual_dialogue':
+        // Fountain marks a dual-dialogue cue with a trailing '^' on the
+        // second character's line.
+        lines.push('');
+        lines.push(`${text} ^`);
+        break;
+
+      case 'note':
+        // Fountain's boneyard/note syntax.
+        lines.push(`[[${text}]]`);
         break;
     }
   });

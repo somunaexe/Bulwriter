@@ -160,13 +160,39 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   onBranchSelected(branch: Branch): void {
-    this.activeBranch = branch;
-    this.saveSnapshot();
-    
-    // If there's no tip snapshot, nothing to load
-    if (!branch.tipId) return;
+    const previousBranch = this.activeBranch;
 
-    this.applySnapshotContent(branch)
+    const switchTo = () => {
+      this.activeBranch = branch;
+      // If there's no tip snapshot, nothing to load
+      if (!branch.tipId) return;
+      this.applySnapshotContent(branch);
+    };
+
+    // Auto-save the work on the branch we're leaving — to that branch,
+    // not the one we're switching to — before loading the new content.
+    if (previousBranch && previousBranch.id !== branch.id && this.canEdit) {
+      const content = this.sync.getContent();
+      this.vc
+        .commit(
+          this.projectId,
+          this.scriptId,
+          previousBranch.id,
+          content,
+          `Auto-save before switching to "${branch.name}"`,
+        )
+        .subscribe({
+          next: () => switchTo(),
+          // Don't let a failed auto-save block the branch switch —
+          // the user's local content is still in the editor either way.
+          error: (err) => {
+            console.error('Auto-save before branch switch failed:', err);
+            switchTo();
+          },
+        });
+    } else {
+      switchTo();
+    }
   }
 
   toggleAutoSave(): void {

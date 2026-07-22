@@ -178,6 +178,72 @@ html, body {
 .pm-mount .ProseMirror p       { margin-bottom: .25rem; }
 .pm-mount .ProseMirror h1      { color: var(--accent); font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; margin: 1.5rem 0 .25rem; }
 
+/*
+ * Industry-standard screenplay format, translated from the classic
+ * 12pt-Courier/10-characters-per-inch page layout into `ch` units
+ * (1ch == the width of one monospace character, so these ratios hold
+ * regardless of the container's actual pixel width):
+ *   action/scene heading — flush left, full 60-character measure
+ *   character cue        — 22ch indent, UPPERCASE
+ *   parenthetical         — 16ch indent, narrower measure
+ *   dialogue              — 10ch indent, 35ch measure
+ *   transition            — flush right, UPPERCASE
+ */
+.pm-mount .ProseMirror [data-element] { max-width: 60ch; }
+
+.pm-mount .ProseMirror [data-element="scene_heading"],
+.pm-mount .ProseMirror [data-element="shot"],
+.pm-mount .ProseMirror [data-element="sequence_heading"] {
+  margin-top: 1.5rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.pm-mount .ProseMirror [data-element="action"] {
+  text-align: left;
+}
+
+.pm-mount .ProseMirror [data-element="character"] {
+  margin-left: 22ch;
+  max-width: 38ch;
+  text-transform: uppercase;
+}
+
+.pm-mount .ProseMirror [data-element="parenthetical"] {
+  margin-left: 16ch;
+  max-width: 26ch;
+}
+
+.pm-mount .ProseMirror [data-element="dialogue"] {
+  margin-left: 10ch;
+  max-width: 35ch;
+}
+
+.pm-mount .ProseMirror [data-element="dual_dialogue"] {
+  margin-left: 22ch;
+  max-width: 38ch;
+  text-transform: uppercase;
+}
+
+.pm-mount .ProseMirror [data-element="transition"] {
+  margin-left: auto;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.pm-mount .ProseMirror [data-element="lyrics"] {
+  text-align: center;
+  font-style: italic;
+}
+
+.pm-mount .ProseMirror [data-element="note"] {
+  margin-left: 4ch;
+  max-width: 50ch;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 0.92em;
+}
+
 /* Cursor colours for collaborators */
 .ProseMirror .collaboration-cursor__caret { border-left: 2px solid #ff6b6b; }
 .ProseMirror .collaboration-cursor__label { background: #ff6b6b; color: #fff; font-size: 11px; border-radius: 3px; padding: 0 4px; }
