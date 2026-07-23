@@ -215,6 +215,11 @@ html, body {
 }
 
 .branch-pill {
+  /* The sidebar (with the active branch highlighted in the Drafts
+     list) is always visible on wider screens, so this would just be a
+     redundant second copy of the same info — shown only below 768px,
+     where the sidebar is an off-canvas drawer instead. */
+  display: none;
   font-size: 12px;
   font-weight: 500;
   padding: .25rem .7rem;
@@ -303,6 +308,14 @@ html, body {
 .pm-mount {
   flex: 1;
   overflow-y: auto;
+  /* .pm-mount scrolls (the page is usually taller than the viewport)
+     but .page-chrome doesn't (overflow: hidden) — without this, the
+     scrollbar eats space from only the right side of .pm-mount's
+     content box, shifting its centered child a few px left of
+     .page-chrome's, which has no scrollbar to compensate for. Reserving
+     a stable gutter on both sides keeps the centering math identical
+     whether or not a scrollbar is actually showing. */
+  scrollbar-gutter: stable both-edges;
   display: flex;
   justify-content: center;
   /* No horizontal padding here — .page-chrome has none either, so both
@@ -608,6 +621,7 @@ html, body {
     row-gap: .6rem;
     padding: .6rem .85rem;
   }
+  .branch-pill { display: inline-block; }
 
   /* .page-chrome's own width/margin responsive tweak lives in
      editor.component.scss — component-scoped rules there get an
