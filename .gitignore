@@ -35,3 +35,4 @@ frontend/.angular
 
 SP*
 *.patch
+*.diff
