@@ -42,14 +42,14 @@
 
     <main class="editor-main">
 
+      <!-- Only useful on mobile: the sidebar (always visible on wider
+           screens) already shows the active branch and, via the navbar,
+           the user's role — this would just be an empty bar otherwise. -->
       <header class="editor-header">
         <button class="sidebar-toggle" (click)="sidebarOpen = !sidebarOpen" aria-label="Toggle drafts panel">☰</button>
 
-        <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span> 
+        <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
         <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
-
-        <!-- Viewers see a read-only badge instead -->
-        <span class="role-badge" *ngIf="!canEdit">View only</span>
       </header>
 
       <div class="element-toolbar">

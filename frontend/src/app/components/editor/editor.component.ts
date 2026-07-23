@@ -29,6 +29,7 @@ import { MenuDropdownComponent } from '../menu-dropdown/menu-dropdown.component'
 import { fountainToPMDoc, parseFountain } from '../../editor/fountain-import';
 import { MembershipService } from '../../services/membership.service';
 import { AutoSaveService } from '../../services/autosave.service';
+import { CurrentRoleService } from '../../services/current-role.service';
 
 @Component({
   selector: 'app-editor',
@@ -105,6 +106,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     public vc: VersionControlService,
     private membership: MembershipService,
     private autoSave: AutoSaveService,  // ← add this
+    private currentRole: CurrentRoleService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -121,6 +123,7 @@ export class EditorComponent implements OnInit, OnDestroy {
         console.log(role)
         this.myRole = role;
         this.roleLoaded = true;
+        this.currentRole.setRole(role);
         if (role === 'viewer') this.makeEditorReadOnly();
       },
       error: () => {
@@ -133,6 +136,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sync.endSession();
     this.autoSave.stop()
+    this.currentRole.clear();
   }
 
   applySnapshotContent(branch: Branch): void {

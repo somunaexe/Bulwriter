@@ -27,6 +27,12 @@
      at 96 CSS px/in, i.e. the literal US-Letter page width. */
   --script-width: 816px;
 
+  /* Fake multi-page illusion (see .pm-mount .ProseMirror below) — the
+     manuscript is still one continuous document, not real pagination,
+     so these just control where the repeating "page seam" bands land. */
+  --page-h:   11in;
+  --page-gap: .6in;
+
   --navbar-h: 56px;
 }
 
@@ -205,7 +211,10 @@ html, body {
 // }
 
 .editor-header {
-  display: flex;
+  /* Only shown on mobile (see the media query below) — on wider screens
+     the sidebar covers the active branch and the navbar shows the
+     user's role, so this bar would otherwise render with nothing in it. */
+  display: none;
   align-items: center;
   gap: 1rem;
   padding: .75rem 1.5rem;
@@ -343,10 +352,37 @@ html, body {
   font-size: 12pt;
   line-height: 1.9;
   outline: none;
-  background: var(--page-bg);
   color: var(--page-text);
   white-space: pre-wrap;
   overflow-wrap: break-word; /* a long run of characters with no spaces must wrap, not force the page wider */
+
+  /* Google-Docs-style fake pagination: the document is still one
+     continuous ProseMirror node, not real paginated content — this just
+     paints repeating bands onto the page background so it *looks* like
+     a stack of separate 11in sheets with gaps between them. A seam every
+     (--page-h + --page-gap) draws a shadow under the page above, a strip
+     of the app's own background colour standing in for the gap between
+     sheets, and a highlight along the top edge of the sheet below. Text
+     that happens to fall inside a seam will visually run through it —
+     there's no layout engine here reflowing content around the bands —
+     but that's the accepted trade-off for a pure-CSS illusion instead of
+     real pagination logic. */
+  background-color: var(--page-bg);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--page-bg) 0,
+    var(--page-bg) calc(var(--page-h) - 6px),
+    rgba(0, 0, 0, .3) calc(var(--page-h) - 6px),
+    rgba(0, 0, 0, .3) var(--page-h),
+    var(--bg) var(--page-h),
+    var(--bg) calc(var(--page-h) + var(--page-gap) - 8px),
+    rgba(255, 255, 255, .06) calc(var(--page-h) + var(--page-gap) - 8px),
+    rgba(255, 255, 255, .06) calc(var(--page-h) + var(--page-gap) - 6px),
+    var(--page-bg) calc(var(--page-h) + var(--page-gap) - 6px),
+    var(--page-bg) calc(var(--page-h) + var(--page-gap))
+  );
+  background-repeat: repeat-y;
+  background-size: 100% calc(var(--page-h) + var(--page-gap));
 }
 
 /* Screenplay element colours */
@@ -548,17 +584,6 @@ html, body {
   flex-shrink: 0;
 }
 
-.role-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: .2rem .65rem;
-  border-radius: 999px;
-  background: rgba(255,255,255,.08);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  margin-left: auto;
-}
-
 .autosave-status {
   margin-left: auto;
   font-size: 11px;
@@ -617,6 +642,7 @@ html, body {
   }
 
   .editor-header {
+    display: flex;
     flex-wrap: wrap;
     row-gap: .6rem;
     padding: .6rem .85rem;
