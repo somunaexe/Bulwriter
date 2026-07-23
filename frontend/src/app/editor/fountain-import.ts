@@ -154,12 +154,12 @@ export function parseFountain(fountain: string): ParsedLine[] {
     }
 
     if (line.startsWith('.') && !line.startsWith('..')) {
-      parsed.push({ element: 'scene_heading', text: line.slice(1).trim() });
+      parsed.push({ element: 'scene', text: line.slice(1).trim() });
       i++; continue;
     }
 
     if (/^(INT|EXT|INT\.\/EXT|I\/E|EST)[\.\s]/i.test(line)) {
-      parsed.push({ element: 'scene_heading', text: line.toUpperCase() });
+      parsed.push({ element: 'scene', text: line.toUpperCase() });
       i++; continue;
     }
 

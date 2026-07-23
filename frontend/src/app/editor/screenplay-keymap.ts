@@ -82,10 +82,10 @@ function handleShiftTab(
 ): boolean {
   const el = currentElement(state);
   if (!el) return false;
-  // Reverse cycle: dialogue→character, character→action, anything→scene_heading
+  // Reverse cycle: dialogue→character, character→action, anything→scene
   const reverse: Record<ScreenplayElement, ScreenplayElement> = {
-    scene_heading: 'note',
-    action: 'scene_heading',
+    scene: 'note',
+    action: 'scene',
     character: 'action',
     parenthetical: 'character',
     dialogue: 'parenthetical',
@@ -93,8 +93,8 @@ function handleShiftTab(
     shot: 'transition',
     lyrics: 'shot',
     dual_dialogue: 'lyrics',
-    sequence_heading: 'dual_dialogue',
-    note: 'sequence_heading',
+    sequence: 'dual_dialogue',
+    note: 'sequence',
     title_page_field: 'action',
   };
   return setElement(state, dispatch, reverse[el]);
@@ -138,7 +138,7 @@ export function autoUppercasePlugin(): Plugin {
       handleTextInput(view, from, to, text) {
         const el = currentElement(view.state);
         if (
-          el === 'scene_heading' ||
+          el === 'scene' ||
           el === 'character' ||
           el === 'transition' ||
           el === 'lyrics' ||
@@ -168,7 +168,7 @@ export function screenplayKeymap(): Plugin {
     Enter:       handleEnter,
 
     // Ctrl/Cmd + number keys for quick element switching
-    'Mod-1': (state, dispatch) => setElement(state, dispatch, 'scene_heading'),
+    'Mod-1': (state, dispatch) => setElement(state, dispatch, 'scene'),
     'Mod-2': (state, dispatch) => setElement(state, dispatch, 'action'),
     'Mod-3': (state, dispatch) => setElement(state, dispatch, 'character'),
     'Mod-4': (state, dispatch) => setElement(state, dispatch, 'dialogue'),
@@ -177,7 +177,7 @@ export function screenplayKeymap(): Plugin {
     'Mod-7': (state, dispatch) => setElement(state, dispatch, 'shot'),
     'Mod-8': (state, dispatch) => setElement(state, dispatch, 'lyrics'),
     'Mod-9': (state, dispatch) => setElement(state, dispatch, 'dual_dialogue'),
-    'Mod-0': (state, dispatch) => setElement(state, dispatch, 'sequence_heading'),
+    'Mod-0': (state, dispatch) => setElement(state, dispatch, 'sequence'),
     'Mod--': (state, dispatch) => setElement(state, dispatch, 'note'),
   });
 }

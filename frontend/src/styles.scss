@@ -366,9 +366,9 @@ html, body {
  */
 .pm-mount .ProseMirror [data-element] { max-width: 60ch; }
 
-.pm-mount .ProseMirror [data-element="scene_heading"],
+.pm-mount .ProseMirror [data-element="scene"],
 .pm-mount .ProseMirror [data-element="shot"],
-.pm-mount .ProseMirror [data-element="sequence_heading"] {
+.pm-mount .ProseMirror [data-element="sequence"] {
   margin-top: 1.5rem;
   text-transform: uppercase;
   font-weight: 600;

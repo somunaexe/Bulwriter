@@ -80,7 +80,7 @@ export function toFountain(doc: PMNode): string {
     const text = serializeInline(node); // marked-up text actually written out
 
     switch (element) {
-      case 'scene_heading': {
+      case 'scene': {
         // Fountain recognises INT./EXT./EST./I-E automatically. Anything
         // else (a forced heading the writer typed via a leading '.') needs
         // that '.' re-added on export — otherwise re-importing the file
@@ -123,7 +123,7 @@ export function toFountain(doc: PMNode): string {
         break;
 
       case 'shot':
-      case 'sequence_heading':
+      case 'sequence':
         // Treated like a heading — its own line, set off by blank lines.
         lines.push('');
         lines.push(text);

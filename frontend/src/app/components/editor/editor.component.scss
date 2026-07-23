@@ -99,7 +99,7 @@
     color: #ffffff;
   }
 
-  &[data-element="scene_heading"] {
+  &[data-element="scene"] {
     --element-color: #ffcc66;
 
     border-left: 2px solid var(--element-color);
@@ -174,7 +174,7 @@
     display: flex;
   }
 
-  &[data-element="sequence_heading"] {
+  &[data-element="sequence"] {
     --element-color: #dac9a1;
 
     border-left: 2px solid var(--element-color);
@@ -211,49 +211,3 @@
   padding: 0 8px;
   white-space: nowrap;
 }
-
-// .el-btn.active {
-//   background: rgba(120, 90, 255, 0.25);
-//   border: 1px solid #7a5cff;
-//   color: #ffffff;
-//   transform: translateY(-1px);
-// }
-
-// .element-toolbar {
-//   backdrop-filter: blur(10px);
-//   position: sticky;
-//   top: 0;
-//   z-index: 50;
-// }
-
-// Page background/sizing/margins live in the global styles.scss —
-// component-scoped styles here can't reach the .ProseMirror element,
-// since ProseMirror creates it as a child of #prosemirrorMount outside
-// Angular's template compiler, which emulated view encapsulation can't
-// target reliably.
-
-// ---------------------------- SCHEMA -----------------------------------
-// .pm-shot {
-//   text-transform: uppercase;
-//   font-weight: 600;
-// }
-
-// .pm-lyrics {
-//   font-style: italic;
-// }
-
-// .pm-dual-dialogue {
-//   margin-left: 220px;
-//   width: 250px;
-// }
-
-// .pm-sequence-heading {
-//   text-transform: uppercase;
-//   font-weight: 700;
-//   text-align: center;
-// }
-
-// .pm-note {
-//   color: #ffcc00;
-//   font-style: italic;
-// }

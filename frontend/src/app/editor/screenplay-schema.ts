@@ -14,12 +14,12 @@ const screenplayNodes: Record<string, NodeSpec> = {
   },
 
   // Scene heading — INT. CAFÉ - DAY
-  scene_heading: {
+  scene: {
     group: 'block',
     content: 'inline*',
-    attrs: { element: { default: 'scene_heading' } },
-    parseDOM: [{ tag: 'p[data-element="scene_heading"]' }],
-    toDOM: () => ['p', { 'data-element': 'scene_heading', class: 'pm-scene-heading' }, 0],
+    attrs: { element: { default: 'scene' } },
+    parseDOM: [{ tag: 'p[data-element="scene"]' }],
+    toDOM: () => ['p', { 'data-element': 'scene', class: 'pm-scene' }, 0],
   },
 
   // Action — description of what we see
@@ -95,12 +95,12 @@ const screenplayNodes: Record<string, NodeSpec> = {
   },
 
   // Sequence Heading — TRAINING MONTAGE
-  sequence_heading: {
+  sequence: {
     group: 'block',
     content: 'inline*',
-    attrs: { element: { default: 'sequence_heading' } },
-    parseDOM: [{ tag: 'p[data-element="sequence_heading"]' }],
-    toDOM: () => ['p', { 'data-element': 'sequence_heading', class: 'pm-sequence-heading' }, 0],
+    attrs: { element: { default: 'sequence' } },
+    parseDOM: [{ tag: 'p[data-element="sequence"]' }],
+    toDOM: () => ['p', { 'data-element': 'sequence', class: 'pm-sequence' }, 0],
   },
 
   // Note — internal writer note
@@ -170,7 +170,7 @@ export const screenplaySchema = new Schema({
 // ---------------------------  ----------------------------- //
 // Element type helpers
 export type ScreenplayElement =
-  | 'scene_heading'
+  | 'scene'
   | 'action'
   | 'character'
   | 'dialogue'
@@ -179,12 +179,12 @@ export type ScreenplayElement =
   | 'shot'
   | 'lyrics'
   | 'dual_dialogue'
-  | 'sequence_heading'
+  | 'sequence'
   | 'note'
   | 'title_page_field';
 
 export const ELEMENT_LABELS: Record<ScreenplayElement, string> = {
-  scene_heading:    'Scene heading',
+  scene:            'Scene',
   action:           'Action',
   character:        'Character',
   dialogue:         'Dialogue',
@@ -193,7 +193,7 @@ export const ELEMENT_LABELS: Record<ScreenplayElement, string> = {
   shot:             'Shot',
   lyrics:           'Lyrics',
   dual_dialogue:    'Dual Dialogue',
-  sequence_heading: 'Sequence Heading',
+  sequence:         'Sequence',
   note:             'Note',
   title_page_field: 'Title Page Field',
 };
@@ -206,7 +206,7 @@ export const TITLE_PAGE_KEYS = ['Title', 'Credit', 'Author', 'Draft date', 'Cont
 // out of the toolbar/Tab cycle — it's structural (Title/Author/etc.), not
 // something you freely retype a line as.
 export const TAB_CYCLE: Record<ScreenplayElement, ScreenplayElement> = {
-  scene_heading:    'action',
+  scene:            'action',
   action:           'character',
   character:        'parenthetical',
   parenthetical:    'dialogue',
@@ -214,9 +214,9 @@ export const TAB_CYCLE: Record<ScreenplayElement, ScreenplayElement> = {
   transition:       'shot',
   shot:             'lyrics',
   lyrics:           'dual_dialogue',
-  dual_dialogue:    'sequence_heading',
-  sequence_heading: 'note',
-  note:             'scene_heading',
+  dual_dialogue:    'sequence',
+  sequence:         'note',
+  note:             'scene',
   title_page_field: 'action',
 };
 
@@ -226,12 +226,12 @@ export const ENTER_CREATES: Record<ScreenplayElement, ScreenplayElement> = {
   character:        'parenthetical',
   dialogue:         'action',    //  overriden to 'character' by Tab
   parenthetical:    'dialogue',
-  scene_heading:    'action',
-  transition:       'scene_heading',
+  scene:            'action',
+  transition:       'scene',
   shot:             'action',
   lyrics:           'action',
   dual_dialogue:    'character',
-  sequence_heading: 'scene_heading',
+  sequence:         'scene',
   note:             'action',
   title_page_field: 'title_page_field',
 };

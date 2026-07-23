@@ -45,7 +45,7 @@
       <header class="editor-header">
         <button class="sidebar-toggle" (click)="sidebarOpen = !sidebarOpen" aria-label="Toggle drafts panel">☰</button>
 
-        <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span>
+        <span class="branch-pill" *ngIf="activeBranch">{{ activeBranch.name }}</span> 
         <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
 
         <!-- Viewers see a read-only badge instead -->
@@ -137,7 +137,7 @@
             <button (click)="openShortcuts()">Keyboard shortcuts</button>
           </app-menu-dropdown>
         </nav>
-      </div>
+      </div> <!-- page-chrome-->
 
       <div #prosemirrorMount class="pm-mount">
 

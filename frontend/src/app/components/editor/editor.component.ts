@@ -21,7 +21,7 @@ import {
 import { setBlockType } from 'prosemirror-commands';
 
 const ELEMENTS: ScreenplayElement[] = [
-  'scene_heading', 'action', 'character', 'parenthetical', 'dialogue', 'transition', 'shot', 'lyrics', 'dual_dialogue', 'sequence_heading', 'note',
+  'scene', 'action', 'character', 'parenthetical', 'dialogue', 'transition', 'shot', 'lyrics', 'dual_dialogue', 'sequence', 'note',
 ];
 
 import { toFountain, downloadFountain } from '../../editor/fountain-export';
@@ -380,12 +380,17 @@ export class EditorComponent implements OnInit, OnDestroy {
     alert(
       'Tab — cycle element type\n' +
       'Enter — new line (smart element)\n' +
-      '⌘1 — Scene heading\n' +
+      '⌘1 — Scene\n' +
       '⌘2 — Action\n' +
       '⌘3 — Character\n' +
       '⌘4 — Dialogue\n' +
       '⌘5 — Parenthetical\n' +
-      '⌘6 — Transition'
+      '⌘6 — Transition\n' +
+      '⌘7 — Shot\n' +
+      '⌘8 — Lyrics\n' +
+      '⌘9 — Dual Dialogue\n' +
+      '⌘0 — Sequence\n' +
+      '⌘- — Notes'
     );
   }
 
