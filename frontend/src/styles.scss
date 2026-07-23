@@ -358,28 +358,26 @@ html, body {
 
   /* Google-Docs-style fake pagination: the document is still one
      continuous ProseMirror node, not real paginated content — this just
-     paints repeating bands onto the page background so it *looks* like
-     a stack of separate 11in sheets with gaps between them. A seam every
-     (--page-h + --page-gap) draws a shadow under the page above, a strip
-     of the app's own background colour standing in for the gap between
-     sheets, and a highlight along the top edge of the sheet below. Text
-     that happens to fall inside a seam will visually run through it —
-     there's no layout engine here reflowing content around the bands —
-     but that's the accepted trade-off for a pure-CSS illusion instead of
-     real pagination logic. */
+     paints a repeating seam onto the page background every --page-h so
+     it *looks* like a stack of separate 11in sheets. Text that happens
+     to fall on a seam will visually run through it — there's no layout
+     engine here reflowing content around the bands — so unlike an
+     earlier version of this, the seam is NEVER an opaque fill: it's a
+     thin shadow line plus a light (not dark) groove, both still well
+     short of --page-text's contrast on --page-bg, so a line of dialogue
+     landing on a seam stays readable instead of vanishing into a block
+     of the app's own near-black chrome colour. */
   background-color: var(--page-bg);
   background-image: repeating-linear-gradient(
     to bottom,
-    var(--page-bg) 0,
-    var(--page-bg) calc(var(--page-h) - 6px),
-    rgba(0, 0, 0, .3) calc(var(--page-h) - 6px),
-    rgba(0, 0, 0, .3) var(--page-h),
-    var(--bg) var(--page-h),
-    var(--bg) calc(var(--page-h) + var(--page-gap) - 8px),
-    rgba(255, 255, 255, .06) calc(var(--page-h) + var(--page-gap) - 8px),
-    rgba(255, 255, 255, .06) calc(var(--page-h) + var(--page-gap) - 6px),
-    var(--page-bg) calc(var(--page-h) + var(--page-gap) - 6px),
-    var(--page-bg) calc(var(--page-h) + var(--page-gap))
+    transparent 0,
+    transparent calc(var(--page-h) - 3px),
+    rgba(0, 0, 0, .35) calc(var(--page-h) - 3px),
+    rgba(0, 0, 0, .35) var(--page-h),
+    rgba(0, 0, 0, .1) var(--page-h),
+    rgba(0, 0, 0, .1) calc(var(--page-h) + var(--page-gap) - 3px),
+    rgba(255, 255, 255, .8) calc(var(--page-h) + var(--page-gap) - 3px),
+    rgba(255, 255, 255, .8) calc(var(--page-h) + var(--page-gap))
   );
   background-repeat: repeat-y;
   background-size: 100% calc(var(--page-h) + var(--page-gap));
