@@ -202,6 +202,24 @@ export const ELEMENT_LABELS: Record<ScreenplayElement, string> = {
 // them. Used by "Insert title page" and to label the field CSS.
 export const TITLE_PAGE_KEYS = ['Title', 'Credit', 'Author', 'Draft date', 'Contact'] as const;
 
+// The Mod-N key each element switches to — must match screenplayKeymap()
+// in screenplay-keymap.ts exactly. Shown on the toolbar buttons in place
+// of the element name while Ctrl/Cmd is held.
+export const SHORTCUT_KEYS: Record<ScreenplayElement, string> = {
+  scene:            '1',
+  action:           '2',
+  character:        '3',
+  dialogue:         '4',
+  parenthetical:    '5',
+  transition:       '6',
+  shot:             '7',
+  lyrics:           '8',
+  dual_dialogue:    '9',
+  sequence:         '0',
+  note:             '-',
+  title_page_field: '',
+};
+
 // Tab cycles through this sequence. title_page_field is intentionally left
 // out of the toolbar/Tab cycle — it's structural (Title/Author/etc.), not
 // something you freely retype a line as.

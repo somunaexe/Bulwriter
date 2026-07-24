@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MembershipService } from '../../services/membership.service';
 
@@ -27,6 +27,10 @@ interface Collaborator {
 })
 export class CollaboratorStackComponent implements OnInit, OnChanges {
   @Input() projectId = '';
+  // Only an owner can invite/remove people — the manage circle only
+  // shows up for them, everyone else just sees who's on the project.
+  @Input() canManage = false;
+  @Output() manage = new EventEmitter<void>();
 
   collaborators: Collaborator[] = [];
   openKey: string | null = null;

@@ -1,7 +1,9 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Observable } from 'rxjs';
 import { VersionControlService, Branch, Snapshot } from '../../services/version-control.service';
+import { AutoSaveState } from '../../services/autosave.service';
 
 @Component({
   selector: 'app-branch-panel',
@@ -14,6 +16,7 @@ export class BranchPanelComponent implements OnInit {
   @Input() projectId = '';
   @Input() scriptId = '';
   @Input() canEdit = false;
+  @Input() autoSaveState$: Observable<AutoSaveState> | null = null;
 
   // The commit message text lives here (the sidebar), but committing
   // reads the live document content from SyncService, which only the

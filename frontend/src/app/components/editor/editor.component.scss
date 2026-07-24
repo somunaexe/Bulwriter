@@ -40,7 +40,10 @@
   align-items: center;
   gap: 8px;
 
-  padding: 10px 12px;
+  /* Vertical padding matched to .collab-stack's own rendered height
+     (58px) so the two sidebar-adjacent chrome bars line up instead of
+     the toolbar reading as slightly shorter. */
+  padding: 14.5px 12px;
   /* No top margin/border — sits flush against the navbar above it
      instead of floating as a separate rounded card, sharing the
      navbar's own border-bottom as the one dividing line between them
@@ -87,6 +90,16 @@
 
   text-transform: capitalize;
   letter-spacing: 0.2px;
+
+  // While Ctrl/Cmd is held, the label is swapped for the shortcut key
+  // (see modHeld in editor.component.ts) — centered and a bit heavier
+  // so a single digit doesn't look like a stray leftover fragment.
+  &.showing-shortcut {
+    min-width: 2.4em;
+    text-align: center;
+    font-weight: 700;
+    font-family: var(--font-mono);
+  }
 
   &:hover {
     background: #1f1f1f;

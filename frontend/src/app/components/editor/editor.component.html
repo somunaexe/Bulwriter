@@ -15,25 +15,18 @@
     <div class="sidebar-backdrop" *ngIf="sidebarOpen" (click)="sidebarOpen = false"></div>
 
     <aside class="sidebar">
-      <app-collaborator-stack [projectId]="projectId"></app-collaborator-stack>
-
-      <!-- Auto-save status -->
-      <div class="autosave-status" *ngIf="autoSaveState$ | async as state">
-        <span *ngIf="state.saving" class="status-saving">Saving…</span>
-        <span *ngIf="!state.saving && state.lastSaved" class="status-saved">
-          Saved {{ state.lastSaved | date:'HH:mm' }}
-        </span>
-        <span *ngIf="!state.saving && !state.lastSaved && state.enabled" class="status-pending">
-          Auto-save on
-        </span>
-        <span *ngIf="!state.enabled" class="status-off">Auto-save off</span>
-      </div>
+      <app-collaborator-stack
+        [projectId]="projectId"
+        [canManage]="isOwner"
+        (manage)="goToCollaborators()"
+      ></app-collaborator-stack>
 
       <app-branch-panel
         [projectId]="projectId"
         [scriptId]="scriptId"
         [canEdit]="canEdit"
         [commitMessage]="commitMessage"
+        [autoSaveState$]="autoSaveState$"
         (commitMessageChange)="commitMessage = $event"
         (saveSnapshot)="saveSnapshot()"
         (branchSelected)="onBranchSelected($event)"
@@ -58,10 +51,11 @@
         <div class="el-btns">
           <button *ngFor="let el of elements"
                 class="el-btn"
+                [class.showing-shortcut]="modHeld"
                 [attr.data-element]="el"
                 [class.active]="el === activeElement"
                 (click)="setElement(el)">
-          {{ elementLabels[el] }}
+          {{ modHeld ? shortcutKeys[el] : elementLabels[el] }}
         </button>
         </div>
 

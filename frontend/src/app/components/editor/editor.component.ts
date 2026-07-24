@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import * as Y from 'yjs';
 import {
   Component, OnDestroy,
-  ViewChild, ElementRef, Input
+  ViewChild, ElementRef, Input, HostListener
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,6 +18,7 @@ import {
   screenplaySchema,
   ScreenplayElement,
   ELEMENT_LABELS,
+  SHORTCUT_KEYS,
   TITLE_PAGE_KEYS,
 } from '../../editor/screenplay-schema';
 import { setBlockType } from 'prosemirror-commands';
@@ -105,7 +106,31 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   elements = ELEMENTS;
   elementLabels = ELEMENT_LABELS;
+  shortcutKeys = SHORTCUT_KEYS;
   activeElement: ScreenplayElement | null = null;
+
+  // Whether Ctrl/Cmd is currently held — the toolbar buttons swap their
+  // label for the shortcut key they'd trigger while it is (⌘1–0/-,
+  // matching screenplayKeymap()).
+  modHeld = false;
+
+  @HostListener('window:keydown', ['$event'])
+  onWindowKeydown(event: KeyboardEvent): void {
+    if (event.ctrlKey || event.metaKey) this.modHeld = true;
+  }
+
+  @HostListener('window:keyup', ['$event'])
+  onWindowKeyup(event: KeyboardEvent): void {
+    if (!event.ctrlKey && !event.metaKey) this.modHeld = false;
+  }
+
+  // Covers alt-tabbing away, cmd-tabbing on Mac, etc. — keyup for the
+  // modifier itself doesn't fire if focus left the window first, which
+  // would otherwise leave modHeld stuck true.
+  @HostListener('window:blur')
+  onWindowBlur(): void {
+    this.modHeld = false;
+  }
 
   showToolbar = true;
   sidebarOpen = false; // off-canvas on mobile; CSS keeps the sidebar always visible on wider screens

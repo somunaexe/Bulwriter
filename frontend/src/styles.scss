@@ -105,6 +105,25 @@ html, body {
 .panel-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 1rem; }
 .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 1.25rem 0 .5rem; }
 
+.panel-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0 0;
+}
+
+// Puts "History" and the auto-save status on one line — the row carries
+// the spacing .section-label normally has on its own, so it doesn't
+// double up when nested here.
+.section-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .5rem;
+  margin: 1.25rem 0 .5rem;
+
+  .section-label { margin: 0; }
+}
+
 .branch-list { list-style: none; }
 .branch-item {
   display: flex;

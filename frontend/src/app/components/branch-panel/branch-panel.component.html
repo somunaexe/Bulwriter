@@ -15,8 +15,22 @@
     <button class="btn-ghost" (click)="createBranch()">Create</button>
   </div>
 
+  <hr class="panel-divider" />
+
   <ng-container *ngIf="activeBranch">
-    <h3 class="section-label">History</h3>
+    <div class="section-label-row">
+      <h3 class="section-label">History</h3>
+      <div class="autosave-status" *ngIf="autoSaveState$ | async as state">
+        <span *ngIf="state.saving" class="status-saving">Saving…</span>
+        <span *ngIf="!state.saving && state.lastSaved" class="status-saved">
+          Saved {{ state.lastSaved | date:'HH:mm' }}
+        </span>
+        <span *ngIf="!state.saving && !state.lastSaved && state.enabled" class="status-pending">
+          Auto-save on
+        </span>
+        <span *ngIf="!state.enabled" class="status-off">Auto-save off</span>
+      </div>
+    </div>
 
     <!-- Creating a new snapshot sits directly above the list it's
          about to join — the newest entry always lands at the top. -->

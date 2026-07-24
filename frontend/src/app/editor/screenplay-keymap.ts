@@ -2,6 +2,7 @@ import { keymap } from 'prosemirror-keymap';
 import { Plugin, TextSelection } from 'prosemirror-state';
 import { EditorState, Transaction } from 'prosemirror-state';
 import { Node, NodeType } from 'prosemirror-model';
+import { toggleMark } from 'prosemirror-commands';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -179,5 +180,12 @@ export function screenplayKeymap(): Plugin {
     'Mod-9': (state, dispatch) => setElement(state, dispatch, 'dual_dialogue'),
     'Mod-0': (state, dispatch) => setElement(state, dispatch, 'sequence'),
     'Mod--': (state, dispatch) => setElement(state, dispatch, 'note'),
+
+    // Inline formatting — the marks already exist in the schema
+    // (character extensions like (V.O.) are conventionally bold), but
+    // nothing bound Mod-b/i/u to actually toggle them.
+    'Mod-b': toggleMark(screenplaySchema.marks['strong']),
+    'Mod-i': toggleMark(screenplaySchema.marks['em']),
+    'Mod-u': toggleMark(screenplaySchema.marks['underline']),
   });
 }
