@@ -118,14 +118,24 @@ export class EditorComponent implements OnInit, OnDestroy {
   // matching screenplayKeymap()).
   modHeld = false;
 
+  // These fire on every keystroke anywhere in the window, not just
+  // Ctrl/Cmd — Angular runs change detection across the whole component
+  // tree after every zone-patched event handler, and on a long script
+  // that's real work (one binding per virtual page in pageNumbers, the
+  // full history list, the autosave pipe...). Reassigning modHeld to a
+  // value it's already at still triggers that whole sweep, and a held
+  // modifier key can fire repeated keydown events on some browser/OS
+  // combinations — so without this guard, holding Ctrl on a long
+  // document could re-run a full CD pass on every repeat tick for as
+  // long as it's held. Only actually changing the value earns a CD run.
   @HostListener('window:keydown', ['$event'])
   onWindowKeydown(event: KeyboardEvent): void {
-    if (event.ctrlKey || event.metaKey) this.modHeld = true;
+    if ((event.ctrlKey || event.metaKey) && !this.modHeld) this.modHeld = true;
   }
 
   @HostListener('window:keyup', ['$event'])
   onWindowKeyup(event: KeyboardEvent): void {
-    if (!event.ctrlKey && !event.metaKey) this.modHeld = false;
+    if (!event.ctrlKey && !event.metaKey && this.modHeld) this.modHeld = false;
   }
 
   // Covers alt-tabbing away, cmd-tabbing on Mac, etc. — keyup for the
@@ -133,7 +143,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   // would otherwise leave modHeld stuck true.
   @HostListener('window:blur')
   onWindowBlur(): void {
-    this.modHeld = false;
+    if (this.modHeld) this.modHeld = false;
   }
 
   showToolbar = true;
