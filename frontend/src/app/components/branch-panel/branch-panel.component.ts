@@ -94,4 +94,31 @@ export class BranchPanelComponent implements OnInit {
       this.compareDrafts.emit({ from: this.selectedA, to: this.selectedB });
     }
   }
+
+  // Terser the older a snapshot gets: today shows just the time, this
+  // week shows "N days ago", this year shows month/day, and beyond that
+  // the year comes back — e.g. "17:00", "6 days ago 17:00",
+  // "05/08 17:00", "05/08/2026 17:00".
+  formatSnapshotDate(createdAt: string): string {
+    const created = new Date(createdAt);
+    const now = new Date();
+
+    const time = created.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diffDays = Math.round((startOfDay(now) - startOfDay(created)) / 86400000);
+
+    if (diffDays <= 0) return time;
+    if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago ${time}`;
+
+    const oneYearAgo = new Date(now);
+    oneYearAgo.setFullYear(now.getFullYear() - 1);
+
+    const mm = String(created.getMonth() + 1).padStart(2, '0');
+    const dd = String(created.getDate()).padStart(2, '0');
+
+    return created < oneYearAgo
+      ? `${mm}/${dd}/${created.getFullYear()} ${time}`
+      : `${mm}/${dd} ${time}`;
+  }
 }

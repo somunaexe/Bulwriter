@@ -54,7 +54,7 @@
           </div>
           <div class="snap-info">
             <span class="snap-msg">{{ snap.message || 'Draft' }}</span>
-            <span class="snap-date">{{ snap.createdAt | date:'HH:mm' }}</span>
+            <span class="snap-date">{{ formatSnapshotDate(snap.createdAt) }}</span>
           </div>
         </li>
       </ul>
