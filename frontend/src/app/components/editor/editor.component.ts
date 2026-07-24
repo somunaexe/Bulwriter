@@ -114,7 +114,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   activeElement: ScreenplayElement | null = null;
 
   // Whether Ctrl/Cmd is currently held — the toolbar buttons swap their
-  // label for the shortcut key they'd trigger while it is (⌘1–0/-,
+  // label for the shortcut key they'd trigger while it is (⌘1–0/=,
   // matching screenplayKeymap()).
   modHeld = false;
 
@@ -571,7 +571,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     { keys: '⌘8',    label: 'Lyrics' },
     { keys: '⌘9',    label: 'Dual Dialogue' },
     { keys: '⌘0',    label: 'Sequence' },
-    { keys: '⌘-',    label: 'Note' },
+    { keys: '⌘=',    label: 'Note' },
     { keys: '⌘B',    label: 'Bold' },
     { keys: '⌘I',    label: 'Italic' },
     { keys: '⌘U',    label: 'Underline' },

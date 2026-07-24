@@ -216,7 +216,7 @@ export const SHORTCUT_KEYS: Record<ScreenplayElement, string> = {
   lyrics:           '8',
   dual_dialogue:    '9',
   sequence:         '0',
-  note:             '-',
+  note:             '=',
   title_page_field: '',
 };
 
