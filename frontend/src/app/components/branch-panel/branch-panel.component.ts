@@ -40,13 +40,31 @@ export class BranchPanelComponent implements OnInit {
   }
 
   loadBranches(): void {
-    this.vc.listBranches(this.projectId, this.scriptId).subscribe(b => (this.branches = b ?? []));
+    this.vc.listBranches(this.projectId, this.scriptId).subscribe(b => {
+      this.branches = b ?? [];
+      if (!this.branches.length) return;
+
+      // Nothing was ever auto-selected here before — a fresh component
+      // instance (e.g. on every full page reload) started with
+      // activeBranch: null and just sat there empty until the user
+      // manually clicked a branch. Restore whichever branch they were
+      // last on for this script, falling back to the first branch (the
+      // one the script was created with) if nothing's remembered yet.
+      const lastId = localStorage.getItem(this.storageKey());
+      const restored = this.branches.find(br => br.id === lastId);
+      this.selectBranch(restored ?? this.branches[0]);
+    });
   }
 
   selectBranch(branch: Branch): void {
     this.activeBranch = branch;
     this.branchSelected.emit(branch);
     this.vc.history(this.projectId, this.scriptId, branch.id).subscribe(h => (this.history = h ?? []));
+    localStorage.setItem(this.storageKey(), branch.id);
+  }
+
+  private storageKey(): string {
+    return `bulwriter:lastBranch:${this.scriptId}`;
   }
 
   createBranch(): void {
