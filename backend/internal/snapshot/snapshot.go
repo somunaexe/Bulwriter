@@ -20,6 +20,11 @@ type Branch struct {
 	Name       string    `json:"name"`
 	TipID      string    `json:"tipId"`
 	CreatedAt  time.Time `json:"createdAt"`
+	// DraftContent is auto-save's own slot, separate from the snapshot
+	// history — see 006_branch_draft.sql. DraftUpdatedAt is nil when
+	// there's no draft newer than the tip snapshot.
+	DraftContent   string     `json:"draftContent"`
+	DraftUpdatedAt *time.Time `json:"draftUpdatedAt,omitempty"`
 }
 
 type Snapshot struct {
@@ -75,9 +80,9 @@ func (s *Store) CreateBranch(scriptID, name, fromSnapshotID string) (*Branch, er
 func (s *Store) GetBranch(id string) (*Branch, error) {
 	b := &Branch{}
 	err := s.db.QueryRow(
-		`SELECT id, script_id, name, tip_id, created_at
+		`SELECT id, script_id, name, tip_id, created_at, draft_content, draft_updated_at
 		 FROM branches WHERE id = $1`, id,
-	).Scan(&b.ID, &b.ScriptID, &b.Name, &b.TipID, &b.CreatedAt)
+	).Scan(&b.ID, &b.ScriptID, &b.Name, &b.TipID, &b.CreatedAt, &b.DraftContent, &b.DraftUpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, errors.New("branch not found")
@@ -90,7 +95,7 @@ func (s *Store) GetBranch(id string) (*Branch, error) {
 
 func (s *Store) ListBranches(scriptID string) ([]*Branch, error) {
 	rows, err := s.db.Query(
-		`SELECT id, script_id, name, tip_id, created_at
+		`SELECT id, script_id, name, tip_id, created_at, draft_content, draft_updated_at
 		 FROM branches WHERE script_id = $1
 		 ORDER BY created_at ASC`, scriptID,
 	)
@@ -104,12 +109,28 @@ func (s *Store) ListBranches(scriptID string) ([]*Branch, error) {
 	var branches []*Branch
 	for rows.Next() {
 		b := &Branch{}
-		if err := rows.Scan(&b.ID, &b.ScriptID, &b.Name, &b.TipID, &b.CreatedAt); err != nil {
+		if err := rows.Scan(&b.ID, &b.ScriptID, &b.Name, &b.TipID, &b.CreatedAt, &b.DraftContent, &b.DraftUpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning branch: %w", err)
 		}
 		branches = append(branches, b)
 	}
 	return branches, rows.Err()
+}
+
+// SaveDraft is what auto-save calls — it overwrites the branch's own draft
+// slot in place instead of creating a new snapshot, so autosaving never
+// grows the history list. A manually-created snapshot (Commit) always
+// still requires an explicit action from the writer.
+func (s *Store) SaveDraft(branchID, content string) error {
+	now := time.Now()
+	_, err := s.db.Exec(
+		`UPDATE branches SET draft_content = $1, draft_updated_at = $2 WHERE id = $3`,
+		content, now, branchID,
+	)
+	if err != nil {
+		return fmt.Errorf("saving draft: %w", err)
+	}
+	return nil
 }
 
 // updateBranchTip is an internal helper — moves the branch pointer forward
@@ -164,9 +185,11 @@ func (s *Store) Commit(scriptID, branchID, content, message, authorID string) (*
 		return nil, fmt.Errorf("inserting snapshot: %w", err)
 	}
 
-	// Update branch tip
+	// Update branch tip, and clear the draft slot — the snapshot just
+	// created is now the freshest known state, so a stale draft behind
+	// it would only be confusing.
 	_, err = tx.Exec(
-		`UPDATE branches SET tip_id = $1 WHERE id = $2`,
+		`UPDATE branches SET tip_id = $1, draft_content = '', draft_updated_at = NULL WHERE id = $2`,
 		snap.ID, branchID,
 	)
 	if err != nil {

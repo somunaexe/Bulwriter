@@ -1,5 +1,6 @@
 import { OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import * as Y from 'yjs';
 import {
   Component, OnDestroy,
@@ -77,13 +78,17 @@ export class EditorComponent implements OnInit, OnDestroy {
         this.autoSave.setSaveFn(async () => {
           if (!this.activeBranch) return;
             const content = this.sync.getContent();
-            await this.vc.commit(
+            // Overwrites the branch's draft slot rather than creating a
+            // new snapshot — a writer has to explicitly hit "New
+            // snapshot" for anything to land in the history list.
+            // firstValueFrom actually subscribes (unlike bare `await` on
+            // an Observable, which never fires the HTTP call at all).
+            await firstValueFrom(this.vc.saveDraft(
               this.projectId,
               this.scriptId,
               this.activeBranch.id,
               content,
-              `Auto-save-${Math.floor(1000 + Math.random() * 9000)}`,
-            );
+            ));
           });
 
           this.autoSave.start();
@@ -179,32 +184,44 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   applySnapshotContent(branch: Branch): void {
-    // Implement auto save
+    // The draft slot (auto-save) is always fresher than the tip snapshot
+    // when it's set — Commit() clears draftUpdatedAt the moment a real
+    // snapshot lands, so a non-empty draftUpdatedAt means "load this
+    // instead of the tip."
+    if (branch.draftUpdatedAt) {
+      this.replaceEditorContent(branch.draftContent ?? '');
+      return;
+    }
+
+    if (!branch.tipId) return;
     this.vc.getSnapshot(this.projectId, this.scriptId, branch.id, branch.tipId).subscribe(snap => {
       if (!snap?.content) return;
+      this.replaceEditorContent(snap.content);
+    });
+  }
 
-      const session = (this.sync as any).session;
-      if (!session) return;
+  private replaceEditorContent(content: string): void {
+    const session = (this.sync as any).session;
+    if (!session) return;
 
-      const view = session.view;
-      const ydoc: Y.Doc = session.doc;
+    const view = session.view;
+    const ydoc: Y.Doc = session.doc;
 
-      // Parse Fountain into structured elements
-      const parsed = parseFountain(snap.content);
-      const newDoc = fountainToPMDoc(parsed);
+    // Parse Fountain into structured elements
+    const parsed = parseFountain(content);
+    const newDoc = fountainToPMDoc(parsed);
 
-      // Instead of replacing ProseMirror state directly, we update
-      // the Yjs document — ySyncPlugin will then sync the new content
-      // into ProseMirror automatically.
-      //
-      // We do this by applying a ProseMirror transaction that replaces
-      // the entire document content, wrapped in a Yjs transaction so
-      // the change is tracked by the CRDT.
-      ydoc.transact(() => {
-        const { tr } = view.state;
-        tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
-        view.dispatch(tr);
-      });
+    // Instead of replacing ProseMirror state directly, we update
+    // the Yjs document — ySyncPlugin will then sync the new content
+    // into ProseMirror automatically.
+    //
+    // We do this by applying a ProseMirror transaction that replaces
+    // the entire document content, wrapped in a Yjs transaction so
+    // the change is tracked by the CRDT.
+    ydoc.transact(() => {
+      const { tr } = view.state;
+      tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
+      view.dispatch(tr);
     });
   }
 
@@ -214,32 +231,29 @@ export class EditorComponent implements OnInit, OnDestroy {
 
     const switchTo = () => {
       this.activeBranch = branch;
-      // If there's no tip snapshot, nothing to load
-      if (!branch.tipId) return;
+      // Nothing to load if there's neither a tip snapshot nor a draft
+      if (!branch.tipId && !branch.draftUpdatedAt) return;
       this.applySnapshotContent(branch);
     };
 
-    // Auto-save the work on the branch we're leaving — to that branch,
-    // not the one we're switching to — before loading the new content.
+    // Save the work on the branch we're leaving — to its draft slot, not
+    // as a new snapshot — before loading the new content.
     if (previousBranch && previousBranch.id !== branch.id && this.canEdit) {
       const content = this.sync.getContent();
-      this.vc
-        .commit(
-          this.projectId,
-          this.scriptId,
-          previousBranch.id,
-          content,
-          `Auto-save before switching to "${branch.name}"`,
-        )
-        .subscribe({
-          next: () => switchTo(),
-          // Don't let a failed auto-save block the branch switch —
-          // the user's local content is still in the editor either way.
-          error: (err) => {
-            console.error('Auto-save before branch switch failed:', err);
-            switchTo();
-          },
-        });
+      firstValueFrom(this.vc.saveDraft(
+        this.projectId,
+        this.scriptId,
+        previousBranch.id,
+        content,
+      )).then(
+        () => switchTo(),
+        // Don't let a failed save block the branch switch — the user's
+        // local content is still in the editor either way.
+        (err) => {
+          console.error('Saving draft before branch switch failed:', err);
+          switchTo();
+        },
+      );
     } else {
       switchTo();
     }

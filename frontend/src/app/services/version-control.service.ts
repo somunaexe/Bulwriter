@@ -9,6 +9,11 @@ export interface Branch {
   name: string;
   tipId: string;
   createdAt: string;
+  // Auto-save's own slot, separate from the snapshot history — see
+  // backend/db/migrations/006_branch_draft.sql. draftUpdatedAt is unset
+  // when there's no draft newer than the tip snapshot.
+  draftContent?: string;
+  draftUpdatedAt?: string;
 }
 
 export interface Snapshot {
@@ -54,6 +59,15 @@ export class VersionControlService {
     return this.http.post<Snapshot>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/branches/${branchId}/commit`,
       { content, message, authorId: 'current-user' } // swap authorId for real auth later
+    );
+  }
+
+  /** Overwrites the branch's draft slot — what auto-save calls instead of
+   *  commit(), so autosaving never adds an entry to the snapshot history. */
+  saveDraft(projectId: string, scriptId: string, branchId: string, content: string): Observable<void> {
+    return this.http.put<void>(
+      `${this.BASE}/projects/${projectId}/scripts/${scriptId}/branches/${branchId}/draft`,
+      { content }
     );
   }
 

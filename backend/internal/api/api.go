@@ -88,6 +88,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	// Snapshots
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches/{branchId}/commit", r.commit).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches/{branchId}/draft", r.saveDraft).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches/{branchId}/history", r.history).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches/{branchId}/snapshots/{snapshotId}", r.getSnapshot).Methods("GET")
 
@@ -302,6 +303,25 @@ func (r *router) commit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, snap)
+}
+
+// saveDraft is what auto-save calls — see Store.SaveDraft. Unlike commit,
+// it never touches the snapshot history or the branch tip.
+func (r *router) saveDraft(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	var body struct {
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if err := r.store.SaveDraft(vars["branchId"], body.Content); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (r *router) history(w http.ResponseWriter, req *http.Request) {
