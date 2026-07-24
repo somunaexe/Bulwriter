@@ -178,7 +178,7 @@ export function screenplayKeymap(): Plugin {
     'Mod-8': (state, dispatch) => setElement(state, dispatch, 'lyrics'),
     'Mod-9': (state, dispatch) => setElement(state, dispatch, 'dual_dialogue'),
     'Mod-0': (state, dispatch) => setElement(state, dispatch, 'sequence'),
-    'Mod--': (state, dispatch) => setElement(state, dispatch, 'note'),
+    'Mod-=': (state, dispatch) => setElement(state, dispatch, 'note'),
 
     // Inline formatting — the marks already exist in the schema
     // (character extensions like (V.O.) are conventionally bold), but
