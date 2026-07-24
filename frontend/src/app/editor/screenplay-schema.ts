@@ -223,26 +223,26 @@ export const SHORTCUT_KEYS: Record<ScreenplayElement, string> = {
 // Tab cycles through this sequence. title_page_field is intentionally left
 // out of the toolbar/Tab cycle — it's structural (Title/Author/etc.), not
 // something you freely retype a line as.
-export const TAB_CYCLE: Record<ScreenplayElement, ScreenplayElement> = {
-  scene:            'action',
-  action:           'character',
-  character:        'parenthetical',
-  parenthetical:    'dialogue',
-  dialogue:         'transition',
-  transition:       'shot',
-  shot:             'lyrics',
-  lyrics:           'dual_dialogue',
-  dual_dialogue:    'sequence',
-  sequence:         'note',
-  note:             'scene',
-  title_page_field: 'action',
-};
+// export const TAB_CYCLE: Record<ScreenplayElement, ScreenplayElement> = {
+//   scene:            'action',
+//   action:           'character',
+//   character:        'parenthetical',
+//   parenthetical:    'dialogue',
+//   dialogue:         'transition',
+//   transition:       'shot',
+//   shot:             'lyrics',
+//   lyrics:           'dual_dialogue',
+//   dual_dialogue:    'sequence',
+//   sequence:         'note',
+//   note:             'scene',
+//   title_page_field: 'action',
+// };
 
 // What pressing Enter creates after each element
 export const ENTER_CREATES: Record<ScreenplayElement, ScreenplayElement> = {
   action:           'character',
   character:        'parenthetical',
-  dialogue:         'action',    //  overriden to 'character' by Tab
+  dialogue:         'action',   
   parenthetical:    'dialogue',
   scene:            'action',
   transition:       'scene',

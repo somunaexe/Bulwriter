@@ -6,7 +6,6 @@ import { toggleMark } from 'prosemirror-commands';
 import {
   screenplaySchema,
   ScreenplayElement,
-  TAB_CYCLE,
   ENTER_CREATES,
 } from './screenplay-schema';
 
@@ -66,40 +65,40 @@ function insertElement(
 // Tab — cycle element type
 // ---------------------------------------------------------------------------
 
-function handleTab(
-  state: EditorState,
-  dispatch: ((tr: Transaction) => void) | undefined
-): boolean {
-  const el = currentElement(state);
-  if (!el) return false;
-  const next = TAB_CYCLE[el];
-  return setElement(state, dispatch, next);
-}
+// function handleTab(
+//   state: EditorState,
+//   dispatch: ((tr: Transaction) => void) | undefined
+// ): boolean {
+//   const el = currentElement(state);
+//   if (!el) return false;
+//   const next = TAB_CYCLE[el];
+//   return setElement(state, dispatch, next);
+// }
 
 // Shift-Tab goes backwards (simplified: goes to action)
-function handleShiftTab(
-  state: EditorState,
-  dispatch: ((tr: Transaction) => void) | undefined
-): boolean {
-  const el = currentElement(state);
-  if (!el) return false;
-  // Reverse cycle: dialogue→character, character→action, anything→scene
-  const reverse: Record<ScreenplayElement, ScreenplayElement> = {
-    scene: 'note',
-    action: 'scene',
-    character: 'action',
-    parenthetical: 'character',
-    dialogue: 'parenthetical',
-    transition: 'dialogue',
-    shot: 'transition',
-    lyrics: 'shot',
-    dual_dialogue: 'lyrics',
-    sequence: 'dual_dialogue',
-    note: 'sequence',
-    title_page_field: 'action',
-  };
-  return setElement(state, dispatch, reverse[el]);
-}
+// function handleShiftTab(
+//   state: EditorState,
+//   dispatch: ((tr: Transaction) => void) | undefined
+// ): boolean {
+//   const el = currentElement(state);
+//   if (!el) return false;
+//   // Reverse cycle: dialogue→character, character→action, anything→scene
+//   const reverse: Record<ScreenplayElement, ScreenplayElement> = {
+//     scene: 'note',
+//     action: 'scene',
+//     character: 'action',
+//     parenthetical: 'character',
+//     dialogue: 'parenthetical',
+//     transition: 'dialogue',
+//     shot: 'transition',
+//     lyrics: 'shot',
+//     dual_dialogue: 'lyrics',
+//     sequence: 'dual_dialogue',
+//     note: 'sequence',
+//     title_page_field: 'action',
+//   };
+//   return setElement(state, dispatch, reverse[el]);
+// }
 
 // ---------------------------------------------------------------------------
 // Enter — create next logical element
@@ -164,8 +163,8 @@ export function autoUppercasePlugin(): Plugin {
 
 export function screenplayKeymap(): Plugin {
   return keymap({
-    Tab:        handleTab,
-    'Shift-Tab': handleShiftTab,
+    // Tab:        handleTab,
+    // 'Shift-Tab': handleShiftTab,
     Enter:       handleEnter,
 
     // Ctrl/Cmd + number keys for quick element switching

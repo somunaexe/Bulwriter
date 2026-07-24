@@ -59,7 +59,7 @@
         </button>
         </div>
 
-        <span class="kbd-hint">Tab to cycle &nbsp;·&nbsp; ⌘1–0 to set</span>
+        <span class="kbd-hint">Tab to cycle &nbsp;·&nbsp; Ctrl/⌘ 1–0 to set</span>
       </div>
 
       <!-- Only the menu bar itself is attached to the page below it —
@@ -85,26 +85,23 @@
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Format">
-            <button *ngFor="let el of elements" (click)="setElement(el)">
-              {{ elementLabels[el] }}
-            </button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="View">
-            <button (click)="toggleToolbar()">
+            <!-- <button (click)="toggleToolbar()">
               {{ showToolbar ? 'Hide' : 'Show' }} format toolbar
-            </button>
+            </button> -->
           </app-menu-dropdown>
 
-          <app-menu-dropdown label="Share">
+          <app-menu-dropdown *ngIf="!isOwner" label="Share">
             <button (click)="goToCollaborators()" *ngIf="isOwner">Manage collaborators…</button>
-            <button disabled *ngIf="!isOwner">View only access</button>
+            <!-- <button disabled *ngIf="!isOwner">View only access</button> -->
           </app-menu-dropdown>
 
-          <app-menu-dropdown label="Revisions">
-            <button (click)="scrollToHistory()">View history</button>
-            <button (click)="createBranchPrompt()">New branch…</button>
-          </app-menu-dropdown>
+          <!-- <app-menu-dropdown label="Revisions"> -->
+            <!-- <button (click)="scrollToHistory()">View history</button>
+            <button (click)="createBranchPrompt()">New branch…</button> -->
+          <!-- </app-menu-dropdown> -->
 
           <app-menu-dropdown label="Tools">
             <button (click)="toggleAutoSave()">
@@ -115,8 +112,6 @@
             <button (click)="setAutoSaveInterval(2)">Auto-save every 2 mins</button>
             <button (click)="setAutoSaveInterval(5)">Auto-save every 5 mins</button>
             <button (click)="setAutoSaveInterval(10)">Auto-save every 10 mins</button>
-
-            <button (click)="openWordCount()">Word count</button>
             <button (click)="openScriptStats()">Script statistics</button>
           </app-menu-dropdown>
 
