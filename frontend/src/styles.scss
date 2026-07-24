@@ -317,6 +317,10 @@ html, body {
 .pm-mount {
   flex: 1;
   overflow-y: auto;
+  /* Containing block for .page-number's absolute positioning, and for
+     .ProseMirror's offsetTop (EditorComponent.setupPageNumbers) to be
+     measured in the same coordinate space those labels are placed in. */
+  position: relative;
   /* .pm-mount scrolls (the page is usually taller than the viewport)
      but .page-chrome doesn't (overflow: hidden) — without this, the
      scrollbar eats space from only the right side of .pm-mount's
@@ -369,26 +373,45 @@ html, body {
      paints a repeating seam onto the page background every --page-h so
      it *looks* like a stack of separate 11in sheets. Text that happens
      to fall on a seam will visually run through it — there's no layout
-     engine here reflowing content around the bands — so unlike an
-     earlier version of this, the seam is NEVER an opaque fill: it's a
-     thin shadow line plus a light (not dark) groove, both still well
-     short of --page-text's contrast on --page-bg, so a line of dialogue
-     landing on a seam stays readable instead of vanishing into a block
-     of the app's own near-black chrome colour. */
+     engine here reflowing content around the bands — so the seam is
+     just two hairline creases (bottom-of-page shadow, top-of-next-page
+     highlight) with plain --page-bg in between, NOT a tinted band: an
+     earlier version filled the whole gap with a visibly different
+     colour, which made any line of dialogue landing there look like it
+     was highlighted/selected instead of just being ordinary page text
+     with a crease running through it. */
   background-color: var(--page-bg);
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(var(--page-h) - 3px),
-    rgba(0, 0, 0, .35) calc(var(--page-h) - 3px),
-    rgba(0, 0, 0, .35) var(--page-h),
-    rgba(0, 0, 0, .1) var(--page-h),
-    rgba(0, 0, 0, .1) calc(var(--page-h) + var(--page-gap) - 3px),
-    rgba(255, 255, 255, .8) calc(var(--page-h) + var(--page-gap) - 3px),
-    rgba(255, 255, 255, .8) calc(var(--page-h) + var(--page-gap))
+    transparent calc(var(--page-h) - 2px),
+    rgba(0, 0, 0, .3) calc(var(--page-h) - 2px),
+    rgba(0, 0, 0, .3) var(--page-h),
+    transparent var(--page-h),
+    transparent calc(var(--page-h) + var(--page-gap) - 2px),
+    rgba(255, 255, 255, .6) calc(var(--page-h) + var(--page-gap) - 2px),
+    rgba(255, 255, 255, .6) calc(var(--page-h) + var(--page-gap))
   );
   background-repeat: repeat-y;
   background-size: 100% calc(var(--page-h) + var(--page-gap));
+}
+
+/* One per virtual page (EditorComponent.setupPageNumbers), positioned
+   in the same top-inset-from-the-seam spot every industry screenplay
+   tool uses — top-right of the page, inside its 1in margin. Page 1 is
+   conventionally left unnumbered, so these start at "2." */
+.page-number {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--script-width);
+  max-width: 100%;
+  text-align: right;
+  padding-right: .75in;
+  font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
+  font-size: 12pt;
+  color: var(--page-text);
+  pointer-events: none;
 }
 
 /* Screenplay element colours */

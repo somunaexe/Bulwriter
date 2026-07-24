@@ -140,7 +140,7 @@
       </div> <!-- page-chrome-->
 
       <div #prosemirrorMount class="pm-mount">
-
+        <span class="page-number" *ngFor="let p of pageNumbers" [style.top.px]="p.top">{{ p.n }}.</span>
       </div>
     </main>
 

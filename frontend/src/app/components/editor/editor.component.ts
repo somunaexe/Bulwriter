@@ -45,6 +45,15 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   private _mountRef!: ElementRef<HTMLDivElement>;
 
+  // Page numbers for the fake-pagination illusion (see .pm-mount
+  // .ProseMirror in styles.scss) — {n, top} pairs rendered as absolutely
+  // positioned siblings of the ProseMirror mount, one per virtual page,
+  // recomputed whenever the document's height changes.
+  pageNumbers: { n: number; top: number }[] = [];
+  private pageUnitPx = 0;
+  private pmTopOffset = 0;
+  private pageResizeObserver?: ResizeObserver;
+
   @ViewChild('prosemirrorMount')
   set mountRef(el: ElementRef<HTMLDivElement>) {
     if (el && !this._mountRef) {
@@ -59,6 +68,7 @@ export class EditorComponent implements OnInit, OnDestroy {
         null,
         (element) => { this.activeElement = element; },
       );
+      this.setupPageNumbers(el.nativeElement);
       // Apply read-only if role already loaded by this point
       if (this.myRole === 'viewer') this.makeEditorReadOnly();
       if (this.myRole !== 'viewer') {
@@ -137,6 +147,38 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.sync.endSession();
     this.autoSave.stop()
     this.currentRole.clear();
+    this.pageResizeObserver?.disconnect();
+  }
+
+  // --page-h/--page-gap are physical CSS units ("11in", ".6in"), not
+  // usable directly in JS math — a throwaway probe element converts them
+  // to px the same way the browser does, instead of duplicating the
+  // numbers here where they could drift out of sync with styles.scss.
+  private setupPageNumbers(mountEl: HTMLElement): void {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute; visibility:hidden; height:calc(var(--page-h) + var(--page-gap));';
+    document.body.appendChild(probe);
+    this.pageUnitPx = probe.getBoundingClientRect().height;
+    document.body.removeChild(probe);
+
+    const update = () => {
+      const pmEl = mountEl.querySelector('.ProseMirror') as HTMLElement | null;
+      if (!pmEl || !this.pageUnitPx) return;
+      this.pmTopOffset = pmEl.offsetTop;
+      const count = Math.max(1, Math.round(pmEl.scrollHeight / this.pageUnitPx + .5));
+      // Page 1 is conventionally left unnumbered in screenplay format
+      // (like a title page), so numbering starts at the second page.
+      this.pageNumbers = Array.from({ length: count - 1 }, (_, i) => ({
+        n: i + 2,
+        // Land just inside the top margin of each virtual page, matching
+        // where the CSS seam itself falls ((n-1) * pageUnit).
+        top: this.pmTopOffset + (i + 1) * this.pageUnitPx + 24,
+      }));
+    };
+
+    this.pageResizeObserver = new ResizeObserver(update);
+    this.pageResizeObserver.observe(mountEl);
+    update();
   }
 
   applySnapshotContent(branch: Branch): void {
