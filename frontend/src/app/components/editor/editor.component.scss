@@ -41,11 +41,15 @@
   gap: 8px;
 
   padding: 10px 12px;
-  margin: 8px 0;
+  /* No top margin/border — sits flush against the navbar above it
+     instead of floating as a separate rounded card, sharing the
+     navbar's own border-bottom as the one dividing line between them
+     rather than stacking a second border directly beneath it. */
+  margin: 0 0 8px;
 
   background: #141414;
-  border: 1px solid #2a2a2a;
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-top: none;
 
   overflow-x: auto;
   white-space: nowrap;
