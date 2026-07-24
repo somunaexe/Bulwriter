@@ -1,0 +1,31 @@
+<div class="collab-stack" *ngIf="collaborators.length">
+  <button
+    *ngFor="let c of collaborators"
+    type="button"
+    class="collab-avatar"
+    [class.pending]="!c.accepted"
+    [class.open]="openKey === c.key"
+    (click)="toggle(c.key)"
+    [attr.aria-label]="c.name"
+  >
+    <img *ngIf="c.imageUrl" [src]="c.imageUrl" [alt]="c.name" />
+    <span *ngIf="!c.imageUrl">{{ initials(c.name) }}</span>
+  </button>
+
+  <div class="collab-popover" *ngIf="openKey">
+    <ng-container *ngFor="let c of collaborators">
+      <div class="collab-detail" *ngIf="c.key === openKey">
+        <img *ngIf="c.imageUrl" class="detail-avatar" [src]="c.imageUrl" [alt]="c.name" />
+        <span *ngIf="!c.imageUrl" class="detail-avatar detail-avatar-fallback">{{ initials(c.name) }}</span>
+        <div class="detail-info">
+          <span class="detail-name">{{ c.name }}</span>
+          <span class="detail-email" *ngIf="c.email">{{ c.email }}</span>
+          <span class="detail-role">{{ c.role }}</span>
+          <span class="detail-status" [class.accepted]="c.accepted">
+            {{ c.accepted ? 'Accepted' : 'Invite pending' }}
+          </span>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>

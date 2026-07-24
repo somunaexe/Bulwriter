@@ -15,6 +15,8 @@
     <div class="sidebar-backdrop" *ngIf="sidebarOpen" (click)="sidebarOpen = false"></div>
 
     <aside class="sidebar">
+      <app-collaborator-stack [projectId]="projectId"></app-collaborator-stack>
+
       <!-- Auto-save status -->
       <div class="autosave-status" *ngIf="autoSaveState$ | async as state">
         <span *ngIf="state.saving" class="status-saving">Saving…</span>
@@ -43,8 +45,8 @@
     <main class="editor-main">
 
       <!-- Only useful on mobile: the sidebar (always visible on wider
-           screens) already shows the active branch and, via the navbar,
-           the user's role — this would just be an empty bar otherwise. -->
+           screens) already shows the active branch — this would just
+           be an empty bar otherwise. -->
       <header class="editor-header">
         <button class="sidebar-toggle" (click)="sidebarOpen = !sidebarOpen" aria-label="Toggle drafts panel">☰</button>
 

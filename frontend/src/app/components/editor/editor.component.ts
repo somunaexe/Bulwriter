@@ -12,6 +12,7 @@ import { SyncService } from '../../services/sync.service';
 import { VersionControlService, Branch } from '../../services/version-control.service';
 import { BranchPanelComponent } from '../branch-panel/branch-panel.component';
 import { DiffViewerComponent } from '../diff-viewer/diff-viewer.component';
+import { CollaboratorStackComponent } from '../collaborator-stack/collaborator-stack.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -29,12 +30,11 @@ import { MenuDropdownComponent } from '../menu-dropdown/menu-dropdown.component'
 import { fountainToPMDoc, parseFountain } from '../../editor/fountain-import';
 import { MembershipService } from '../../services/membership.service';
 import { AutoSaveService } from '../../services/autosave.service';
-import { CurrentRoleService } from '../../services/current-role.service';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -116,7 +116,6 @@ export class EditorComponent implements OnInit, OnDestroy {
     public vc: VersionControlService,
     private membership: MembershipService,
     private autoSave: AutoSaveService,  // ← add this
-    private currentRole: CurrentRoleService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -133,7 +132,6 @@ export class EditorComponent implements OnInit, OnDestroy {
         console.log(role)
         this.myRole = role;
         this.roleLoaded = true;
-        this.currentRole.setRole(role);
         if (role === 'viewer') this.makeEditorReadOnly();
       },
       error: () => {
@@ -146,7 +144,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sync.endSession();
     this.autoSave.stop()
-    this.currentRole.clear();
     this.pageResizeObserver?.disconnect();
   }
 

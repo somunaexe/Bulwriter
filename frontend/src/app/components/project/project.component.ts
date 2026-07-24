@@ -1,11 +1,10 @@
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ScriptService, Script } from '../../services/script.service';
 import { MembershipService, Member, Invite } from '../../services/membership.service';
-import { CurrentRoleService } from '../../services/current-role.service';
 
 @Component({
   selector: 'app-project',
@@ -14,7 +13,7 @@ import { CurrentRoleService } from '../../services/current-role.service';
   templateUrl: './project.component.html',
   styleUrl: './project.component.scss'
 })
-export class ProjectComponent implements OnInit, OnDestroy {
+export class ProjectComponent implements OnInit {
   scripts: Script[] = [];
   projectId = '';
   newTitle = '';
@@ -29,7 +28,6 @@ export class ProjectComponent implements OnInit, OnDestroy {
   constructor(
       private scriptService: ScriptService,
       private membershipService: MembershipService,
-      private currentRole: CurrentRoleService,
       private route: ActivatedRoute,
       private router: Router
     ) {}
@@ -55,13 +53,8 @@ export class ProjectComponent implements OnInit, OnDestroy {
     this.membershipService.getMyRole(this.projectId).subscribe({
       next: ({ role }) => {
         this.myRole = role;
-        this.currentRole.setRole(role);
       },
     });
-  }
-
-  ngOnDestroy(): void {
-    this.currentRole.clear();
   }
 
   get isOwner(): boolean { return this.myRole === 'owner'; }

@@ -212,8 +212,8 @@ html, body {
 
 .editor-header {
   /* Only shown on mobile (see the media query below) — on wider screens
-     the sidebar covers the active branch and the navbar shows the
-     user's role, so this bar would otherwise render with nothing in it. */
+     the sidebar covers the active branch, so this bar would otherwise
+     render with nothing in it. */
   display: none;
   align-items: center;
   gap: 1rem;

@@ -8,6 +8,12 @@ export interface Member {
   userId: string;
   role: string;
   joinedAt: string;
+  // Enriched server-side from Clerk (see backend/internal/clerkapi) —
+  // absent if CLERK_SECRET_KEY isn't configured or Clerk has no record
+  // of the user, so treat these as optional everywhere they're used.
+  name?: string;
+  email?: string;
+  imageUrl?: string;
 }
 
 export interface Invite {

@@ -1,6 +1,5 @@
 import { Component, ElementRef, HostListener, inject, OnInit } from '@angular/core';
 import { ClerkService } from '../../services/clerk.service';
-import { CurrentRoleService } from '../../services/current-role.service';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 
@@ -14,11 +13,9 @@ import { Router, RouterLink } from '@angular/router';
 
 export class NavbarComponent implements OnInit {
   clerk = inject(ClerkService);
-  currentRole = inject(CurrentRoleService);
 
   signedIn$ = this.clerk.isSignedIn$;
   user$ = this.clerk.user$;
-  role$ = this.currentRole.role$;
 
   menuOpen = false;
   accountOpen = false;

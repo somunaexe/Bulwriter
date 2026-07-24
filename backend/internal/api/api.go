@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
@@ -24,6 +25,7 @@ type router struct {
 	projects *project.Store
 	scripts	 *script.Store
 	members  *membership.Store  // ← add this
+	clerk    *clerkapi.Client
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
@@ -33,6 +35,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		projects: project.NewStore(db),
 		scripts:  script.NewStore((db)),
 		members:  membership.NewStore(db),
+		clerk:    clerkapi.NewClient(),
 	}
 
 	mx := mux.NewRouter()
@@ -344,6 +347,19 @@ func (r *router) diff(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, lines)
 }
 
+// memberWithProfile adds Clerk-sourced display info (name/email/avatar) on
+// top of the stored membership row — the DB only ever holds userID/role,
+// since Clerk is the source of truth for profile data. Enrichment is
+// best-effort: r.clerk.GetProfile silently returns nil when no secret key
+// is configured or Clerk doesn't recognize the user, leaving these fields
+// empty rather than failing the whole members list over one bad lookup.
+type memberWithProfile struct {
+	*membership.Member
+	Name     string `json:"name,omitempty"`
+	Email    string `json:"email,omitempty"`
+	ImageURL string `json:"imageUrl,omitempty"`
+}
+
 func (r *router) listMembers(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	members, err := r.members.ListMembers(vars["projectId"])
@@ -351,7 +367,18 @@ func (r *router) listMembers(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, members)
+
+	enriched := make([]memberWithProfile, len(members))
+	for i, m := range members {
+		mp := memberWithProfile{Member: m}
+		if profile, err := r.clerk.GetProfile(m.UserID); err == nil && profile != nil {
+			mp.Name = profile.Name
+			mp.Email = profile.Email
+			mp.ImageURL = profile.ImageURL
+		}
+		enriched[i] = mp
+	}
+	writeJSON(w, http.StatusOK, enriched)
 }
 
 func (r *router) listInvites(w http.ResponseWriter, req *http.Request) {

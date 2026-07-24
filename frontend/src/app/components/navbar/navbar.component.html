@@ -16,7 +16,6 @@
           <span class="avatar" *ngIf="!user.imageUrl">{{ initials(user.name) }}</span>
           <img class="avatar" *ngIf="user.imageUrl" [src]="user.imageUrl" [alt]="user.name" />
           <span class="account-name">{{ user.name }}</span>
-          <span class="role-tag" *ngIf="role$ | async as role">{{ role }}</span>
           <span class="chevron">▾</span>
         </button>
 
