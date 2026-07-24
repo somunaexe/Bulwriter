@@ -49,50 +49,18 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-// Styling for items projected via ng-content.
-// ::ng-deep would normally be needed to style projected content,
-// but since these are just <button> elements we can target them
-// directly — Angular's view encapsulation doesn't block element
-// selectors on slotted content in this case.
-.menu-panel button {
-  background: transparent;
-  // Reserved always (transparent by default) so the hover state's
-  // accent colour doesn't shift the text by adding width on hover.
-  border: none;
-  border-left: 2px solid transparent;
-  color: var(--text);
-  font-family: var(--font-ui);
-  font-size: 13px;
-  text-align: left;
-  padding: .55rem .7rem .55rem .6rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background .12s, color .12s, border-color .12s;
-}
-.menu-panel button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-left-color: var(--accent);
-  color: var(--accent);
-}
-.menu-panel button:disabled {
-  color: var(--muted);
-  cursor: default;
-  opacity: .5;
-}
-.menu-panel button:disabled:hover {
-  background: transparent;
-  border-left-color: transparent;
-}
-
-.menu-divider {
-  height: 1px;
-  background: var(--border);
-  margin: .4rem .3rem;
-}
+// .menu-panel's own <button> items and .menu-divider are NOT styled here
+// — they're projected via <ng-content> from whichever parent template
+// declared them (editor.component.html), so they carry THAT component's
+// Angular view-encapsulation attribute, not this component's. A scoped
+// selector here compiles to require both ends of "​.menu-panel button"
+// to share this component's own attribute, which the projected <button>
+// never has — it silently never matches. See styles.scss for the real
+// rules (the same reason ProseMirror's own injected content is styled
+// globally there instead of in editor.component.scss).
 
 /* Touch targets grow slightly on small screens/touch devices. */
 @media (max-width: 760px) {
   .menu-trigger { padding: .5rem .65rem; font-size: 13px; }
-  .menu-panel button { padding: .65rem .7rem; font-size: 14px; }
   .menu-panel { min-width: 200px; }
 }

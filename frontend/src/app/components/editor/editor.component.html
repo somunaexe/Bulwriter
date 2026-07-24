@@ -74,17 +74,20 @@
             <div class="menu-divider"></div>
             <button (click)="importFountain()" [disabled]="!canEdit">Import Fountain…</button>
             <button (click)="exportFountain()">Export as Fountain…</button>
-            <button (click)="exportPDF()" disabled>Export as PDF…</button>
+            <button (click)="exportPDF()">Export as PDF…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Edit">
             <button (click)="undo()">Undo</button>
             <button (click)="redo()">Redo</button>
             <div class="menu-divider"></div>
-            <button (click)="openFindReplace()" disabled>Find &amp; Replace…</button>
+            <button (click)="openFindReplace()">Find &amp; Replace…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Format">
+            <button *ngFor="let el of elements" (click)="setElement(el)">
+              {{ elementLabels[el] }}
+            </button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="View">
@@ -113,13 +116,8 @@
             <button (click)="setAutoSaveInterval(5)">Auto-save every 5 mins</button>
             <button (click)="setAutoSaveInterval(10)">Auto-save every 10 mins</button>
 
-            <button disabled>Word count</button>
-            <button disabled>Script statistics</button>
-          </app-menu-dropdown>
-
-          <app-menu-dropdown label="Reports">
-            <button disabled>Scene list</button>
-            <button disabled>Character list</button>
+            <button (click)="openWordCount()">Word count</button>
+            <button (click)="openScriptStats()">Script statistics</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Production">
@@ -145,5 +143,67 @@
       [toId]="diffToId"
       (close)="showDiff = false">
     </app-diff-viewer>
+
+    <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
+      <ul class="shortcut-list">
+        <li *ngFor="let s of shortcutList">
+          <kbd>{{ s.keys }}</kbd>
+          <span>{{ s.label }}</span>
+        </li>
+      </ul>
+    </app-modal>
+
+    <app-modal *ngIf="showFindReplace" title="Find &amp; Replace" (closed)="closeFindReplace()">
+      <div class="find-replace-form">
+        <input class="input-sm" placeholder="Find…" [(ngModel)]="findTerm" (keydown.enter)="findNext()" autofocus />
+        <input class="input-sm" placeholder="Replace with…" [(ngModel)]="replaceTerm" [disabled]="!canEdit" />
+        <label class="match-case">
+          <input type="checkbox" [(ngModel)]="matchCase" /> Match case
+        </label>
+        <p class="find-count" *ngIf="findMatchCount !== null">
+          {{ findMatchCount }} match{{ findMatchCount === 1 ? '' : 'es' }}
+        </p>
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="findNext()">Find next</button>
+          <button class="btn-ghost" (click)="replaceCurrent()" [disabled]="!canEdit">Replace</button>
+          <button class="btn-ghost" (click)="replaceAllOccurrences()" [disabled]="!canEdit">Replace all</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showPdfPasswordModal" title="Export as PDF" (closed)="showPdfPasswordModal = false">
+      <div class="pdf-export-form">
+        <p>Protect the PDF with a password, or export it unprotected.</p>
+        <input class="input-sm" type="password" placeholder="Password (optional)" [(ngModel)]="pdfPassword" (keydown.enter)="confirmPdfExport(true)" />
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="confirmPdfExport(false)">Skip password</button>
+          <button class="btn-save" (click)="confirmPdfExport(true)" [disabled]="!pdfPassword.trim()">Export with password</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showWordCount" title="Word count" (closed)="showWordCount = false">
+      <p class="stat-headline">{{ wordCount }} word{{ wordCount === 1 ? '' : 's' }}</p>
+    </app-modal>
+
+    <app-modal *ngIf="showScriptStats" title="Script statistics" (closed)="showScriptStats = false">
+      <div class="script-stats" *ngIf="scriptStats as stats">
+        <p class="stat-headline">{{ stats.wordCount }} word{{ stats.wordCount === 1 ? '' : 's' }}</p>
+
+        <h3 class="section-label">Scenes ({{ stats.sceneList.length }})</h3>
+        <ol class="stats-list" *ngIf="stats.sceneList.length; else noScenes">
+          <li *ngFor="let scene of stats.sceneList">{{ scene }}</li>
+        </ol>
+        <ng-template #noScenes><p class="stats-empty">No scene headings yet.</p></ng-template>
+
+        <h3 class="section-label">Characters ({{ stats.characterList.length }})</h3>
+        <ul class="stats-list" *ngIf="stats.characterList.length; else noCharacters">
+          <li *ngFor="let c of stats.characterList">
+            {{ c.name }} <span class="stats-count">{{ c.lines }} line{{ c.lines === 1 ? '' : 's' }}</span>
+          </li>
+        </ul>
+        <ng-template #noCharacters><p class="stats-empty">No characters yet.</p></ng-template>
+      </div>
+    </app-modal>
 
 </div>

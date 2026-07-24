@@ -1,8 +1,7 @@
 <div class="dashboard">
 
   <header class="dash-header">
-    <h1 class="logo">Bulwriter</h1>
-    <p class="tagline">Your screenwriting workspace</p>
+    <h1 class="logo">{{ project?.title }}</h1>
   </header>
 
   <!-- Only editors and owners can create scripts -->
@@ -40,7 +39,13 @@
 
     <ul class="member-list">
       <li *ngFor="let m of members" class="member-item">
-        <span class="member-id">{{ m.userId }}</span>
+        <span class="member-identity">
+          <img *ngIf="m.imageUrl" class="member-avatar" [src]="m.imageUrl" [alt]="m.name || m.email" />
+          <span *ngIf="!m.imageUrl" class="member-avatar member-avatar-fallback">
+            {{ (m.name || m.email || '?')[0] | uppercase }}
+          </span>
+          <span class="member-name">{{ m.name || m.email || m.userId }}</span>
+        </span>
         <span class="member-role">{{ m.role }}</span>
       </li>
     </ul>

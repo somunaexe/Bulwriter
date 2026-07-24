@@ -21,14 +21,18 @@
     <div class="section-label-row">
       <h3 class="section-label">History</h3>
       <div class="autosave-status" *ngIf="autoSaveState$ | async as state">
+        <span class="autosave-dot"
+              [class.on]="state.enabled"
+              [title]="state.enabled ? 'Auto-save on' : 'Auto-save off'"
+        ></span>
+        <span class="autosave-interval">{{ state.intervalMinutes }}m</span>
         <span *ngIf="state.saving" class="status-saving">Saving…</span>
         <span *ngIf="!state.saving && state.lastSaved" class="status-saved">
           Saved {{ state.lastSaved | date:'HH:mm' }}
         </span>
-        <span *ngIf="!state.saving && !state.lastSaved && state.enabled" class="status-pending">
-          Auto-save on
+        <span *ngIf="!state.saving && !state.lastSaved" class="status-pending">
+          Not saved yet
         </span>
-        <span *ngIf="!state.enabled" class="status-off">Auto-save off</span>
       </div>
     </div>
 

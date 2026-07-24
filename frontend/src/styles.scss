@@ -328,6 +328,116 @@ html, body {
 .btn-icon  { background: transparent; color: var(--muted); font-size: 16px; padding: .2rem .5rem; }
 .btn-icon:hover { color: var(--text); }
 
+/* ── Modal content (keyboard shortcuts, find & replace, PDF export,
+      word count / script statistics) — see ModalComponent for the
+      shared backdrop/panel chrome these sit inside. ── */
+.shortcut-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    font-size: 13px;
+    color: var(--text);
+  }
+}
+
+kbd {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: .2rem .5rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  min-width: 2.4em;
+  text-align: center;
+}
+
+.find-replace-form,
+.pdf-export-form {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+
+  .input-sm { width: 100%; }
+}
+
+.match-case {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+
+  input { cursor: pointer; }
+}
+
+.find-count {
+  font-size: 12px;
+  color: var(--muted);
+  margin: -.25rem 0 0;
+}
+
+.find-replace-actions {
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+}
+
+.pdf-export-form p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.stat-headline {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.script-stats .section-label:first-of-type { margin-top: 1.25rem; }
+
+.stats-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+
+  li {
+    font-size: 13px;
+    color: var(--text);
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+  }
+}
+
+ol.stats-list {
+  list-style: decimal;
+  padding-left: 1.2rem;
+
+  li { display: list-item; }
+}
+
+.stats-count {
+  color: var(--muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.stats-empty {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-style: italic;
+}
+
 /* ── ProseMirror mount ──
    The manuscript itself is rendered as a literal 8.5x11in page — a
    white/cream sheet with dark Courier text, per industry convention
@@ -632,16 +742,84 @@ html, body {
   flex-shrink: 0;
 }
 
+/* The File/Edit/Format/... dropdown items (<button>/<div class="menu-divider">)
+   are declared in editor.component.html and projected into
+   app-menu-dropdown via <ng-content> — they carry editor.component's own
+   Angular view-encapsulation attribute, not menu-dropdown.component's, so
+   a scoped rule in menu-dropdown.component.scss can never actually match
+   them (its ".menu-panel button" compiles to require the SAME attribute
+   on both .menu-panel and button, and only .menu-panel has it). Global
+   scope is the only place these can be reached from. */
+.menu-panel button {
+  background: transparent;
+  // Reserved always (transparent by default) so the hover state's
+  // accent colour doesn't shift the text by adding width on hover.
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  text-align: left;
+  padding: .55rem .7rem .55rem .6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.menu-panel button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-left-color: var(--accent);
+  color: var(--accent);
+}
+.menu-panel button:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: .5;
+}
+.menu-panel button:disabled:hover {
+  background: transparent;
+  border-left-color: transparent;
+}
+
+.menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: .4rem .3rem;
+}
+
+@media (max-width: 760px) {
+  .menu-panel button { padding: .65rem .7rem; font-size: 14px; }
+}
+
 .autosave-status {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
   font-size: 11px;
   font-weight: 500;
+}
+
+// Green when auto-save is on, red when it's off — the interval text
+// next to it is always shown regardless, since Tools lets you set an
+// interval independently of toggling auto-save on/off.
+.autosave-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--delete-fg);
+  flex-shrink: 0;
+
+  &.on { background: var(--insert-fg); }
+}
+
+.autosave-interval {
+  color: var(--muted);
+  margin-right: .15rem;
 }
 
 .status-saving  { color: var(--accent); }
 .status-saved   { color: var(--muted); }
 .status-pending { color: var(--muted); }
-.status-off     { color: var(--delete-fg); }
 
 /* ══════════════════════════ Responsive — editor ══════════════════════════
    Below 768px the two big desktop assumptions break: a 260px fixed sidebar

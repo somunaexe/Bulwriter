@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ScriptService, Script } from '../../services/script.service';
 import { MembershipService, Member, Invite } from '../../services/membership.service';
+import { ProjectService, Project } from '../../services/project.service';
 
 @Component({
   selector: 'app-project',
@@ -15,6 +16,7 @@ import { MembershipService, Member, Invite } from '../../services/membership.ser
 })
 export class ProjectComponent implements OnInit {
   scripts: Script[] = [];
+  project: Project | null = null;
   projectId = '';
   newTitle = '';
   loading = true;
@@ -28,12 +30,15 @@ export class ProjectComponent implements OnInit {
   constructor(
       private scriptService: ScriptService,
       private membershipService: MembershipService,
+      private projectService: ProjectService,
       private route: ActivatedRoute,
       private router: Router
     ) {}
 
   ngOnInit(): void {
     this.projectId = this.route.snapshot.params['projectId'];
+
+    this.projectService.get(this.projectId).subscribe(p => this.project = p);
 
     this.scriptService.list(this.projectId).subscribe({
       next: scripts => {

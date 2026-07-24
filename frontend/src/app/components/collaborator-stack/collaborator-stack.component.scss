@@ -7,6 +7,9 @@
 }
 
 .collab-avatar {
+  position: relative; // z-index below does nothing without this
+  z-index: 1;
+
   width: 30px;
   height: 30px;
   flex-shrink: 0;
@@ -45,14 +48,18 @@
 
   &.open,
   &:hover {
-    z-index: 1;
+    z-index: 2;
     border-color: var(--accent);
   }
 
   // Sits at the end of the stack, visually distinct from a member's own
   // avatar (grey rather than accent-coloured) so it reads as "manage
-  // this list" rather than "one more person."
+  // this list" rather than "one more person." Explicitly behind every
+  // real collaborator (lower z-index, regardless of DOM order) — it's
+  // a "there's more here" affordance peeking out, not something that
+  // should cover up an actual person's avatar.
   &.collab-manage {
+    z-index: 0;
     background: #3a3a40;
     color: var(--muted);
     font-size: 15px;

@@ -29,14 +29,18 @@ const ELEMENTS: ScreenplayElement[] = [
 
 import { toFountain, downloadFountain } from '../../editor/fountain-export';
 import { MenuDropdownComponent } from '../menu-dropdown/menu-dropdown.component';
+import { ModalComponent } from '../modal/modal.component';
 import { fountainToPMDoc, parseFountain } from '../../editor/fountain-import';
+import { findAll, selectMatch, replaceMatch, replaceAll } from '../../editor/find-replace';
+import { computeScriptStats, ScriptStats } from '../../editor/script-stats';
+import { exportScreenplayPdf } from '../../editor/fountain-to-pdf';
 import { MembershipService } from '../../services/membership.service';
 import { AutoSaveService } from '../../services/autosave.service';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -293,6 +297,26 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.autoSave.setInterval(minutes);
   }
 
+  showWordCount = false;
+  wordCount = 0;
+
+  openWordCount(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    this.wordCount = computeScriptStats(view.state.doc).wordCount;
+    this.showWordCount = true;
+  }
+
+  showScriptStats = false;
+  scriptStats: ScriptStats | null = null;
+
+  openScriptStats(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    this.scriptStats = computeScriptStats(view.state.doc);
+    this.showScriptStats = true;
+  }
+
   setElement(element: ScreenplayElement): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
@@ -349,8 +373,23 @@ export class EditorComponent implements OnInit, OnDestroy {
     downloadFountain(fountainText, this.scriptId);
   }
 
+  showPdfPasswordModal = false;
+  pdfPassword = '';
+
   exportPDF(): void {
-      // Placeholder — bigger feature
+    this.pdfPassword = '';
+    this.showPdfPasswordModal = true;
+  }
+
+  confirmPdfExport(usePassword: boolean): void {
+    const view = (this.sync as any).session?.view;
+    this.showPdfPasswordModal = false;
+    if (!view) return;
+
+    exportScreenplayPdf(view.state.doc, {
+      filename: this.scriptId,
+      password: usePassword && this.pdfPassword.trim() ? this.pdfPassword.trim() : undefined,
+    }).catch(err => console.error('PDF export failed:', err));
   }
 
   importFountain(): void {
@@ -426,8 +465,67 @@ export class EditorComponent implements OnInit, OnDestroy {
     });
   }
 
+  showFindReplace = false;
+  findTerm = '';
+  replaceTerm = '';
+  matchCase = false;
+  findMatchCount: number | null = null; // null = haven't searched yet
+  private findMatchIndex = -1;
+
   openFindReplace(): void {
-    // Placeholder for now
+    this.showFindReplace = true;
+    this.findMatchCount = null;
+    this.findMatchIndex = -1;
+  }
+
+  closeFindReplace(): void {
+    this.showFindReplace = false;
+  }
+
+  findNext(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view || !this.findTerm) return;
+
+    const matches = findAll(view, this.findTerm, this.matchCase);
+    this.findMatchCount = matches.length;
+    if (!matches.length) {
+      this.findMatchIndex = -1;
+      return;
+    }
+
+    this.findMatchIndex = (this.findMatchIndex + 1) % matches.length;
+    selectMatch(view, matches[this.findMatchIndex]);
+  }
+
+  replaceCurrent(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view || !this.findTerm || !this.canEdit) return;
+
+    const matches = findAll(view, this.findTerm, this.matchCase);
+    this.findMatchCount = matches.length;
+    if (!matches.length) return;
+
+    // If the current selection already IS the match at findMatchIndex,
+    // replace it in place — otherwise just land on it first, same as
+    // Find Next, so a bare click of Replace never eats the wrong text.
+    const { from, to } = view.state.selection;
+    const current = matches[this.findMatchIndex];
+    if (current && current.from === from && current.to === to) {
+      replaceMatch(view, current, this.replaceTerm);
+      // Positions after this match shifted by the length delta — redo
+      // the search fresh rather than trying to patch the old list.
+      this.findMatchIndex = -1;
+    }
+    this.findNext();
+  }
+
+  replaceAllOccurrences(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view || !this.findTerm || !this.canEdit) return;
+
+    replaceAll(view, this.findTerm, this.replaceTerm, this.matchCase);
+    this.findMatchCount = 0; // everything just got replaced — nothing left to find
+    this.findMatchIndex = -1;
   }
 
   // ── View menu ────────────────────────────────────────────────────
@@ -458,22 +556,29 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   // ── Help menu ────────────────────────────────────────────────────
 
+  showShortcuts = false;
+
+  shortcutList: { keys: string; label: string }[] = [
+    { keys: 'Tab',   label: 'Cycle element type' },
+    { keys: 'Enter', label: 'New line (smart element)' },
+    { keys: '⌘1',    label: 'Scene' },
+    { keys: '⌘2',    label: 'Action' },
+    { keys: '⌘3',    label: 'Character' },
+    { keys: '⌘4',    label: 'Dialogue' },
+    { keys: '⌘5',    label: 'Parenthetical' },
+    { keys: '⌘6',    label: 'Transition' },
+    { keys: '⌘7',    label: 'Shot' },
+    { keys: '⌘8',    label: 'Lyrics' },
+    { keys: '⌘9',    label: 'Dual Dialogue' },
+    { keys: '⌘0',    label: 'Sequence' },
+    { keys: '⌘-',    label: 'Note' },
+    { keys: '⌘B',    label: 'Bold' },
+    { keys: '⌘I',    label: 'Italic' },
+    { keys: '⌘U',    label: 'Underline' },
+  ];
+
   openShortcuts(): void {
-    alert(
-      'Tab — cycle element type\n' +
-      'Enter — new line (smart element)\n' +
-      '⌘1 — Scene\n' +
-      '⌘2 — Action\n' +
-      '⌘3 — Character\n' +
-      '⌘4 — Dialogue\n' +
-      '⌘5 — Parenthetical\n' +
-      '⌘6 — Transition\n' +
-      '⌘7 — Shot\n' +
-      '⌘8 — Lyrics\n' +
-      '⌘9 — Dual Dialogue\n' +
-      '⌘0 — Sequence\n' +
-      '⌘- — Notes'
-    );
+    this.showShortcuts = true;
   }
 
   private makeEditorReadOnly(): void {
