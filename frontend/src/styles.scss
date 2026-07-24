@@ -327,6 +327,14 @@ html, body {
   scrollbar-gutter: stable both-edges;
   display: flex;
   justify-content: center;
+  /* Flex items default to align-items: stretch, which clamps a child's
+     cross-axis (here, vertical) size instead of letting it grow to fit
+     its own content — the .ProseMirror child was getting clamped to
+     exactly its min-height (11in) while any content past that rendered
+     completely outside its own box, over the app's bare dark backdrop
+     instead of the page background, on any document longer than one
+     page. flex-start lets it size to its actual content instead. */
+  align-items: flex-start;
   /* No horizontal padding here — .page-chrome has none either, so both
      compute max-width:100% against the exact same available width and
      never drift apart once the viewport gets narrow enough for that
