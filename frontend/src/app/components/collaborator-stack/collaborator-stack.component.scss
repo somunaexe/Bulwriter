@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 .collab-stack {
   position: relative;
   display: flex;
@@ -25,7 +27,7 @@
   justify-content: center;
 
   background: var(--accent);
-  color: #0f0f11;
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 700;
 
@@ -60,13 +62,13 @@
   // should cover up an actual person's avatar.
   &.collab-manage {
     z-index: 0;
-    background: #3a3a40;
+    background: var(--surface-2);
     color: var(--muted);
     font-size: 15px;
     font-weight: 600;
 
     &:hover {
-      background: #47474e;
+      background: var(--border);
       color: var(--text);
       border-color: var(--muted);
     }
@@ -74,15 +76,12 @@
 }
 
 .collab-popover {
+  @include surface-panel;
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
   z-index: 50;
 
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, .4);
   padding: 12px;
   min-width: 220px;
 }
@@ -106,7 +105,7 @@
   align-items: center;
   justify-content: center;
   background: var(--accent);
-  color: #0f0f11;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 700;
 }

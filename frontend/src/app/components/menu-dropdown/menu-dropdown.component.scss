@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 .menu-dropdown {
   position: relative;
   display: inline-block;
@@ -25,18 +27,14 @@
 }
 
 .menu-panel {
+  @include surface-panel;
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
   min-width: 230px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
   border-top: 2px solid var(--accent);
-  border-radius: 10px;
   padding: .45rem;
-  // Two layered shadows — a soft wide one for ambient depth, a tighter
-  // one right under the panel — read as more "lifted" than one flat blur.
-  box-shadow: 0 16px 40px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
   z-index: 50;
   display: flex;
   flex-direction: column;

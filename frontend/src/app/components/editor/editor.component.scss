@@ -50,9 +50,10 @@
      rather than stacking a second border directly beneath it. */
   margin: 0 0 8px;
 
-  background: #141414;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-top: none;
+  box-shadow: var(--shadow-sm);
 
   overflow-x: auto;
   white-space: nowrap;
@@ -81,7 +82,7 @@
   border: 1px solid transparent;
   background: transparent;
 
-  color: #cfcfcf;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 500;
 
@@ -106,9 +107,9 @@
   }
 
   &:hover {
-    background: #1f1f1f;
-    border-color: #333;
-    color: #ffffff;
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text);
   }
 
   &:active {
@@ -118,9 +119,9 @@
   /* active state (you can toggle this in TS later) */
   &.active,
   &[data-active="true"] {
-    background: #2b2b2b;
-    border-color: #4a4a4a;
-    color: #ffffff;
+    background: var(--surface-2);
+    border-color: rgba(var(--accent-rgb), .4);
+    color: var(--text);
   }
 
   &[data-element="scene"] {
@@ -184,8 +185,8 @@
     --element-color: #66ffd9;
 
     border-left: 2px solid var(--element-color);
-    background: color-mix(in srgb, var(--element-color) 6%, transparent);
-    color: #bffcf0;
+    background: color-mix(in srgb, var(--element-color) 12%, transparent);
+    color: #0d7d6e;
     font-style: italic;
     text-transform: uppercase;
   }
@@ -211,7 +212,7 @@
     --element-color: #999;
 
     border-left: 2px solid var(--element-color);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.04);
     opacity: 0.85;
     font-style: italic;
   }
@@ -230,7 +231,7 @@
   margin-left: auto;
 
   font-size: 11px;
-  color: #777;
+  color: var(--muted);
 
   padding: 0 8px;
   white-space: nowrap;
