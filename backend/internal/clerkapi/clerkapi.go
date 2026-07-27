@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -119,6 +120,47 @@ func (c *Client) GetProfile(userID string) (*Profile, error) {
 	profile := &Profile{Name: strings.TrimSpace(name), Email: email, ImageURL: body.ImageURL}
 	c.store(userID, profile)
 	return profile, nil
+}
+
+// FindUserIDByEmail resolves an email address to a Clerk user ID, if any
+// account exists for it — used to check "is this invite email already a
+// collaborator" before creating a duplicate. Returns "", nil (not an
+// error) when nothing matches, since most invited addresses won't have
+// signed up yet.
+func (c *Client) FindUserIDByEmail(email string) (string, error) {
+	if !c.Enabled() || email == "" {
+		return "", nil
+	}
+
+	q := url.Values{}
+	q.Set("email_address", email)
+
+	req, err := http.NewRequest(http.MethodGet, "https://api.clerk.com/v1/users?"+q.Encode(), nil)
+	if err != nil {
+		return "", fmt.Errorf("building clerk request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.secretKey)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("calling clerk: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("clerk returned status %d looking up email", resp.StatusCode)
+	}
+
+	var users []struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+		return "", fmt.Errorf("decoding clerk response: %w", err)
+	}
+	if len(users) == 0 {
+		return "", nil
+	}
+	return users[0].ID, nil
 }
 
 func (c *Client) store(userID string, profile *Profile) {

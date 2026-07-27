@@ -36,6 +36,8 @@ import { computeScriptStats, ScriptStats } from '../../editor/script-stats';
 import { exportScreenplayPdf } from '../../editor/fountain-to-pdf';
 import { MembershipService } from '../../services/membership.service';
 import { AutoSaveService } from '../../services/autosave.service';
+import { ProjectService, Project } from '../../services/project.service';
+import { fileToBackgroundDataUri } from '../../editor/background-image';
 
 @Component({
   selector: 'app-editor',
@@ -155,11 +157,14 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   autoSaveState$ = this.autoSave.state$;
 
+  project: Project | null = null;
+
   constructor(
     public sync: SyncService,
     public vc: VersionControlService,
     private membership: MembershipService,
     private autoSave: AutoSaveService,  // ← add this
+    private projectService: ProjectService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -169,6 +174,8 @@ export class EditorComponent implements OnInit, OnDestroy {
     // values from the current URL — captured by the router automatically
     this.projectId = this.route.snapshot.params['projectId'];
     this.scriptId  = this.route.snapshot.params['scriptId'];
+
+    this.projectService.get(this.projectId).subscribe(p => this.project = p);
 
     // Fetch the current user's role on this project
     this.membership.getMyRole(this.projectId).subscribe({
@@ -346,7 +353,17 @@ export class EditorComponent implements OnInit, OnDestroy {
       .subscribe(snap => {
         console.log('Snapshot saved:', snap.id);
         this.commitMessage = '';
+        this.autoSave.markSaved();
       });
+  }
+
+  // File menu's "Save draft" — a manual, on-demand version of the exact
+  // same save autoSave already runs on a timer (registered via
+  // autoSave.setSaveFn in the prosemirrorMount setter above), so it picks
+  // up the same saving/lastSaved state the sidebar already shows.
+  saveDraftNow(): void {
+    if (!this.activeBranch || !this.canEdit) return;
+    this.autoSave.triggerSave();
   }
 
   openDiff(fromId: string, toId: string): void {
@@ -549,6 +566,61 @@ export class EditorComponent implements OnInit, OnDestroy {
   goToCollaborators(): void {
     // Navigate back to the project page where collaborators live
     this.router.navigate(['/projects', this.projectId]);
+  }
+
+  // ── Tools menu: background image ────────────────────────────────
+  // A faint, project-wide personalization behind the editor's chrome
+  // (sidebar, toolbars) — deliberately excluded from the manuscript page
+  // itself (.page-chrome / .pm-mount stay opaque; see styles.scss's
+  // .has-bg-image rules) so it never competes with the actual script.
+
+  get backgroundLayer(): string {
+    if (!this.project?.backgroundImage) return 'none';
+    // A near-opaque tint in the app's own --bg colour, layered over the
+    // image — keeps it a faint suggestion behind the chrome rather than
+    // a loud photo, and blends seamlessly wherever no image is set.
+    return `linear-gradient(rgba(246, 241, 230, .93), rgba(246, 241, 230, .93)), url("${this.project.backgroundImage}")`;
+  }
+
+  uploadBackgroundImage(): void {
+    if (!this.isOwner) return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+
+    input.onchange = async (event: Event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      let dataUri: string;
+      try {
+        dataUri = await fileToBackgroundDataUri(file);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Could not process that image.');
+        return;
+      }
+
+      this.projectService.setBackground(this.projectId, dataUri).subscribe({
+        next: () => {
+          if (this.project) this.project = { ...this.project, backgroundImage: dataUri };
+        },
+        error: () => alert('Could not upload background image.'),
+      });
+    };
+
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  }
+
+  removeBackgroundImage(): void {
+    if (!this.isOwner) return;
+    this.projectService.clearBackground(this.projectId).subscribe({
+      next: () => {
+        if (this.project) this.project = { ...this.project, backgroundImage: undefined };
+      },
+    });
   }
 
   // ── Revisions menu ───────────────────────────────────────────────

@@ -110,6 +110,10 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	// Roles
 	api.HandleFunc("/projects/{projectId}/my-role", r.getMyRole).Methods("GET")
+
+	// Per-project editor background image (owner only)
+	api.HandleFunc("/projects/{projectId}/background", r.setProjectBackground).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/background", r.clearProjectBackground).Methods("DELETE")
 	
 	return c.Handler(mx)
 }
@@ -431,6 +435,26 @@ func (r *router) createInvite(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Already a collaborator? Resolve the email to a Clerk account (if
+	// any) and check membership directly, rather than letting a second
+	// invite silently pile up for someone already on the project.
+	if uid, err := r.clerk.FindUserIDByEmail(body.Email); err == nil && uid != "" {
+		if isMember, err := r.members.IsMember(vars["projectId"], uid); err == nil && isMember {
+			writeErr(w, http.StatusConflict, "this person is already a collaborator")
+			return
+		}
+	}
+
+	// Already invited and still pending? Don't stack duplicate invites.
+	if existing, err := r.members.ListInvites(vars["projectId"]); err == nil {
+		for _, inv := range existing {
+			if inv.Status == "pending" && strings.EqualFold(inv.Email, body.Email) {
+				writeErr(w, http.StatusConflict, "an invite is already pending for this email")
+				return
+			}
+		}
+	}
+
 	// Default role if not specified
 	role2 := body.Role
 	if role2 == "" {
@@ -518,6 +542,65 @@ func (r *router) declineInvite(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "declined"})
+}
+
+// maxBackgroundImageBytes bounds the request body for a project's
+// background image — the client resizes/compresses the image before
+// upload, so this is generous headroom for the resulting data URI, not a
+// budget for raw uploads.
+const maxBackgroundImageBytes = 6 << 20
+
+func (r *router) setProjectBackground(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleOwner) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body struct {
+		Image string `json:"image"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid or too large image payload")
+		return
+	}
+	if !strings.HasPrefix(body.Image, "data:image/") {
+		writeErr(w, http.StatusBadRequest, "image must be a data URI")
+		return
+	}
+
+	if err := r.projects.SetBackgroundImage(vars["projectId"], body.Image); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (r *router) clearProjectBackground(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleOwner) {
+		return
+	}
+
+	if err := r.projects.ClearBackgroundImage(vars["projectId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (r *router) getMyRole(w http.ResponseWriter, req *http.Request) {

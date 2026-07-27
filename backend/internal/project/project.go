@@ -15,6 +15,9 @@ type Project struct {
 	Title     string    `json:"title"`  // renamed from Name
 	OwnerID   string    `json:"ownerId"`
 	CreatedAt time.Time `json:"createdAt"`
+	// A data URI, resized/compressed client-side before upload — nil for
+	// the vast majority of projects that never set one.
+	BackgroundImage *string `json:"backgroundImage,omitempty"`
 }
 
 type Store struct {
@@ -45,7 +48,7 @@ func (s *Store) Create(title, ownerID string) (*Project, error) {
 
 func (s *Store) List(ownerID string) ([]*Project, error) {
 	rows, err := s.db.Query(
-		`SELECT id, title, owner_id, created_at
+		`SELECT id, title, owner_id, created_at, background_image
 		 FROM projects WHERE owner_id = $1
 		 ORDER BY created_at DESC`, ownerID,
 	)
@@ -57,8 +60,12 @@ func (s *Store) List(ownerID string) ([]*Project, error) {
 	var projects []*Project
 	for rows.Next() {
 		p := &Project{}
-		if err := rows.Scan(&p.ID, &p.Title, &p.OwnerID, &p.CreatedAt); err != nil {
+		var bg sql.NullString
+		if err := rows.Scan(&p.ID, &p.Title, &p.OwnerID, &p.CreatedAt, &bg); err != nil {
 			return nil, fmt.Errorf("scanning project: %w", err)
+		}
+		if bg.Valid {
+			p.BackgroundImage = &bg.String
 		}
 		projects = append(projects, p)
 	}
@@ -67,17 +74,43 @@ func (s *Store) List(ownerID string) ([]*Project, error) {
 
 func (s *Store) Get(id string) (*Project, error) {
 	p := &Project{}
+	var bg sql.NullString
 	err := s.db.QueryRow(
-		`SELECT id, title, owner_id, created_at
+		`SELECT id, title, owner_id, created_at, background_image
 		 FROM projects WHERE id = $1`, id,
-	).Scan(&p.ID, &p.Title, &p.OwnerID, &p.CreatedAt)
+	).Scan(&p.ID, &p.Title, &p.OwnerID, &p.CreatedAt, &bg)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("project not found")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("querying project: %w", err)
 	}
+	if bg.Valid {
+		p.BackgroundImage = &bg.String
+	}
 	return p, nil
+}
+
+// SetBackgroundImage stores a data URI as the project's editor-chrome
+// background. ClearBackgroundImage(id) (pass "") removes it.
+func (s *Store) SetBackgroundImage(id, dataURI string) error {
+	_, err := s.db.Exec(
+		`UPDATE projects SET background_image = $1 WHERE id = $2`, dataURI, id,
+	)
+	if err != nil {
+		return fmt.Errorf("setting background image: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) ClearBackgroundImage(id string) error {
+	_, err := s.db.Exec(
+		`UPDATE projects SET background_image = NULL WHERE id = $1`, id,
+	)
+	if err != nil {
+		return fmt.Errorf("clearing background image: %w", err)
+	}
+	return nil
 }
 
 // ListByIDs returns projects matching any of the given IDs.
@@ -100,7 +133,7 @@ func (s *Store) ListByIDs(ids []string) ([]*Project, error) {
 	}
 
 	query := fmt.Sprintf(
-		`SELECT id, title, owner_id, created_at FROM projects
+		`SELECT id, title, owner_id, created_at, background_image FROM projects
 		 WHERE id IN (%s) ORDER BY created_at DESC`,
 		strings.Join(placeholders, ","),
 	)
@@ -114,8 +147,12 @@ func (s *Store) ListByIDs(ids []string) ([]*Project, error) {
 	var projects []*Project
 	for rows.Next() {
 		p := &Project{}
-		if err := rows.Scan(&p.ID, &p.Title, &p.OwnerID, &p.CreatedAt); err != nil {
+		var bg sql.NullString
+		if err := rows.Scan(&p.ID, &p.Title, &p.OwnerID, &p.CreatedAt, &bg); err != nil {
 			return nil, err
+		}
+		if bg.Valid {
+			p.BackgroundImage = &bg.String
 		}
 		projects = append(projects, p)
 	}

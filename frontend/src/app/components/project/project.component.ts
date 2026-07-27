@@ -86,8 +86,8 @@ export class ProjectComponent implements OnInit {
         this.showInviteModal = false;
         this.collabStack?.refresh();
       },
-      error: () => {
-        this.inviteError = 'Could not send invite.';
+      error: (err) => {
+        this.inviteError = err?.error?.error || 'Could not send invite.';
       },
     });
   }
