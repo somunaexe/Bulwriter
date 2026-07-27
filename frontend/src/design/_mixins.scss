@@ -1,0 +1,30 @@
+// Shared structural building blocks for component stylesheets.
+// Import from any component .scss with `@use 'mixins' as *;` — resolved via
+// stylePreprocessorOptions.includePaths (angular.json), no relative path
+// needed. Values themselves live as CSS custom properties in styles.scss
+// (:root) so a single palette/elevation change propagates everywhere
+// without touching these mixins.
+
+// A static elevated surface — dropdowns, popovers, modals, the menu-bar
+// panel. Not itself the clickable target, so no hover affordance.
+@mixin surface-panel($radius: var(--radius-lg)) {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: $radius;
+  box-shadow: var(--shadow-lg);
+}
+
+// A clickable card — project/script list rows. Same panel look, but
+// starts at a lower resting elevation and lifts on hover.
+@mixin interactive-card($radius: var(--radius-lg)) {
+  @include surface-panel($radius);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+
+  &:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+}

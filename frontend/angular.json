@@ -25,6 +25,9 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "stylePreprocessorOptions": {
+              "includePaths": ["src/design"]
+            },
             "assets": [
               "src/favicon.ico",
               "src/assets"
@@ -91,6 +94,9 @@
             ],
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
+            "stylePreprocessorOptions": {
+              "includePaths": ["src/design"]
+            },
             "assets": [
               "src/favicon.ico",
               "src/assets"
