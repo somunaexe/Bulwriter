@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import * as Y from 'yjs';
 import {
   Component, OnDestroy,
-  ViewChild, ElementRef, Input, HostListener
+  ViewChild, ElementRef, Input, HostListener, Renderer2
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -165,6 +165,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     private membership: MembershipService,
     private autoSave: AutoSaveService,  // ← add this
     private projectService: ProjectService,
+    private renderer: Renderer2,
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -175,7 +176,10 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.projectId = this.route.snapshot.params['projectId'];
     this.scriptId  = this.route.snapshot.params['scriptId'];
 
-    this.projectService.get(this.projectId).subscribe(p => this.project = p);
+    this.projectService.get(this.projectId).subscribe(p => {
+      this.project = p;
+      this.applyBodyBackground();
+    });
 
     // Fetch the current user's role on this project
     this.membership.getMyRole(this.projectId).subscribe({
@@ -196,6 +200,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.sync.endSession();
     this.autoSave.stop()
     this.pageResizeObserver?.disconnect();
+    this.clearBodyBackground();
   }
 
   // --page-h/--page-gap are physical CSS units ("11in", ".6in"), not
@@ -569,17 +574,37 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   // ── Tools menu: background image ────────────────────────────────
-  // A faint, project-wide personalization behind the editor's chrome
-  // (sidebar, toolbars) — deliberately excluded from the manuscript page
-  // itself (.page-chrome / .pm-mount stay opaque; see styles.scss's
-  // .has-bg-image rules) so it never competes with the actual script.
+  // A project-wide personalization behind the editor's chrome (navbar,
+  // sidebar, toolbars) — deliberately excluded from the manuscript page
+  // itself (.page-chrome / .pm-mount stay opaque) so it never competes
+  // with the actual script. Applied to <body> (via Renderer2), not just
+  // this component's own template root — the navbar lives outside
+  // EditorComponent entirely, so a binding on .editor-layout alone could
+  // never reach it.
 
-  get backgroundLayer(): string {
+  private backgroundLayerValue(): string {
     if (!this.project?.backgroundImage) return 'none';
-    // A near-opaque tint in the app's own --bg colour, layered over the
-    // image — keeps it a faint suggestion behind the chrome rather than
-    // a loud photo, and blends seamlessly wherever no image is set.
-    return `linear-gradient(rgba(246, 241, 230, .93), rgba(246, 241, 230, .93)), url("${this.project.backgroundImage}")`;
+    // A light tint in the app's own --bg colour, layered under the
+    // image — keeps text over it readable without crushing the image
+    // down to nothing. Every chrome surface (navbar/sidebar/toolbars)
+    // goes fully transparent under body.has-bg-image (see styles.scss)
+    // so they all show exactly this same layer, not a second faded
+    // copy stacked on top of it.
+    return `linear-gradient(rgba(246, 241, 230, .6), rgba(246, 241, 230, .6)), url("${this.project.backgroundImage}")`;
+  }
+
+  private applyBodyBackground(): void {
+    if (!this.project?.backgroundImage) {
+      this.clearBodyBackground();
+      return;
+    }
+    this.renderer.setStyle(document.body, '--project-bg-layer', this.backgroundLayerValue());
+    this.renderer.addClass(document.body, 'has-bg-image');
+  }
+
+  private clearBodyBackground(): void {
+    this.renderer.removeStyle(document.body, '--project-bg-layer');
+    this.renderer.removeClass(document.body, 'has-bg-image');
   }
 
   uploadBackgroundImage(): void {
@@ -604,6 +629,7 @@ export class EditorComponent implements OnInit, OnDestroy {
       this.projectService.setBackground(this.projectId, dataUri).subscribe({
         next: () => {
           if (this.project) this.project = { ...this.project, backgroundImage: dataUri };
+          this.applyBodyBackground();
         },
         error: () => alert('Could not upload background image.'),
       });
@@ -619,6 +645,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.projectService.clearBackground(this.projectId).subscribe({
       next: () => {
         if (this.project) this.project = { ...this.project, backgroundImage: undefined };
+        this.clearBodyBackground();
       },
     });
   }

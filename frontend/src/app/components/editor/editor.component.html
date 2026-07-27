@@ -13,9 +13,7 @@
   <!-- Authorized -->
   <div *ngIf="roleLoaded && roles.includes(myRole)"
        class="editor-layout"
-       [class.sidebar-open]="sidebarOpen"
-       [class.has-bg-image]="!!project?.backgroundImage"
-       [style.--project-bg-layer]="backgroundLayer">
+       [class.sidebar-open]="sidebarOpen">
     <div class="sidebar-backdrop" *ngIf="sidebarOpen" (click)="sidebarOpen = false"></div>
 
     <aside class="sidebar">

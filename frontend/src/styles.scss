@@ -71,6 +71,36 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Per-project editor background image (EditorComponent, applied via
+   Renderer2 since the navbar it also needs to reach lives outside the
+   editor's own component tree) — set on <body> so one continuous,
+   fixed image spans literally everywhere at once: navbar, sidebar,
+   toolbars, the open gutter around the manuscript page. Every chrome
+   surface that would otherwise paint over it goes fully transparent
+   under body.has-bg-image (below) rather than adding its own second
+   translucent layer — two stacked semi-transparent layers compound
+   multiplicatively and crush the image down to barely-visible, so
+   there's exactly one tint decision (baked into --project-bg-layer),
+   applied once. --project-bg-layer is unset (falls back to `none`)
+   unless a project actually has one set. */
+body {
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-image: var(--project-bg-layer, none);
+}
+
+/* The manuscript page itself (.page-chrome / .pm-mount) and modals are
+   deliberately left out — personalization is for the surrounding
+   chrome, never the industry-standard page or a transient overlay. */
+body.has-bg-image .navbar,
+body.has-bg-image .sidebar,
+body.has-bg-image .element-toolbar,
+body.has-bg-image .editor-header {
+  background: transparent;
+}
+
 /* ── Editor layout ──
    height accounts for <app-navbar> sitting above <router-outlet> (it's
    position: sticky, so it occupies real space — a plain 100vh here
@@ -85,30 +115,6 @@ html, body {
   height: calc(100dvh - var(--navbar-h));
   width: 100%;
   overflow: hidden;
-
-  /* Per-project background image (EditorComponent.backgroundLayer) — a
-     fixed, viewport-spanning layer so it reads as one continuous image
-     behind every part of this grid rather than tiling separately per
-     panel. --project-bg-layer is unset (falls back to `none`) unless a
-     project actually has one set. */
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-image: var(--project-bg-layer, none);
-}
-
-/* .sidebar/.element-toolbar/.editor-header stay fully opaque by default
-   — pixel-identical to before this feature existed — and only turn
-   semi-transparent once a background image is actually active, so the
-   shared fixed layer above can show faintly through them. The manuscript
-   page itself (.page-chrome / .pm-mount) and modals are deliberately
-   left out — personalization is for the surrounding chrome, never the
-   industry-standard page or a transient overlay. */
-.editor-layout.has-bg-image .sidebar,
-.editor-layout.has-bg-image .element-toolbar,
-.editor-layout.has-bg-image .editor-header {
-  background: rgba(255, 255, 255, .82);
 }
 
 .editor-main {
