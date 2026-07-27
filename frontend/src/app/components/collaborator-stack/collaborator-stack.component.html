@@ -21,8 +21,25 @@
     class="collab-avatar collab-manage"
     aria-label="View, add, and remove collaborators"
     title="View, add, and remove collaborators"
-    (click)="manage.emit()"
+    (click)="onManageClick()"
   >+</button>
+
+  <div class="collab-invite-popover" *ngIf="showInvitePopover">
+    <p class="invite-popover-title">Invite collaborator</p>
+    <input
+      class="input-sm"
+      placeholder="Invite by email…"
+      [(ngModel)]="inviteEmail"
+      (keydown.enter)="sendInvite()"
+      autofocus />
+    <p class="invite-popover-error" *ngIf="inviteError">{{ inviteError }}</p>
+    <div class="invite-popover-actions">
+      <button class="btn-ghost" (click)="showInvitePopover = false">Cancel</button>
+      <button class="btn-save" (click)="sendInvite()" [disabled]="!inviteEmail.trim() || inviteSending">
+        {{ inviteSending ? 'Sending…' : 'Send' }}
+      </button>
+    </div>
+  </div>
 
   <div class="collab-popover" *ngIf="openKey">
     <ng-container *ngFor="let c of collaborators">

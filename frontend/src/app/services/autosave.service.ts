@@ -65,6 +65,13 @@ export class AutoSaveService implements OnDestroy {
     }
   }
 
+  // For saves that happen outside the timer (e.g. committing a named
+  // snapshot) — lets the sidebar's "Saved HH:mm" indicator reflect any
+  // manual save, not just automatic ticks.
+  markSaved(): void {
+    this.state$.next({ ...this.state$.getValue(), saving: false, lastSaved: new Date() });
+  }
+
   setEnabled(enabled: boolean): void {
     this.state$.next({ ...this.state$.getValue(), enabled });
     if (enabled) {

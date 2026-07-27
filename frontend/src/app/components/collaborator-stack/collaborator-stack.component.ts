@@ -1,5 +1,6 @@
 import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MembershipService } from '../../services/membership.service';
 
 interface Collaborator {
@@ -21,7 +22,7 @@ interface Collaborator {
 @Component({
   selector: 'app-collaborator-stack',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './collaborator-stack.component.html',
   styleUrl: './collaborator-stack.component.scss',
 })
@@ -30,10 +31,21 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
   // Only an owner can invite/remove people — the manage circle only
   // shows up for them, everyone else just sees who's on the project.
   @Input() canManage = false;
+  // When true, clicking the manage ("+") avatar opens a small invite form
+  // right here (anchored below the stack) instead of emitting `manage` —
+  // used on the editor page, where there's nowhere further to navigate to.
+  // The project page (the manage page itself) leaves this off and handles
+  // `manage` itself.
+  @Input() invitePopover = false;
   @Output() manage = new EventEmitter<void>();
 
   collaborators: Collaborator[] = [];
   openKey: string | null = null;
+
+  showInvitePopover = false;
+  inviteEmail = '';
+  inviteError = '';
+  inviteSending = false;
 
   private memberCollabs: Collaborator[] = [];
   private pendingCollabs: Collaborator[] = [];
@@ -102,12 +114,44 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
 
   toggle(key: string): void {
     this.openKey = this.openKey === key ? null : key;
+    this.showInvitePopover = false;
+  }
+
+  onManageClick(): void {
+    if (this.invitePopover) {
+      this.openKey = null;
+      this.inviteEmail = '';
+      this.inviteError = '';
+      this.showInvitePopover = !this.showInvitePopover;
+    } else {
+      this.manage.emit();
+    }
+  }
+
+  sendInvite(): void {
+    const email = this.inviteEmail.trim();
+    if (!email) return;
+
+    this.inviteSending = true;
+    this.membership.invite(this.projectId, email).subscribe({
+      next: () => {
+        this.inviteSending = false;
+        this.showInvitePopover = false;
+        this.inviteEmail = '';
+        this.load();
+      },
+      error: (err) => {
+        this.inviteSending = false;
+        this.inviteError = err?.error?.error || 'Could not send invite.';
+      },
+    });
   }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (this.openKey && !this.host.nativeElement.contains(event.target as Node)) {
-      this.openKey = null;
+    if (!this.host.nativeElement.contains(event.target as Node)) {
+      if (this.openKey) this.openKey = null;
+      if (this.showInvitePopover) this.showInvitePopover = false;
     }
   }
 }

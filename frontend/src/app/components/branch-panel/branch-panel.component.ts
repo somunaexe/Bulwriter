@@ -70,8 +70,18 @@ export class BranchPanelComponent implements OnInit {
     return `bulwriter:lastBranch:${this.scriptId}`;
   }
 
+  // Disables the Create button both for an empty name and for one that
+  // already matches an existing branch (case-insensitive) — branch names
+  // otherwise silently collide, since createBranch() has no server-side
+  // uniqueness check of its own.
+  get canCreateBranch(): boolean {
+    const name = this.newBranchName.trim();
+    if (!name) return false;
+    return !this.branches.some(b => b.name.toLowerCase() === name.toLowerCase());
+  }
+
   createBranch(): void {
-    if (!this.newBranchName.trim()) return;
+    if (!this.canCreateBranch) return;
     const fromId = this.activeBranch?.tipId ?? '';
     this.vc.createBranch(this.projectId, this.scriptId, this.newBranchName, fromId).subscribe(b => {
       this.branches.push(b);

@@ -86,6 +86,46 @@
   min-width: 220px;
 }
 
+// Anchored below the stack, sized to match the branch panel it sits
+// above (both are full-width children of the same 260px sidebar column)
+// — collapses to full width only on small screens, same breakpoint the
+// rest of the editor's mobile layout uses.
+.collab-invite-popover {
+  @include surface-panel;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+
+  width: 260px;
+  max-width: calc(100vw - 2rem);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.invite-popover-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.invite-popover-error {
+  font-size: 12px;
+  color: var(--delete-fg);
+}
+
+.invite-popover-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+@media (max-width: 768px) {
+  .collab-invite-popover { width: 100%; }
+}
+
 .collab-detail {
   display: flex;
   gap: 10px;

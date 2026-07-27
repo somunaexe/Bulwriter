@@ -11,8 +11,8 @@
   </ul>
 
   <div class="new-branch">
-    <input [(ngModel)]="newBranchName" placeholder="New branch name…" class="input-sm" />
-    <button class="btn-ghost" (click)="createBranch()">Create</button>
+    <input [(ngModel)]="newBranchName" placeholder="New branch name…" class="input-sm" (keydown.enter)="createBranch()" />
+    <button class="btn-ghost" (click)="createBranch()" [disabled]="!canCreateBranch">Create</button>
   </div>
 
   <hr class="panel-divider" />

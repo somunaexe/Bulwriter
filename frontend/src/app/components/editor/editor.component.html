@@ -11,14 +11,18 @@
   </div>
 
   <!-- Authorized -->
-  <div *ngIf="roleLoaded && roles.includes(myRole)" class="editor-layout" [class.sidebar-open]="sidebarOpen">
+  <div *ngIf="roleLoaded && roles.includes(myRole)"
+       class="editor-layout"
+       [class.sidebar-open]="sidebarOpen"
+       [class.has-bg-image]="!!project?.backgroundImage"
+       [style.--project-bg-layer]="backgroundLayer">
     <div class="sidebar-backdrop" *ngIf="sidebarOpen" (click)="sidebarOpen = false"></div>
 
     <aside class="sidebar">
       <app-collaborator-stack
         [projectId]="projectId"
         [canManage]="isOwner"
-        (manage)="goToCollaborators()"
+        [invitePopover]="true"
       ></app-collaborator-stack>
 
       <app-branch-panel
@@ -68,7 +72,7 @@
       <div class="page-chrome">
         <nav class="menu-bar">
           <app-menu-dropdown label="File">
-            <button (click)="saveSnapshot()" [disabled]="!activeBranch || !canEdit">Save draft</button>
+            <button (click)="saveDraftNow()" [disabled]="!activeBranch || !canEdit">Save draft</button>
             <div class="menu-divider"></div>
             <button (click)="insertTitlePage()" [disabled]="!canEdit">Insert title page…</button>
             <div class="menu-divider"></div>
@@ -113,6 +117,15 @@
             <button (click)="setAutoSaveInterval(5)">Auto-save every 5 mins</button>
             <button (click)="setAutoSaveInterval(10)">Auto-save every 10 mins</button>
             <button (click)="openScriptStats()">Script statistics</button>
+            <ng-container *ngIf="isOwner">
+              <div class="menu-divider"></div>
+              <button (click)="uploadBackgroundImage()">
+                {{ project?.backgroundImage ? 'Change' : 'Upload' }} background image…
+              </button>
+              <button (click)="removeBackgroundImage()" *ngIf="project?.backgroundImage">
+                Remove background image
+              </button>
+            </ng-container>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Production">
