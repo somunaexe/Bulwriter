@@ -1,31 +1,38 @@
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ScriptService, Script } from '../../services/script.service';
-import { MembershipService, Member, Invite } from '../../services/membership.service';
+import { MembershipService } from '../../services/membership.service';
 import { ProjectService, Project } from '../../services/project.service';
+import { CollaboratorStackComponent } from '../collaborator-stack/collaborator-stack.component';
+import { ModalComponent } from '../modal/modal.component';
 
 @Component({
   selector: 'app-project',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CollaboratorStackComponent, ModalComponent],
   templateUrl: './project.component.html',
   styleUrl: './project.component.scss'
 })
 export class ProjectComponent implements OnInit {
+  @ViewChild('collabStack') collabStack?: CollaboratorStackComponent;
+
   scripts: Script[] = [];
   project: Project | null = null;
   projectId = '';
   newTitle = '';
   loading = true;
   error = '';
-  members: Member[] = [];
-  invites: Invite[] = [];
+  myRole = '';
+
+  // Reused for the "Invite collaborator" modal, opened via the
+  // collaborator stack's manage ("+") button — this replaced the
+  // always-visible invite input that used to live directly in this page.
+  showInviteModal = false;
   inviteEmail = '';
   inviteError = '';
-  myRole = '';
 
   constructor(
       private scriptService: ScriptService,
@@ -51,9 +58,6 @@ export class ProjectComponent implements OnInit {
       },
     });
 
-    // Load collaborators
-    this.loadCollaborators();
-
     // Fetch role
     this.membershipService.getMyRole(this.projectId).subscribe({
       next: ({ role }) => {
@@ -65,9 +69,10 @@ export class ProjectComponent implements OnInit {
   get isOwner(): boolean { return this.myRole === 'owner'; }
   get canEdit(): boolean { return this.myRole === 'owner' || this.myRole === 'editor'; }
 
-  loadCollaborators(): void {
-    this.membershipService.listMembers(this.projectId).subscribe(m => this.members = m ?? []);
-    this.membershipService.listInvites(this.projectId).subscribe(i => this.invites = i ?? []);
+  openInviteModal(): void {
+    this.inviteEmail = '';
+    this.inviteError = '';
+    this.showInviteModal = true;
   }
 
   sendInvite(): void {
@@ -75,10 +80,11 @@ export class ProjectComponent implements OnInit {
     if (!email) return;
 
     this.membershipService.invite(this.projectId, email).subscribe({
-      next: invite => {
-        this.invites.unshift(invite);
+      next: () => {
         this.inviteEmail = '';
         this.inviteError = '';
+        this.showInviteModal = false;
+        this.collabStack?.refresh();
       },
       error: () => {
         this.inviteError = 'Could not send invite.';

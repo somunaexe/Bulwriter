@@ -68,8 +68,11 @@
 }
 .invite-status.pending { color: #b5762f; }
 
-.invite-form {
-  display: flex;
-  gap: .5rem;
-  margin-top: 1rem;
+// The global .error-msg is sized for a full page section (centered,
+// 2rem vertical padding) — inside the compact invite modal it needs to
+// read like an ordinary inline form error instead.
+.find-replace-form .error-msg {
+  text-align: left;
+  padding: 0;
+  font-size: 12.5px;
 }

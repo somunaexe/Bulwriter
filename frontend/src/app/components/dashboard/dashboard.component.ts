@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ProjectService, Project } from '../../services/project.service';
+import { MembershipService, MyInvite } from '../../services/membership.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -17,8 +18,15 @@ export class DashboardComponent implements OnInit {
   loading = true;
   error = '';
 
+  // Invites addressed to the signed-in user — shown so they can actively
+  // accept or decline instead of being silently auto-joined on login.
+  invites: MyInvite[] = [];
+  invitesLoading = true;
+  invitePending: Record<string, boolean> = {};
+
   constructor(
     private projectService: ProjectService,
+    private membershipService: MembershipService,
     private router: Router,
   ) {}
 
@@ -31,6 +39,45 @@ export class DashboardComponent implements OnInit {
       error: err => {
         this.error = 'Could not load projects.';
         this.loading = false;
+      },
+    });
+
+    this.membershipService.listMyInvites().subscribe({
+      next: invites => {
+        this.invites = invites ?? [];
+        this.invitesLoading = false;
+      },
+      error: () => {
+        this.invitesLoading = false;
+      },
+    });
+  }
+
+  acceptInvite(invite: MyInvite): void {
+    this.invitePending[invite.id] = true;
+    this.membershipService.acceptInvite(invite.id).subscribe({
+      next: () => {
+        this.invites = this.invites.filter(i => i.id !== invite.id);
+        delete this.invitePending[invite.id];
+        // The newly-joined project won't be in the list yet — reload it
+        // rather than trying to reconstruct a Project from the invite.
+        this.projectService.list().subscribe(projects => this.projects = projects ?? []);
+      },
+      error: () => {
+        delete this.invitePending[invite.id];
+      },
+    });
+  }
+
+  declineInvite(invite: MyInvite): void {
+    this.invitePending[invite.id] = true;
+    this.membershipService.declineInvite(invite.id).subscribe({
+      next: () => {
+        this.invites = this.invites.filter(i => i.id !== invite.id);
+        delete this.invitePending[invite.id];
+      },
+      error: () => {
+        delete this.invitePending[invite.id];
       },
     });
   }

@@ -25,6 +25,13 @@ export interface Invite {
   createdAt: string;
 }
 
+// An invite addressed to the signed-in user, enriched with the project's
+// title (see api.listMyInvites) so it can be shown/accepted/declined
+// without a separate per-project lookup.
+export interface MyInvite extends Invite {
+  projectTitle?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MembershipService {
   private BASE = environment.apiUrl;
@@ -45,5 +52,20 @@ export class MembershipService {
 
   getMyRole(projectId: string): Observable<{ role: string }> {
     return this.http.get<{ role: string }>(`${this.BASE}/projects/${projectId}/my-role`);
+  }
+
+  // Invites addressed to the signed-in user, across all projects — they
+  // decide whether to accept or decline, rather than invites being
+  // silently auto-accepted on next login.
+  listMyInvites(): Observable<MyInvite[]> {
+    return this.http.get<MyInvite[]>(`${this.BASE}/invites/mine`);
+  }
+
+  acceptInvite(inviteId: string): Observable<Invite> {
+    return this.http.post<Invite>(`${this.BASE}/invites/${inviteId}/accept`, {});
+  }
+
+  declineInvite(inviteId: string): Observable<{ status: string }> {
+    return this.http.post<{ status: string }>(`${this.BASE}/invites/${inviteId}/decline`, {});
   }
 }

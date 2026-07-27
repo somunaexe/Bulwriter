@@ -48,6 +48,13 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
     if (changes['projectId'] && !changes['projectId'].firstChange) this.load();
   }
 
+  // Called by a parent (e.g. after sending a new invite) to pick up
+  // membership changes it made itself — this component only reloads on
+  // its own when projectId changes.
+  refresh(): void {
+    this.load();
+  }
+
   private load(): void {
     if (!this.projectId) return;
 
