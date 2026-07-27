@@ -2,6 +2,7 @@ package membership
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -157,40 +158,85 @@ func (s *Store) ListInvites(projectID string) ([]*Invite, error) {
 	return invites, rows.Err()
 }
 
-func (s *Store) AcceptPendingInvites(userID, email string) error {
+// ListInvitesForEmail lists every still-pending invite addressed to this
+// email, across all projects — this is what the invited user sees to
+// decide whether to accept or decline, rather than invites being silently
+// auto-accepted the next time they log in.
+func (s *Store) ListInvitesForEmail(email string) ([]*Invite, error) {
 	rows, err := s.db.Query(
-		`SELECT id, project_id, role FROM project_invites
-		 WHERE email = $1 AND status = 'pending'`, email,
+		`SELECT id, project_id, email, role, status, created_at
+		 FROM project_invites WHERE email = $1 AND status = 'pending'
+		 ORDER BY created_at DESC`, email,
 	)
 	if err != nil {
-		return fmt.Errorf("querying pending invites: %w", err)
+		return nil, fmt.Errorf("querying pending invites: %w", err)
 	}
+	defer rows.Close()
 
-	type pending struct {
-		id, projectID, role string
-	}
-	var toAccept []pending
-
+	var invites []*Invite
 	for rows.Next() {
-		var p pending
-		if err := rows.Scan(&p.id, &p.projectID, &p.role); err != nil {
-			rows.Close()
-			return err
+		inv := &Invite{}
+		if err := rows.Scan(&inv.ID, &inv.ProjectID, &inv.Email, &inv.Role, &inv.Status, &inv.CreatedAt); err != nil {
+			return nil, err
 		}
-		toAccept = append(toAccept, p)
+		invites = append(invites, inv)
 	}
-	rows.Close()
+	return invites, rows.Err()
+}
 
-	for _, p := range toAccept {
-		if err := s.AddMember(p.projectID, userID, p.role); err != nil {
-			return err
-		}
-		_, err := s.db.Exec(
-			`UPDATE project_invites SET status = 'accepted' WHERE id = $1`, p.id,
-		)
-		if err != nil {
-			return err
-		}
+func (s *Store) GetInvite(inviteID string) (*Invite, error) {
+	inv := &Invite{}
+	err := s.db.QueryRow(
+		`SELECT id, project_id, email, role, status, created_at
+		 FROM project_invites WHERE id = $1`, inviteID,
+	).Scan(&inv.ID, &inv.ProjectID, &inv.Email, &inv.Role, &inv.Status, &inv.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, errors.New("invite not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("querying invite: %w", err)
+	}
+	return inv, nil
+}
+
+// AcceptInvite adds the accepting user as a project member with the
+// invite's role and marks the invite accepted. Callers must first check
+// the invite's email actually belongs to userID (see api.acceptInvite) —
+// this only guards against an invite that's already been resolved.
+func (s *Store) AcceptInvite(inviteID, userID string) (*Invite, error) {
+	inv, err := s.GetInvite(inviteID)
+	if err != nil {
+		return nil, err
+	}
+	if inv.Status != "pending" {
+		return nil, errors.New("invite is no longer pending")
+	}
+	if err := s.AddMember(inv.ProjectID, userID, inv.Role); err != nil {
+		return nil, err
+	}
+	if _, err := s.db.Exec(
+		`UPDATE project_invites SET status = 'accepted' WHERE id = $1`, inviteID,
+	); err != nil {
+		return nil, fmt.Errorf("accepting invite: %w", err)
+	}
+	inv.Status = "accepted"
+	return inv, nil
+}
+
+func (s *Store) DeclineInvite(inviteID string) error {
+	res, err := s.db.Exec(
+		`UPDATE project_invites SET status = 'declined' WHERE id = $1 AND status = 'pending'`,
+		inviteID,
+	)
+	if err != nil {
+		return fmt.Errorf("declining invite: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("invite is no longer pending")
 	}
 	return nil
 }

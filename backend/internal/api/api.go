@@ -6,6 +6,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -100,6 +101,13 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/invites", r.listInvites).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/invites", r.createInvite).Methods("POST")
 
+	// Invites addressed to the signed-in user, across all projects — they
+	// decide whether to accept or decline, rather than invites being
+	// silently auto-accepted on next login.
+	api.HandleFunc("/invites/mine", r.listMyInvites).Methods("GET")
+	api.HandleFunc("/invites/{inviteId}/accept", r.acceptInvite).Methods("POST")
+	api.HandleFunc("/invites/{inviteId}/decline", r.declineInvite).Methods("POST")
+
 	// Roles
 	api.HandleFunc("/projects/{projectId}/my-role", r.getMyRole).Methods("GET")
 	
@@ -127,17 +135,6 @@ func (r *router) wsUpgrade(w http.ResponseWriter, req *http.Request) {
 
 func (r *router) listProjects(w http.ResponseWriter, req *http.Request) {
 	userID := middleware.UserIDFromContext(req)
-	email := middleware.UserEmailFromContext(req)
-
-	// Check if this user has any pending invites matching their email,
-	// and auto-add them as members if so. Runs on every dashboard load —
-	// harmless if there's nothing pending (the query returns no rows).
-	if email != "" {
-		if err := r.members.AcceptPendingInvites(userID, email); err != nil {
-			writeErr(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
 
 	ids, err := r.members.ProjectIDsForUser(userID)
 	if err != nil {
@@ -440,12 +437,87 @@ func (r *router) createInvite(w http.ResponseWriter, req *http.Request) {
 		role2 = "editor"
 	}
 
-	inv, err := r.members.CreateInvite(vars["projectId"], body.Email, role)
+	inv, err := r.members.CreateInvite(vars["projectId"], body.Email, role2)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusCreated, inv)
+}
+
+// inviteWithProject adds the project's title to an invite, so the invited
+// user can tell which project it's for without a separate lookup.
+type inviteWithProject struct {
+	*membership.Invite
+	ProjectTitle string `json:"projectTitle,omitempty"`
+}
+
+func (r *router) listMyInvites(w http.ResponseWriter, req *http.Request) {
+	email := middleware.UserEmailFromContext(req)
+	if email == "" {
+		writeJSON(w, http.StatusOK, []inviteWithProject{})
+		return
+	}
+
+	invites, err := r.members.ListInvitesForEmail(email)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	enriched := make([]inviteWithProject, len(invites))
+	for i, inv := range invites {
+		iw := inviteWithProject{Invite: inv}
+		if p, err := r.projects.Get(inv.ProjectID); err == nil && p != nil {
+			iw.ProjectTitle = p.Title
+		}
+		enriched[i] = iw
+	}
+	writeJSON(w, http.StatusOK, enriched)
+}
+
+func (r *router) acceptInvite(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+	email := middleware.UserEmailFromContext(req)
+
+	inv, err := r.members.GetInvite(vars["inviteId"])
+	if err != nil {
+		writeErr(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if email == "" || !strings.EqualFold(inv.Email, email) {
+		writeErr(w, http.StatusForbidden, "this invite isn't addressed to you")
+		return
+	}
+
+	updated, err := r.members.AcceptInvite(inv.ID, userID)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+func (r *router) declineInvite(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	email := middleware.UserEmailFromContext(req)
+
+	inv, err := r.members.GetInvite(vars["inviteId"])
+	if err != nil {
+		writeErr(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if email == "" || !strings.EqualFold(inv.Email, email) {
+		writeErr(w, http.StatusForbidden, "this invite isn't addressed to you")
+		return
+	}
+
+	if err := r.members.DeclineInvite(inv.ID); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "declined"})
 }
 
 func (r *router) getMyRole(w http.ResponseWriter, req *http.Request) {

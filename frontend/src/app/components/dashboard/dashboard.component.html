@@ -5,6 +5,22 @@
     <p class="tagline">Your screenwriting workspace</p>
   </header>
 
+  <section class="invites" *ngIf="!invitesLoading && invites.length > 0">
+    <h2 class="section-label">Your invites</h2>
+    <ul class="invite-inbox-list">
+      <li *ngFor="let inv of invites" class="invite-inbox-item">
+        <span class="invite-inbox-info">
+          <span class="invite-inbox-project">{{ inv.projectTitle || 'Untitled project' }}</span>
+          <span class="invite-inbox-role">as {{ inv.role }}</span>
+        </span>
+        <span class="invite-inbox-actions">
+          <button class="btn-ghost" (click)="declineInvite(inv)" [disabled]="invitePending[inv.id]">Decline</button>
+          <button class="btn-save" (click)="acceptInvite(inv)" [disabled]="invitePending[inv.id]">Accept</button>
+        </span>
+      </li>
+    </ul>
+  </section>
+
   <section class="new-project">
     <input
       [(ngModel)]="newTitle"

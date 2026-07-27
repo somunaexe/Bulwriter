@@ -37,38 +37,29 @@
   <section class="collaborators">
     <h2 class="section-label">Collaborators</h2>
 
-    <ul class="member-list">
-      <li *ngFor="let m of members" class="member-item">
-        <span class="member-identity">
-          <img *ngIf="m.imageUrl" class="member-avatar" [src]="m.imageUrl" [alt]="m.name || m.email" />
-          <span *ngIf="!m.imageUrl" class="member-avatar member-avatar-fallback">
-            {{ (m.name || m.email || '?')[0] | uppercase }}
-          </span>
-          <span class="member-name">{{ m.name || m.email || m.userId }}</span>
-        </span>
-        <span class="member-role">{{ m.role }}</span>
-      </li>
-    </ul>
+    <app-collaborator-stack
+      #collabStack
+      [projectId]="projectId"
+      [canManage]="isOwner"
+      (manage)="openInviteModal()"
+    ></app-collaborator-stack>
+  </section>
 
-    <ul class="invite-list" *ngIf="invites.length > 0">
-      <li *ngFor="let inv of invites" class="invite-item">
-        <span class="invite-email">{{ inv.email }}</span>
-        <span class="invite-status" [class.pending]="inv.status === 'pending'">{{ inv.status }}</span>
-      </li>
-    </ul>
-
-    <!-- Only owners can invite -->
-    <div class="invite-form" *ngIf="isOwner">
+  <app-modal *ngIf="showInviteModal" title="Invite collaborator" (closed)="showInviteModal = false">
+    <div class="find-replace-form">
       <input
         [(ngModel)]="inviteEmail"
         placeholder="Invite by email…"
         class="input-sm"
-        (keydown.enter)="sendInvite()" />
-      <button class="btn-ghost" (click)="sendInvite()" [disabled]="!inviteEmail.trim()">
-        Invite
-      </button>
+        (keydown.enter)="sendInvite()"
+        autofocus />
+      <p class="error-msg" *ngIf="inviteError">{{ inviteError }}</p>
+      <div class="find-replace-actions">
+        <button class="btn-ghost" (click)="showInviteModal = false">Cancel</button>
+        <button class="btn-save" (click)="sendInvite()" [disabled]="!inviteEmail.trim()">
+          Send invite
+        </button>
+      </div>
     </div>
-
-    <p class="error-msg" *ngIf="inviteError">{{ inviteError }}</p>
-  </section>
+  </app-modal>
 </div>
