@@ -1,0 +1,41 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Location scouting</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading locations…</div>
+
+  <div class="scouting-body" *ngIf="!loading">
+    <p class="empty-msg" *ngIf="!groups.length">No scene headings yet.</p>
+
+    <div class="scouting-location" *ngFor="let group of groups">
+      <h3 class="scouting-location-name">{{ group.locationKey || 'Untitled location' }}</h3>
+
+      <div class="scouting-candidates">
+        <div class="scouting-candidate" *ngFor="let c of group.candidates" [class.selected]="c.isSelected">
+          <img *ngIf="c.photo" class="scouting-photo" [src]="c.photo" [alt]="c.name" />
+          <div class="scouting-candidate-fields">
+            <div class="scouting-candidate-row">
+              <input class="input-sm" placeholder="Name…" [(ngModel)]="c.name" (blur)="save(c)" [disabled]="!canEdit" />
+              <span class="scouting-selected-badge" *ngIf="c.isSelected">Selected</span>
+              <button *ngIf="canEdit && !c.isSelected" class="btn-ghost scouting-select-btn" (click)="select(group, c)">Select</button>
+              <button *ngIf="canEdit" class="scouting-remove-btn" (click)="remove(group, c)" aria-label="Remove candidate">×</button>
+            </div>
+            <input class="input-sm" placeholder="Address…" [(ngModel)]="c.address" (blur)="save(c)" [disabled]="!canEdit" />
+            <textarea class="scouting-notes" placeholder="Notes…" [(ngModel)]="c.notes" (blur)="save(c)" [readonly]="!canEdit"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="scouting-add" *ngIf="canEdit">
+        <input class="input-sm" placeholder="Candidate name…" [(ngModel)]="group.newName" (keydown.enter)="addCandidate(group)" />
+        <input class="input-sm" placeholder="Address…" [(ngModel)]="group.newAddress" (keydown.enter)="addCandidate(group)" />
+        <input type="file" accept="image/*" class="scouting-file-input" (change)="onPhotoSelected(group, $event)" />
+        <button class="btn-ghost" (click)="addCandidate(group)" [disabled]="!group.newName.trim()">+ Add candidate</button>
+      </div>
+    </div>
+  </div>
+</div>

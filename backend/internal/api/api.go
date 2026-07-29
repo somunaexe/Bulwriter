@@ -19,6 +19,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
 	"github.com/somunaexe/bulwriter/backend/internal/schedule"
+	"github.com/somunaexe/bulwriter/backend/internal/scouting"
 	"github.com/somunaexe/bulwriter/backend/internal/script"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 	"github.com/somunaexe/bulwriter/backend/internal/membership"
@@ -33,6 +34,7 @@ type router struct {
 	members   *membership.Store  // ← add this
 	breakdown *breakdown.Store
 	schedule  *schedule.Store
+	scouting  *scouting.Store
 	crew      *crew.Store
 	casting   *casting.Store
 	budget    *budget.Store
@@ -48,6 +50,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		members:   membership.NewStore(db),
 		breakdown: breakdown.NewStore(db),
 		schedule:  schedule.NewStore(db),
+		scouting:  scouting.NewStore(db),
 		crew:      crew.NewStore(db),
 		casting:   casting.NewStore(db),
 		budget:    budget.NewStore(db),
@@ -155,6 +158,14 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/background", r.setProjectBackground).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/background", r.clearProjectBackground).Methods("DELETE")
 
+	// Location scouting — candidate real-world locations per unique
+	// location the script needs (locations themselves are derived live
+	// from the script text on the frontend, same as breakdown).
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting", r.listScoutCandidates).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting", r.addScoutCandidate).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}", r.updateScoutCandidate).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}/select", r.selectScoutCandidate).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}", r.removeScoutCandidate).Methods("DELETE")
 	// Crew — the below-the-line production team, distinct from
 	// project_members (crew members aren't Bulwriter accounts).
 	api.HandleFunc("/projects/{projectId}/crew", r.listCrew).Methods("GET")
@@ -905,6 +916,9 @@ func (r *router) clearProjectBackground(w http.ResponseWriter, req *http.Request
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func (r *router) listScoutCandidates(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	candidates, err := r.scouting.List(vars["scriptId"])
 func (r *router) listCrew(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	members, err := r.crew.List(vars["projectId"])
@@ -912,6 +926,21 @@ func (r *router) listCrew(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if candidates == nil {
+		candidates = []*scouting.Candidate{}
+	}
+	writeJSON(w, http.StatusOK, candidates)
+}
+
+type scoutCandidateBody struct {
+	LocationKey string `json:"locationKey"`
+	Name        string `json:"name"`
+	Address     string `json:"address"`
+	Notes       string `json:"notes"`
+	Photo       string `json:"photo"`
+}
+
+func (r *router) addScoutCandidate(w http.ResponseWriter, req *http.Request) {
 	if members == nil {
 		members = []*crew.Member{}
 	}
@@ -931,6 +960,14 @@ func (r *router) addCrewMember(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body scoutCandidateBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.LocationKey == "" {
+		writeErr(w, http.StatusBadRequest, "locationKey is required, and the payload must fit within the size limit")
+		return
+	}
+
+	c, err := r.scouting.Add(vars["scriptId"], body.LocationKey, body.Name, body.Address, body.Notes, body.Photo)
 	var body struct {
 		Role    string `json:"role"`
 		Name    string `json:"name"`
@@ -947,6 +984,10 @@ func (r *router) addCrewMember(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (r *router) updateScoutCandidate(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusCreated, m)
 }
 
@@ -963,6 +1004,26 @@ func (r *router) updateCrewMember(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body scoutCandidateBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
+		return
+	}
+
+	c, err := r.scouting.Update(vars["scriptId"], vars["candidateId"], body.Name, body.Address, body.Notes, body.Photo)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
+}
+
+func (r *router) selectScoutCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
 	var body struct {
 		Role    string `json:"role"`
 		Name    string `json:"name"`
@@ -979,6 +1040,18 @@ func (r *router) updateCrewMember(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.scouting.Select(vars["scriptId"], vars["candidateId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (r *router) removeScoutCandidate(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, m)
 }
 
@@ -995,6 +1068,7 @@ func (r *router) removeCrewMember(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if err := r.scouting.Remove(vars["scriptId"], vars["candidateId"]); err != nil {
 	if err := r.crew.Remove(vars["projectId"], vars["memberId"]); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

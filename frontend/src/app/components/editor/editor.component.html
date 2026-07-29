@@ -137,6 +137,7 @@
           <app-menu-dropdown label="Production">
             <button (click)="openBreakdown()">Scene breakdown</button>
             <button (click)="openStripboard()">Shooting schedule</button>
+            <button (click)="openScouting()">Location scouting</button>
             <button (click)="openCasting()">Casting</button>
             <button (click)="openBudget()">Budget estimate</button>
           </app-menu-dropdown>
@@ -171,6 +172,15 @@
       (close)="showBreakdown = false">
     </app-breakdown-drawer>
 
+    <div class="breakdown-backdrop" *ngIf="showScouting" (click)="showScouting = false"></div>
+
+    <app-location-scouting
+      *ngIf="showScouting"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showScouting = false">
+    </app-location-scouting>
     <div class="breakdown-backdrop" *ngIf="showCasting" (click)="showCasting = false"></div>
 
     <app-casting-board
