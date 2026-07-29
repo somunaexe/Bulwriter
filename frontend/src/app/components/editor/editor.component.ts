@@ -24,6 +24,7 @@ import {
   TITLE_PAGE_KEYS,
 } from '../../editor/screenplay-schema';
 import { setBlockType } from 'prosemirror-commands';
+import { Node as PMNode } from 'prosemirror-model';
 
 const ELEMENTS: ScreenplayElement[] = [
   'scene', 'action', 'character', 'parenthetical', 'dialogue', 'transition', 'shot', 'lyrics', 'dual_dialogue', 'sequence', 'note',
@@ -40,6 +41,12 @@ import { MembershipService } from '../../services/membership.service';
 import { AutoSaveService } from '../../services/autosave.service';
 import { ProjectService, Project } from '../../services/project.service';
 import { fileToBackgroundDataUri } from '../../editor/background-image';
+import { exportScreenplayJson, importScreenplayJson } from '../../editor/json-transfer';
+import { exportScreenplayHtml } from '../../editor/html-export';
+import { importScreenplayHtml } from '../../editor/html-import';
+import { exportScreenplayDocx } from '../../editor/docx-export';
+import { importDocxToText } from '../../editor/docx-import';
+import { importPdfToText } from '../../editor/pdf-import';
 
 @Component({
   selector: 'app-editor',
@@ -253,16 +260,25 @@ export class EditorComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Parses Fountain-style plain text (what Fountain/DOC/PDF/HTML import
+  // all funnel through — see importDocx/importPdf/importHtml below) and
+  // replaces the editor's content with it.
   private replaceEditorContent(content: string): void {
+    const parsed = parseFountain(content);
+    const newDoc = fountainToPMDoc(parsed);
+    this.replaceEditorContentWithDoc(newDoc);
+  }
+
+  // JSON import (json-transfer.ts) already produces a full ProseMirror
+  // doc directly — a lossless round-trip, unlike the other import
+  // formats — so it replaces content here without going through
+  // parseFountain at all.
+  private replaceEditorContentWithDoc(newDoc: PMNode): void {
     const session = (this.sync as any).session;
     if (!session) return;
 
     const view = session.view;
     const ydoc: Y.Doc = session.doc;
-
-    // Parse Fountain into structured elements
-    const parsed = parseFountain(content);
-    const newDoc = fountainToPMDoc(parsed);
 
     // Instead of replacing ProseMirror state directly, we update
     // the Yjs document — ySyncPlugin will then sync the new content
@@ -275,6 +291,23 @@ export class EditorComponent implements OnInit, OnDestroy {
       const { tr } = view.state;
       tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
       view.dispatch(tr);
+    });
+  }
+
+  // Hidden <input type=file>, clicked programmatically — the standard
+  // browser pattern for a file picker without a visible form control.
+  // Shared by every import format below instead of each rebuilding it.
+  private pickFile(accept: string): Promise<File | null> {
+    return new Promise(resolve => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = accept;
+      input.onchange = (event: Event) => {
+        resolve((event.target as HTMLInputElement).files?.[0] ?? null);
+      };
+      document.body.appendChild(input);
+      input.click();
+      document.body.removeChild(input);
     });
   }
 
@@ -426,56 +459,79 @@ export class EditorComponent implements OnInit, OnDestroy {
     }).catch(err => console.error('PDF export failed:', err));
   }
 
-  importFountain(): void {
-    // Create a hidden file input, click it, and read the result.
-    // This is the standard browser pattern for file upload without a form.
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.fountain,.txt';
-
-    input.onchange = (event: Event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        if (!text) return;
-
-        const session = (this.sync as any).session;
-        if (!session) return;
-
-        const view = session.view;
-        const ydoc: Y.Doc = session.doc;
-
-        // Parse Fountain into structured elements
-        const parsed = parseFountain(text);
-        const newDoc = fountainToPMDoc(parsed);
-
-        // Instead of replacing ProseMirror state directly, we update
-        // the Yjs document — ySyncPlugin will then sync the new content
-        // into ProseMirror automatically.
-        //
-        // We do this by applying a ProseMirror transaction that replaces
-        // the entire document content, wrapped in a Yjs transaction so
-        // the change is tracked by the CRDT.
-        ydoc.transact(() => {
-          const { tr } = view.state;
-          tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
-          view.dispatch(tr);
-        });
-
-        view.focus();
-      };
-
-      reader.readAsText(file);
-    };
-
-    // Trigger the file picker
-    document.body.appendChild(input);
-    input.click();
-    document.body.removeChild(input);
+  async importFountain(): Promise<void> {
+    const file = await this.pickFile('.fountain,.txt');
+    if (!file) return;
+    this.replaceEditorContent(await file.text());
+    (this.sync as any).session?.view?.focus();
   }
+
+  exportJson(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    exportScreenplayJson(view.state.doc, this.scriptId);
+  }
+
+  async importJson(): Promise<void> {
+    const file = await this.pickFile('.json');
+    if (!file) return;
+    try {
+      this.replaceEditorContentWithDoc(importScreenplayJson(await file.text()));
+    } catch (err) {
+      console.error('JSON import failed:', err);
+      alert('Could not import that file — it may not be a Bulwriter JSON export.');
+    }
+  }
+
+  exportHtml(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    exportScreenplayHtml(view.state.doc, this.scriptId);
+  }
+
+  async importHtml(): Promise<void> {
+    const file = await this.pickFile('.html,.htm');
+    if (!file) return;
+    try {
+      this.replaceEditorContentWithDoc(await importScreenplayHtml(file));
+    } catch (err) {
+      console.error('HTML import failed:', err);
+      alert('Could not import that HTML file.');
+    }
+  }
+
+  async exportDocx(): Promise<void> {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    try {
+      await exportScreenplayDocx(view.state.doc, this.scriptId);
+    } catch (err) {
+      console.error('DOCX export failed:', err);
+    }
+  }
+
+  async importDocx(): Promise<void> {
+    const file = await this.pickFile('.docx');
+    if (!file) return;
+    try {
+      this.replaceEditorContent(await importDocxToText(file));
+    } catch (err) {
+      console.error('DOCX import failed:', err);
+      alert('Could not import that Word document.');
+    }
+  }
+
+  async importPdf(): Promise<void> {
+    const file = await this.pickFile('.pdf');
+    if (!file) return;
+    try {
+      this.replaceEditorContent(await importPdfToText(file));
+    } catch (err) {
+      console.error('PDF import failed:', err);
+      alert('Could not import that PDF.');
+    }
+  }
+
   // ── Edit menu ────────────────────────────────────────────────────
 
   undo(): void {
