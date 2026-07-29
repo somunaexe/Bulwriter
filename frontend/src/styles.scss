@@ -845,6 +845,52 @@ ol.stats-list {
   background: rgba(0, 0, 0, .06);
 }
 
+.breakdown-header-actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Small rounded tags — cast (accent-tinted) used by both the scene
+   breakdown and the stripboard; props (neutral, removable) stay local
+   to the breakdown drawer, the only place they're editable. */
+.breakdown-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.breakdown-chip-cast {
+  background: rgba(var(--accent-rgb), .12);
+  color: var(--accent);
+}
+
+.breakdown-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-bottom: .4rem;
+}
+
+/* CDK drag-and-drop (stripboard) — while dragging, CDK clones the
+   dragged element into .cdk-overlay-container, appended directly to
+   <body> outside any component's own view, so its styling can only ever
+   be reached from here, never from StripboardComponent's own
+   (encapsulated) stylesheet. */
+.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0;
+}
+
 .diff-body { flex: 1; overflow-y: auto; font-family: var(--font-mono); font-size: 12.5px; }
 .diff-line { display: flex; gap: .75rem; padding: 1px .75rem; }
 .diff-line.insert { background: var(--insert); }

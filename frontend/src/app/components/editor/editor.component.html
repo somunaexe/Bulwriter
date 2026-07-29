@@ -128,6 +128,7 @@
 
           <app-menu-dropdown label="Production">
             <button (click)="openBreakdown()">Scene breakdown</button>
+            <button (click)="openStripboard()">Shooting schedule</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Help">
@@ -159,6 +160,14 @@
       [canEdit]="canEdit"
       (close)="showBreakdown = false">
     </app-breakdown-drawer>
+
+    <app-stripboard
+      *ngIf="showStripboard"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showStripboard = false">
+    </app-stripboard>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">
