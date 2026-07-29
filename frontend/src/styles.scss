@@ -519,6 +519,14 @@ kbd {
   justify-content: flex-end;
 }
 
+.format-picker {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+
+  button { width: 100%; text-align: left; }
+}
+
 .pdf-export-form p {
   font-size: 13px;
   color: var(--muted);
