@@ -733,6 +733,8 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openCasting(): void {
     this.showCasting = true;
+  }
+  
   openBudget(): void {
     this.showBudget = true;
   }
