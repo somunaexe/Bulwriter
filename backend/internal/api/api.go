@@ -514,6 +514,8 @@ func (r *router) upsertCasting(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, c)
+}
+
 type scheduleResponse struct {
 	Strips []*schedule.Strip   `json:"strips"`
 	Days   []*schedule.DayMeta `json:"days"`
@@ -919,9 +921,6 @@ func (r *router) clearProjectBackground(w http.ResponseWriter, req *http.Request
 func (r *router) listScoutCandidates(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	candidates, err := r.scouting.List(vars["scriptId"])
-func (r *router) listCrew(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	members, err := r.crew.List(vars["projectId"])
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -930,6 +929,19 @@ func (r *router) listCrew(w http.ResponseWriter, req *http.Request) {
 		candidates = []*scouting.Candidate{}
 	}
 	writeJSON(w, http.StatusOK, candidates)
+}
+
+func (r *router) listCrew(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	members, err := r.crew.List(vars["projectId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if members == nil {
+		members = []*crew.Member{}
+	}
+	writeJSON(w, http.StatusOK, members)
 }
 
 type scoutCandidateBody struct {
@@ -941,13 +953,6 @@ type scoutCandidateBody struct {
 }
 
 func (r *router) addScoutCandidate(w http.ResponseWriter, req *http.Request) {
-	if members == nil {
-		members = []*crew.Member{}
-	}
-	writeJSON(w, http.StatusOK, members)
-}
-
-func (r *router) addCrewMember(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	userID := middleware.UserIDFromContext(req)
 
@@ -968,6 +973,26 @@ func (r *router) addCrewMember(w http.ResponseWriter, req *http.Request) {
 	}
 
 	c, err := r.scouting.Add(vars["scriptId"], body.LocationKey, body.Name, body.Address, body.Notes, body.Photo)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (r *router) addCrewMember(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
 	var body struct {
 		Role    string `json:"role"`
 		Name    string `json:"name"`
@@ -984,14 +1009,10 @@ func (r *router) addCrewMember(w http.ResponseWriter, req *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, c)
-}
-
-func (r *router) updateScoutCandidate(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusCreated, m)
 }
 
-func (r *router) updateCrewMember(w http.ResponseWriter, req *http.Request) {
+func (r *router) updateScoutCandidate(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	userID := middleware.UserIDFromContext(req)
 
@@ -1019,11 +1040,19 @@ func (r *router) updateCrewMember(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, c)
 }
 
-func (r *router) selectScoutCandidate(w http.ResponseWriter, req *http.Request) {
+func (r *router) updateCrewMember(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	userID := middleware.UserIDFromContext(req)
 
 	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
 	var body struct {
 		Role    string `json:"role"`
 		Name    string `json:"name"`
@@ -1040,6 +1069,18 @@ func (r *router) selectScoutCandidate(w http.ResponseWriter, req *http.Request) 
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	writeJSON(w, http.StatusOK, m)
+}
+
+func (r *router) selectScoutCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
 		return
 	}
@@ -1052,7 +1093,23 @@ func (r *router) selectScoutCandidate(w http.ResponseWriter, req *http.Request) 
 }
 
 func (r *router) removeScoutCandidate(w http.ResponseWriter, req *http.Request) {
-	writeJSON(w, http.StatusOK, m)
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.scouting.Remove(vars["scriptId"], vars["candidateId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (r *router) removeCrewMember(w http.ResponseWriter, req *http.Request) {
@@ -1068,7 +1125,6 @@ func (r *router) removeCrewMember(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.scouting.Remove(vars["scriptId"], vars["candidateId"]); err != nil {
 	if err := r.crew.Remove(vars["projectId"], vars["memberId"]); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
