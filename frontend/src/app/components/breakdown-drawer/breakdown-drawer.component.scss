@@ -1,10 +1,9 @@
 @use 'mixins' as *;
 
-.breakdown-header-actions {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-}
+// .breakdown-header-actions / .breakdown-chip(-cast) live in the global
+// styles.scss now — the stripboard drawer needs the same header-actions
+// row and cast chips, and a scoped rule here could never reach a class
+// used from a different component's own template.
 
 .breakdown-tabs {
   display: flex;
@@ -83,28 +82,6 @@
   font-size: 12.5px;
   color: var(--muted);
   font-style: italic;
-}
-
-.breakdown-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-  margin-bottom: .4rem;
-}
-
-.breakdown-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .3rem;
-  padding: .2rem .55rem;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.breakdown-chip-cast {
-  background: rgba(var(--accent-rgb), .12);
-  color: var(--accent);
 }
 
 .breakdown-chip-prop {

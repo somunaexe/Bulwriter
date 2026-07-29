@@ -1,0 +1,47 @@
+<div class="stripboard-backdrop" (click)="close.emit()">
+  <div class="stripboard-panel" (click)="$event.stopPropagation()">
+    <header class="breakdown-header">
+      <span>Shooting schedule</span>
+      <div class="breakdown-header-actions">
+        <button class="btn-ghost" (click)="exportCsv()" [disabled]="!days.length">Export CSV</button>
+        <button class="btn-icon" (click)="close.emit()">✕</button>
+      </div>
+    </header>
+
+    <div *ngIf="loading" class="loading">Loading schedule…</div>
+
+    <div class="stripboard-body" *ngIf="!loading" cdkDropListGroup>
+      <div class="stripboard-day" *ngFor="let day of days">
+        <div class="stripboard-day-header">
+          <span>Day {{ day.dayNumber }}</span>
+          <button
+            *ngIf="canEdit && !day.strips.length"
+            class="btn-icon"
+            (click)="removeDay(day)"
+            aria-label="Remove day">✕</button>
+        </div>
+
+        <div class="stripboard-strip-list"
+             cdkDropList
+             [cdkDropListData]="day.strips"
+             [cdkDropListDisabled]="!canEdit"
+             (cdkDropListDropped)="onDrop($event)">
+
+          <div class="stripboard-strip" *ngFor="let strip of day.strips" cdkDrag [cdkDragDisabled]="!canEdit">
+            <div class="stripboard-strip-heading-row">
+              <span class="stripboard-strip-number">{{ strip.number }}</span>
+              <span class="stripboard-strip-heading">{{ strip.heading }}</span>
+            </div>
+            <div class="breakdown-chips" *ngIf="strip.cast.length">
+              <span class="breakdown-chip breakdown-chip-cast" *ngFor="let c of strip.cast">{{ c }}</span>
+            </div>
+          </div>
+
+          <p class="stripboard-empty" *ngIf="!day.strips.length">Drag scenes here</p>
+        </div>
+      </div>
+
+      <button *ngIf="canEdit" class="stripboard-add-day" (click)="addDay()">+ Add day</button>
+    </div>
+  </div>
+</div>

@@ -56,7 +56,7 @@ export interface BreakdownRow extends SceneEntry {
   notes: string;
 }
 
-function csvCell(value: string): string {
+export function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 

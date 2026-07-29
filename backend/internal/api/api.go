@@ -15,6 +15,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
+	"github.com/somunaexe/bulwriter/backend/internal/schedule"
 	"github.com/somunaexe/bulwriter/backend/internal/script"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 	"github.com/somunaexe/bulwriter/backend/internal/membership"
@@ -28,6 +29,7 @@ type router struct {
 	scripts	  *script.Store
 	members   *membership.Store  // ← add this
 	breakdown *breakdown.Store
+	schedule  *schedule.Store
 	clerk     *clerkapi.Client
 }
 
@@ -39,6 +41,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		scripts:   script.NewStore((db)),
 		members:   membership.NewStore(db),
 		breakdown: breakdown.NewStore(db),
+		schedule:  schedule.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -104,6 +107,11 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// frontend, not stored here.
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/breakdown", r.listBreakdown).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/breakdown", r.upsertBreakdown).Methods("PUT")
+
+	// Shooting schedule (stripboard) — the whole thing is replaced as one
+	// unit on every reorder rather than patched strip-by-strip.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.getSchedule).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.replaceSchedule).Methods("PUT")
 
 	// Members & Invites
 	api.HandleFunc("/projects/{projectId}/members", r.listMembers).Methods("GET")
@@ -419,6 +427,48 @@ func (r *router) upsertBreakdown(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, b)
+}
+
+func (r *router) getSchedule(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	strips, err := r.schedule.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if strips == nil {
+		strips = []*schedule.Strip{}
+	}
+	writeJSON(w, http.StatusOK, strips)
+}
+
+func (r *router) replaceSchedule(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Strips []schedule.StripInput `json:"strips"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	strips, err := r.schedule.Replace(vars["scriptId"], body.Strips)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, strips)
 }
 
 // memberWithProfile adds Clerk-sourced display info (name/email/avatar) on
