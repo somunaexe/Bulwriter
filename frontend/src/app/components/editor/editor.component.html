@@ -75,8 +75,16 @@
             <button (click)="insertTitlePage()" [disabled]="!canEdit">Insert title page…</button>
             <div class="menu-divider"></div>
             <button (click)="importFountain()" [disabled]="!canEdit">Import Fountain…</button>
+            <button (click)="importDocx()" [disabled]="!canEdit">Import Word (.docx)…</button>
+            <button (click)="importPdf()" [disabled]="!canEdit">Import PDF…</button>
+            <button (click)="importJson()" [disabled]="!canEdit">Import JSON…</button>
+            <button (click)="importHtml()" [disabled]="!canEdit">Import HTML…</button>
+            <div class="menu-divider"></div>
             <button (click)="exportFountain()">Export as Fountain…</button>
             <button (click)="exportPDF()">Export as PDF…</button>
+            <button (click)="exportDocx()">Export as Word (.docx)…</button>
+            <button (click)="exportJson()">Export as JSON…</button>
+            <button (click)="exportHtml()">Export as HTML…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Edit">
@@ -129,6 +137,7 @@
           <app-menu-dropdown label="Production">
             <button (click)="openBreakdown()">Scene breakdown</button>
             <button (click)="openStripboard()">Shooting schedule</button>
+            <button (click)="openBudget()">Budget estimate</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Help">
@@ -168,6 +177,14 @@
       [canEdit]="canEdit"
       (close)="showStripboard = false">
     </app-stripboard>
+
+    <app-budget-estimator
+      *ngIf="showBudget"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showBudget = false">
+    </app-budget-estimator>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">

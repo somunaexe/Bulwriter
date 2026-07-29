@@ -18,22 +18,47 @@ export interface StripInput {
   position: number;
 }
 
+// A shoot day's call-sheet fields — date, general crew call time,
+// location, freeform notes. Keyed by dayNumber, same as ScheduleStrip.
+export interface ScheduleDayMeta {
+  scriptId: string;
+  dayNumber: number;
+  shootDate: string;
+  callTime: string;
+  location: string;
+  notes: string;
+  updatedAt: string;
+}
+
+export interface DayMetaInput {
+  dayNumber: number;
+  shootDate: string;
+  callTime: string;
+  location: string;
+  notes: string;
+}
+
+export interface ScheduleResponse {
+  strips: ScheduleStrip[];
+  days: ScheduleDayMeta[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ScheduleService {
   private BASE = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
-  list(projectId: string, scriptId: string): Observable<ScheduleStrip[]> {
-    return this.http.get<ScheduleStrip[]>(
+  list(projectId: string, scriptId: string): Observable<ScheduleResponse> {
+    return this.http.get<ScheduleResponse>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/schedule`
     );
   }
 
-  replace(projectId: string, scriptId: string, strips: StripInput[]): Observable<ScheduleStrip[]> {
-    return this.http.put<ScheduleStrip[]>(
+  replace(projectId: string, scriptId: string, strips: StripInput[], days: DayMetaInput[]): Observable<ScheduleResponse> {
+    return this.http.put<ScheduleResponse>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/schedule`,
-      { strips }
+      { strips, days }
     );
   }
 }

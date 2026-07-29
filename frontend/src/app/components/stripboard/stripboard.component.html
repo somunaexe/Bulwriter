@@ -14,11 +14,18 @@
       <div class="stripboard-day" *ngFor="let day of days">
         <div class="stripboard-day-header">
           <span>Day {{ day.dayNumber }}</span>
-          <button
-            *ngIf="canEdit && !day.strips.length"
-            class="btn-icon"
-            (click)="removeDay(day)"
-            aria-label="Remove day">✕</button>
+          <span class="stripboard-day-header-actions">
+            <button
+              class="btn-icon"
+              (click)="openCallSheet(day)"
+              title="Call sheet"
+              aria-label="Call sheet">📋</button>
+            <button
+              *ngIf="canEdit && !day.strips.length"
+              class="btn-icon"
+              (click)="removeDay(day)"
+              aria-label="Remove day">✕</button>
+          </span>
         </div>
 
         <div class="stripboard-strip-list"
@@ -45,3 +52,34 @@
     </div>
   </div>
 </div>
+
+<app-modal
+  *ngIf="callSheetDay"
+  [title]="'Call sheet — Day ' + callSheetDay.dayNumber"
+  (closed)="closeCallSheet()">
+  <div class="call-sheet-form">
+    <label class="call-sheet-field">
+      <span class="breakdown-field-label">Shoot date</span>
+      <input class="input-sm" type="date" [(ngModel)]="callSheetDay.shootDate" [disabled]="!canEdit" />
+    </label>
+    <label class="call-sheet-field">
+      <span class="breakdown-field-label">General call time</span>
+      <input class="input-sm" type="time" [(ngModel)]="callSheetDay.callTime" [disabled]="!canEdit" />
+    </label>
+    <label class="call-sheet-field">
+      <span class="breakdown-field-label">Location</span>
+      <input class="input-sm" placeholder="Address or description…" [(ngModel)]="callSheetDay.location" [disabled]="!canEdit" />
+    </label>
+    <label class="call-sheet-field">
+      <span class="breakdown-field-label">Notes</span>
+      <textarea class="breakdown-notes" placeholder="Parking, weather, safety notes…" [(ngModel)]="callSheetDay.notes" [readonly]="!canEdit"></textarea>
+    </label>
+
+    <p class="call-sheet-scene-count">{{ callSheetDay.strips.length }} scene{{ callSheetDay.strips.length === 1 ? '' : 's' }} scheduled this day.</p>
+
+    <div class="find-replace-actions">
+      <button class="btn-ghost" (click)="closeCallSheet()">Close</button>
+      <button class="btn-save" (click)="exportCallSheet()">Export PDF</button>
+    </div>
+  </div>
+</app-modal>

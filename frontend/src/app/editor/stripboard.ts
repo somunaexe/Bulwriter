@@ -1,11 +1,22 @@
 import { SceneEntry, csvCell } from './scene-breakdown';
 
+// The call sheet's editable fields for one shoot day — persisted
+// alongside the day's strips (see ScheduleService.replace), defaulting
+// to empty until a producer fills them in via the call sheet modal.
 export interface ScheduleDay {
   dayNumber: number;
   strips: SceneEntry[];
+  shootDate: string;
+  callTime: string;
+  location: string;
+  notes: string;
 }
 
 const MAX_STRIPS_PER_DAY = 6;
+
+export function emptyDayMeta(): Pick<ScheduleDay, 'shootDate' | 'callTime' | 'location' | 'notes'> {
+  return { shootDate: '', callTime: '', location: '', notes: '' };
+}
 
 /** Groups scenes by location (heading text, time-of-day stripped —
  *  what matters for scheduling is *where* you're shooting, not what the
@@ -35,12 +46,13 @@ export function autoSuggestDays(scenes: SceneEntry[]): ScheduleDay[] {
     days.push({
       dayNumber: days.length + 1,
       strips: flattened.slice(i, i + MAX_STRIPS_PER_DAY),
+      ...emptyDayMeta(),
     });
   }
-  return days.length ? days : [{ dayNumber: 1, strips: [] }];
+  return days.length ? days : [{ dayNumber: 1, strips: [], ...emptyDayMeta() }];
 }
 
-function normalizeLocation(heading: string): string {
+export function normalizeLocation(heading: string): string {
   return heading
     .replace(/^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?|EXT\.?)\s*/i, '')
     .replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|DAWN|DUSK|CONTINUOUS|LATER)\s*$/i, '')
