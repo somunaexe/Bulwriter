@@ -883,6 +883,45 @@ ol.stats-list {
   margin-bottom: .4rem;
 }
 
+.breakdown-field-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  margin-bottom: .35rem;
+}
+
+.breakdown-chip-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover { color: var(--delete-fg); }
+}
+
+.breakdown-notes {
+  width: 100%;
+  min-height: 54px;
+  resize: vertical;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .5rem .6rem;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--text);
+  outline: none;
+
+  &:focus { border-color: var(--accent); }
+  &:read-only { color: var(--muted); cursor: default; }
+}
+
 /* CDK drag-and-drop (stripboard) — while dragging, CDK clones the
    dragged element into .cdk-overlay-container, appended directly to
    <body> outside any component's own view, so its styling can only ever
