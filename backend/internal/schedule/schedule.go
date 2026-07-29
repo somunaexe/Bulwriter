@@ -27,6 +27,28 @@ type StripInput struct {
 	Position  int    `json:"position"`
 }
 
+// DayMeta is a shoot day's call-sheet fields — date, general crew call
+// time, location, and freeform notes. Keyed by day_number, same as
+// Strip, and always rewritten together with strips (see Replace) so the
+// two stay aligned when days are added/removed/renumbered.
+type DayMeta struct {
+	ScriptID  string    `json:"scriptId"`
+	DayNumber int       `json:"dayNumber"`
+	ShootDate string    `json:"shootDate"`
+	CallTime  string    `json:"callTime"`
+	Location  string    `json:"location"`
+	Notes     string    `json:"notes"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type DayMetaInput struct {
+	DayNumber int    `json:"dayNumber"`
+	ShootDate string `json:"shootDate"`
+	CallTime  string `json:"callTime"`
+	Location  string `json:"location"`
+	Notes     string `json:"notes"`
+}
+
 type Store struct {
 	db *sql.DB
 }
@@ -57,23 +79,51 @@ func (s *Store) List(scriptID string) ([]*Strip, error) {
 	return out, rows.Err()
 }
 
-// Replace wipes and rewrites the whole schedule for a script in one
-// transaction — a drag-and-drop reorder touches many strips' day/position
-// at once, so replacing the full set is simpler and more robust than
-// diffing against what's currently stored.
-func (s *Store) Replace(scriptID string, strips []StripInput) ([]*Strip, error) {
+func (s *Store) ListDays(scriptID string) ([]*DayMeta, error) {
+	rows, err := s.db.Query(
+		`SELECT script_id, day_number, shoot_date, call_time, location, notes, updated_at
+		 FROM schedule_days WHERE script_id = $1
+		 ORDER BY day_number ASC`, scriptID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying schedule days: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*DayMeta
+	for rows.Next() {
+		d := &DayMeta{}
+		if err := rows.Scan(&d.ScriptID, &d.DayNumber, &d.ShootDate, &d.CallTime, &d.Location, &d.Notes, &d.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scanning schedule day: %w", err)
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+// Replace wipes and rewrites the whole schedule (strips AND day
+// metadata) for a script in one transaction — a drag-and-drop reorder
+// touches many strips' day/position at once, and can renumber days, so
+// replacing both full sets together is simpler and more robust than
+// diffing against what's currently stored, and keeps day_number aligned
+// between the two tables.
+func (s *Store) Replace(scriptID string, strips []StripInput, days []DayMetaInput) ([]*Strip, []*DayMeta, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("starting transaction: %w", err)
+		return nil, nil, fmt.Errorf("starting transaction: %w", err)
 	}
 	defer tx.Rollback()
 
 	if _, err := tx.Exec(`DELETE FROM schedule_strips WHERE script_id = $1`, scriptID); err != nil {
-		return nil, fmt.Errorf("clearing schedule: %w", err)
+		return nil, nil, fmt.Errorf("clearing schedule: %w", err)
+	}
+	if _, err := tx.Exec(`DELETE FROM schedule_days WHERE script_id = $1`, scriptID); err != nil {
+		return nil, nil, fmt.Errorf("clearing schedule days: %w", err)
 	}
 
 	now := time.Now()
-	out := make([]*Strip, 0, len(strips))
+
+	outStrips := make([]*Strip, 0, len(strips))
 	for _, in := range strips {
 		st := &Strip{
 			ID:        uuid.New().String(),
@@ -88,13 +138,34 @@ func (s *Store) Replace(scriptID string, strips []StripInput) ([]*Strip, error) 
 			 VALUES ($1, $2, $3, $4, $5, $6)`,
 			st.ID, st.ScriptID, st.SceneKey, st.DayNumber, st.Position, st.UpdatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("inserting strip: %w", err)
+			return nil, nil, fmt.Errorf("inserting strip: %w", err)
 		}
-		out = append(out, st)
+		outStrips = append(outStrips, st)
+	}
+
+	outDays := make([]*DayMeta, 0, len(days))
+	for _, in := range days {
+		d := &DayMeta{
+			ScriptID:  scriptID,
+			DayNumber: in.DayNumber,
+			ShootDate: in.ShootDate,
+			CallTime:  in.CallTime,
+			Location:  in.Location,
+			Notes:     in.Notes,
+			UpdatedAt: now,
+		}
+		if _, err := tx.Exec(
+			`INSERT INTO schedule_days (script_id, day_number, shoot_date, call_time, location, notes, updated_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			d.ScriptID, d.DayNumber, d.ShootDate, d.CallTime, d.Location, d.Notes, d.UpdatedAt,
+		); err != nil {
+			return nil, nil, fmt.Errorf("inserting schedule day: %w", err)
+		}
+		outDays = append(outDays, d)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("committing schedule: %w", err)
+		return nil, nil, fmt.Errorf("committing schedule: %w", err)
 	}
-	return out, nil
+	return outStrips, outDays, nil
 }

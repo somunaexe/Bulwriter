@@ -11,6 +11,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/somunaexe/bulwriter/backend/internal/breakdown"
+	"github.com/somunaexe/bulwriter/backend/internal/casting"
+	"github.com/somunaexe/bulwriter/backend/internal/budget"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
 	"github.com/somunaexe/bulwriter/backend/internal/crew"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
@@ -32,6 +34,8 @@ type router struct {
 	breakdown *breakdown.Store
 	schedule  *schedule.Store
 	crew      *crew.Store
+	casting   *casting.Store
+	budget    *budget.Store
 	clerk     *clerkapi.Client
 }
 
@@ -45,6 +49,8 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		breakdown: breakdown.NewStore(db),
 		schedule:  schedule.NewStore(db),
 		crew:      crew.NewStore(db),
+		casting:   casting.NewStore(db),
+		budget:    budget.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -111,10 +117,24 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/breakdown", r.listBreakdown).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/breakdown", r.upsertBreakdown).Methods("PUT")
 
-	// Shooting schedule (stripboard) — the whole thing is replaced as one
-	// unit on every reorder rather than patched strip-by-strip.
+	// Shooting schedule (stripboard) — the whole thing (strips + each
+	// day's call-sheet metadata) is replaced as one unit on every
+	// reorder rather than patched strip-by-strip.
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.getSchedule).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.replaceSchedule).Methods("PUT")
+
+	// Casting — actor/contact/status per character. Characters
+	// themselves are derived live from the script text on the frontend,
+	// same as breakdown's locations/cast, not stored here.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting", r.listCasting).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting", r.upsertCasting).Methods("PUT")
+	// Budget estimator — per-unit rates (day/location/cast/prop, matched
+	// against counts the frontend derives from the breakdown/schedule)
+	// plus freeform line items for anything else.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/budget", r.getBudget).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/budget", r.setBudgetEstimate).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/budget/line-items", r.addBudgetLineItem).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/budget/line-items/{itemId}", r.removeBudgetLineItem).Methods("DELETE")
 
 	// Members & Invites
 	api.HandleFunc("/projects/{projectId}/members", r.listMembers).Methods("GET")
@@ -439,8 +459,58 @@ func (r *router) upsertBreakdown(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, b)
 }
 
+func (r *router) listCasting(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	roles, err := r.casting.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if roles == nil {
+		roles = []*casting.Role{}
+	}
+	writeJSON(w, http.StatusOK, roles)
+}
+
+func (r *router) upsertCasting(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		CharacterName string `json:"characterName"`
+		ActorName     string `json:"actorName"`
+		Contact       string `json:"contact"`
+		Status        string `json:"status"`
+		Notes         string `json:"notes"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.CharacterName == "" {
+		writeErr(w, http.StatusBadRequest, "characterName is required")
+		return
+	}
+
+	c, err := r.casting.Upsert(vars["scriptId"], body.CharacterName, body.ActorName, body.Contact, body.Status, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
+type scheduleResponse struct {
+	Strips []*schedule.Strip   `json:"strips"`
+	Days   []*schedule.DayMeta `json:"days"`
+}
+
 func (r *router) getSchedule(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
+
 	strips, err := r.schedule.List(vars["scriptId"])
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -449,7 +519,17 @@ func (r *router) getSchedule(w http.ResponseWriter, req *http.Request) {
 	if strips == nil {
 		strips = []*schedule.Strip{}
 	}
-	writeJSON(w, http.StatusOK, strips)
+
+	days, err := r.schedule.ListDays(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if days == nil {
+		days = []*schedule.DayMeta{}
+	}
+
+	writeJSON(w, http.StatusOK, scheduleResponse{Strips: strips, Days: days})
 }
 
 func (r *router) replaceSchedule(w http.ResponseWriter, req *http.Request) {
@@ -466,19 +546,128 @@ func (r *router) replaceSchedule(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var body struct {
-		Strips []schedule.StripInput `json:"strips"`
+		Strips []schedule.StripInput   `json:"strips"`
+		Days   []schedule.DayMetaInput `json:"days"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 
-	strips, err := r.schedule.Replace(vars["scriptId"], body.Strips)
+	strips, days, err := r.schedule.Replace(vars["scriptId"], body.Strips, body.Days)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, strips)
+	writeJSON(w, http.StatusOK, scheduleResponse{Strips: strips, Days: days})
+}
+
+type budgetResponse struct {
+	Estimate  *budget.Estimate   `json:"estimate"`
+	LineItems []*budget.LineItem `json:"lineItems"`
+}
+
+func (r *router) getBudget(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	estimate, err := r.budget.GetEstimate(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	items, err := r.budget.ListLineItems(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if items == nil {
+		items = []*budget.LineItem{}
+	}
+
+	writeJSON(w, http.StatusOK, budgetResponse{Estimate: estimate, LineItems: items})
+}
+
+func (r *router) setBudgetEstimate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		DayRate      float64 `json:"dayRate"`
+		LocationRate float64 `json:"locationRate"`
+		CastRate     float64 `json:"castRate"`
+		PropRate     float64 `json:"propRate"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	estimate, err := r.budget.SetEstimate(vars["scriptId"], body.DayRate, body.LocationRate, body.CastRate, body.PropRate)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, estimate)
+}
+
+func (r *router) addBudgetLineItem(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Label  string  `json:"label"`
+		Amount float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Label == "" {
+		writeErr(w, http.StatusBadRequest, "label is required")
+		return
+	}
+
+	item, err := r.budget.AddLineItem(vars["scriptId"], body.Label, body.Amount)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (r *router) removeBudgetLineItem(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.budget.RemoveLineItem(vars["scriptId"], vars["itemId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // memberWithProfile adds Clerk-sourced display info (name/email/avatar) on
