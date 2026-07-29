@@ -790,7 +790,7 @@ ol.stats-list {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, .4);
-  z-index: 90; /* below the drawer itself (100), above everything else */
+  z-index: 90; /* below the drawer itself (100) */
   animation: drawer-backdrop-fade-in .22s ease-out;
 }
 
@@ -798,7 +798,14 @@ ol.stats-list {
 .breakdown-drawer {
   position: fixed;
   right: 0;
-  top: 0;
+  /* Starts below the navbar rather than at the true viewport top — the
+     navbar is position:sticky with z-index:1000, well above this
+     drawer's own z-index:100, so a top:0 drawer had its header (and the
+     close button living in it) rendered UNDER the navbar, unreachable —
+     on mobile the drawer also goes full-width (see the media query
+     below), leaving no backdrop margin to tap either, so there was no
+     way to dismiss it at all. */
+  top: var(--navbar-h);
   bottom: 0;
   background: var(--surface);
   border-left: 1px solid var(--border);
