@@ -43,6 +43,7 @@ import { exportScreenplayPdf } from '../../editor/fountain-to-pdf';
 import { MembershipService } from '../../services/membership.service';
 import { AutoSaveService } from '../../services/autosave.service';
 import { ProjectService, Project } from '../../services/project.service';
+import { ScriptService, Script } from '../../services/script.service';
 import { fileToBackgroundDataUri } from '../../editor/background-image';
 import { exportScreenplayJson, importScreenplayJson } from '../../editor/json-transfer';
 import { exportScreenplayHtml } from '../../editor/html-export';
@@ -170,6 +171,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   autoSaveState$ = this.autoSave.state$;
 
   project: Project | null = null;
+  script: Script | null = null;
 
   constructor(
     public sync: SyncService,
@@ -177,6 +179,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     private membership: MembershipService,
     private autoSave: AutoSaveService,  // ← add this
     private projectService: ProjectService,
+    private scriptService: ScriptService,
     private renderer: Renderer2,
     private route: ActivatedRoute,
     private router: Router
@@ -192,6 +195,8 @@ export class EditorComponent implements OnInit, OnDestroy {
       this.project = p;
       this.applyBodyBackground();
     });
+
+    this.scriptService.get(this.projectId, this.scriptId).subscribe(s => this.script = s);
 
     // Fetch the current user's role on this project
     this.membership.getMyRole(this.projectId).subscribe({
@@ -435,12 +440,53 @@ export class EditorComponent implements OnInit, OnDestroy {
     view.focus();
   }
 
+  // Export downloads are named after the script, not its id — falls back
+  // to the id only if the script hasn't loaded yet or has no title.
+  private get exportFilename(): string {
+    const title = this.script?.title?.trim();
+    if (!title) return this.scriptId;
+    return title.replace(/[\\/:*?"<>|]/g, '-');
+  }
+
+  showImportModal = false;
+  showExportModal = false;
+
+  openImportModal(): void {
+    this.showImportModal = true;
+  }
+
+  openExportModal(): void {
+    this.showExportModal = true;
+  }
+
+  chooseImport(format: 'fountain' | 'docx' | 'pdf' | 'json' | 'html'): void {
+    this.showImportModal = false;
+    switch (format) {
+      case 'fountain': this.importFountain(); break;
+      case 'docx': this.importDocx(); break;
+      case 'pdf': this.importPdf(); break;
+      case 'json': this.importJson(); break;
+      case 'html': this.importHtml(); break;
+    }
+  }
+
+  chooseExport(format: 'fountain' | 'docx' | 'pdf' | 'json' | 'html'): void {
+    this.showExportModal = false;
+    switch (format) {
+      case 'fountain': this.exportFountain(); break;
+      case 'docx': this.exportDocx(); break;
+      case 'pdf': this.exportPDF(); break;
+      case 'json': this.exportJson(); break;
+      case 'html': this.exportHtml(); break;
+    }
+  }
+
   exportFountain(): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
 
     const fountainText = toFountain(view.state.doc);
-    downloadFountain(fountainText, this.scriptId);
+    downloadFountain(fountainText, this.exportFilename);
   }
 
   showPdfPasswordModal = false;
@@ -457,7 +503,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     if (!view) return;
 
     exportScreenplayPdf(view.state.doc, {
-      filename: this.scriptId,
+      filename: this.exportFilename,
       password: usePassword && this.pdfPassword.trim() ? this.pdfPassword.trim() : undefined,
     }).catch(err => console.error('PDF export failed:', err));
   }
@@ -472,7 +518,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   exportJson(): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
-    exportScreenplayJson(view.state.doc, this.scriptId);
+    exportScreenplayJson(view.state.doc, this.exportFilename);
   }
 
   async importJson(): Promise<void> {
@@ -489,7 +535,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   exportHtml(): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
-    exportScreenplayHtml(view.state.doc, this.scriptId);
+    exportScreenplayHtml(view.state.doc, this.exportFilename);
   }
 
   async importHtml(): Promise<void> {
@@ -507,7 +553,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     const view = (this.sync as any).session?.view;
     if (!view) return;
     try {
-      await exportScreenplayDocx(view.state.doc, this.scriptId);
+      await exportScreenplayDocx(view.state.doc, this.exportFilename);
     } catch (err) {
       console.error('DOCX export failed:', err);
     }

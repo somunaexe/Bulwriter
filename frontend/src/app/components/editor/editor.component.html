@@ -74,17 +74,8 @@
             <div class="menu-divider"></div>
             <button (click)="insertTitlePage()" [disabled]="!canEdit">Insert title page…</button>
             <div class="menu-divider"></div>
-            <button (click)="importFountain()" [disabled]="!canEdit">Import Fountain…</button>
-            <button (click)="importDocx()" [disabled]="!canEdit">Import Word (.docx)…</button>
-            <button (click)="importPdf()" [disabled]="!canEdit">Import PDF…</button>
-            <button (click)="importJson()" [disabled]="!canEdit">Import JSON…</button>
-            <button (click)="importHtml()" [disabled]="!canEdit">Import HTML…</button>
-            <div class="menu-divider"></div>
-            <button (click)="exportFountain()">Export as Fountain…</button>
-            <button (click)="exportPDF()">Export as PDF…</button>
-            <button (click)="exportDocx()">Export as Word (.docx)…</button>
-            <button (click)="exportJson()">Export as JSON…</button>
-            <button (click)="exportHtml()">Export as HTML…</button>
+            <button (click)="openImportModal()" [disabled]="!canEdit">Import…</button>
+            <button (click)="openExportModal()">Export…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Edit">
@@ -231,6 +222,26 @@
           <button class="btn-ghost" (click)="replaceCurrent()" [disabled]="!canEdit">Replace</button>
           <button class="btn-ghost" (click)="replaceAllOccurrences()" [disabled]="!canEdit">Replace all</button>
         </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showImportModal" title="Import" (closed)="showImportModal = false">
+      <div class="format-picker">
+        <button class="btn-ghost" (click)="chooseImport('fountain')">Fountain (.fountain, .txt)</button>
+        <button class="btn-ghost" (click)="chooseImport('docx')">Word (.docx)</button>
+        <button class="btn-ghost" (click)="chooseImport('pdf')">PDF</button>
+        <button class="btn-ghost" (click)="chooseImport('json')">JSON</button>
+        <button class="btn-ghost" (click)="chooseImport('html')">HTML</button>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showExportModal" title="Export" (closed)="showExportModal = false">
+      <div class="format-picker">
+        <button class="btn-ghost" (click)="chooseExport('fountain')">Fountain (.fountain)</button>
+        <button class="btn-ghost" (click)="chooseExport('pdf')">PDF</button>
+        <button class="btn-ghost" (click)="chooseExport('docx')">Word (.docx)</button>
+        <button class="btn-ghost" (click)="chooseExport('json')">JSON</button>
+        <button class="btn-ghost" (click)="chooseExport('html')">HTML</button>
       </div>
     </app-modal>
 

@@ -1,0 +1,16 @@
+# Dev-only image — watches .go files and rebuilds/restarts on save via
+# air, instead of needing a full `docker compose up --build` per change.
+# Not used by Railway (see railway.json, which points at ./Dockerfile).
+FROM golang:1.23
+
+WORKDIR /app
+
+RUN go install github.com/air-verse/air@latest
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+EXPOSE 8080
+CMD ["air", "-c", ".air.toml"]

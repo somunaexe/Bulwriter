@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/bulwriter ./backend/cmd/server"
+bin = "./tmp/bulwriter"
+full_bin = "./tmp/bulwriter"
+include_ext = ["go"]
+exclude_dir = ["tmp", "frontend", ".git"]
+delay = 1000
+
+[log]
+time = false
+
+[misc]
+clean_on_exit = true
