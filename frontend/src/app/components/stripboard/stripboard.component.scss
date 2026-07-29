@@ -3,9 +3,20 @@
 // A centered, wide overlay rather than a side drawer — a stripboard's
 // day-columns need horizontal room the diff/breakdown drawers' vertical
 // list shape never did.
+//
+// Confined to *below* the navbar (top: var(--navbar-h) rather than
+// inset: 0) — the navbar is position:sticky with z-index:1000, well
+// above this backdrop's z-index:200, so a full-height backdrop let the
+// navbar render on top of the panel's own header/close button,
+// unreachable on any screen size small enough that the centered panel's
+// top edge reached that band (which mobile viewports, being shorter,
+// hit far more often).
 .stripboard-backdrop {
   position: fixed;
-  inset: 0;
+  top: var(--navbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, .5);
   z-index: 200;
   display: flex;
@@ -19,7 +30,11 @@
   @include surface-panel;
   width: 92vw;
   max-width: 1200px;
-  height: 85vh;
+  // % of .stripboard-backdrop's own (navbar-aware) height, not the raw
+  // viewport — an 85vh panel could still overflow past the backdrop's
+  // actual available height once that height stops being the full
+  // viewport.
+  height: 85%;
   display: flex;
   flex-direction: column;
   animation: stripboard-pop .18s cubic-bezier(.16, 1, .3, 1);
@@ -83,6 +98,14 @@
   padding: .55rem .65rem;
   margin-bottom: .5rem;
   cursor: grab;
+  // Without this, a touch-drag on the strip is ambiguous with the
+  // browser's own scroll gesture on the scrollable containers around
+  // it (.stripboard-body scrolls horizontally, .stripboard-strip-list
+  // vertically) — the browser wins that race far more often than not,
+  // so on touch the strip mostly just scrolled the page instead of
+  // picking up. This tells the browser "don't scroll from here, this
+  // gesture belongs to CDK's own pointer handling."
+  touch-action: none;
 
   &:active { cursor: grabbing; }
 }
@@ -131,4 +154,44 @@
   transition: border-color .12s, color .12s;
 
   &:hover { border-color: var(--accent); color: var(--accent); }
+}
+
+// Below 768px: full-screen panel (same breakpoint the rest of the
+// editor's mobile layout uses), and days stack vertically instead of
+// sitting in a horizontal-scrolling row — dragging a strip no longer
+// has to fight a second, horizontal scroll gesture on top of the
+// vertical one, which is what made this "hard to use" on a touch
+// screen in the first place.
+@media (max-width: 768px) {
+  .stripboard-backdrop { padding: 0; }
+
+  .stripboard-panel {
+    width: 100%;
+    max-width: 100vw;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .stripboard-body {
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    align-items: stretch;
+  }
+
+  .stripboard-day {
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+  }
+
+  .stripboard-strip-list {
+    flex: none;
+    max-height: 45vh;
+  }
+
+  .stripboard-add-day {
+    align-self: stretch;
+    text-align: center;
+  }
 }
