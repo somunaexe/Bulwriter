@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { SyncService } from '../../services/sync.service';
 import { CastingService, CastingStatus } from '../../services/casting.service';
 import { computeSceneList, csvCell, downloadCsv } from '../../editor/scene-breakdown';
+import { scriptExportFilename } from '../../editor/export-filename';
 
 // One row per character derived live from the script (same source as
 // the breakdown's cast summary) — actorName/contact/status/notes are the
@@ -29,6 +30,7 @@ const STATUSES: CastingStatus[] = ['open', 'submitted', 'callback', 'cast'];
 export class CastingBoardComponent implements OnChanges {
   @Input() projectId = '';
   @Input() scriptId = '';
+  @Input() scriptTitle = '';
   @Input() canEdit = false;
   @Output() close = new EventEmitter<void>();
 
@@ -106,6 +108,6 @@ export class CastingBoardComponent implements OnChanges {
         row.characterName, String(row.sceneCount), row.actorName, row.contact, row.status, row.notes,
       ].map(csvCell).join(','));
     }
-    downloadCsv(lines.join('\r\n'), `${this.scriptId}-casting`);
+    downloadCsv(lines.join('\r\n'), scriptExportFilename(this.scriptTitle, this.scriptId, 'casting'));
   }
 }

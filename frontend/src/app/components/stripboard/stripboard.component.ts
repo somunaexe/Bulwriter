@@ -9,6 +9,7 @@ import { ModalComponent } from '../modal/modal.component';
 import { computeSceneList, downloadCsv, SceneEntry } from '../../editor/scene-breakdown';
 import { autoSuggestDays, scheduleToCsv, emptyDayMeta, ScheduleDay } from '../../editor/stripboard';
 import { exportCallSheetPdf } from '../../editor/call-sheet-pdf';
+import { scriptExportFilename } from '../../editor/export-filename';
 
 @Component({
   selector: 'app-stripboard',
@@ -20,6 +21,7 @@ import { exportCallSheetPdf } from '../../editor/call-sheet-pdf';
 export class StripboardComponent implements OnChanges {
   @Input() projectId = '';
   @Input() scriptId = '';
+  @Input() scriptTitle = '';
   @Input() canEdit = false;
   @Output() close = new EventEmitter<void>();
 
@@ -155,7 +157,7 @@ export class StripboardComponent implements OnChanges {
   }
 
   exportCsv(): void {
-    downloadCsv(scheduleToCsv(this.days), `${this.scriptId}-schedule`);
+    downloadCsv(scheduleToCsv(this.days), scriptExportFilename(this.scriptTitle, this.scriptId, 'shoot schedule'));
   }
 
   // ── Call sheet ───────────────────────────────────────────────────
@@ -174,6 +176,7 @@ export class StripboardComponent implements OnChanges {
     exportCallSheetPdf(this.callSheetDay, {
       projectTitle: this.projectTitle || 'Untitled project',
       totalDays: this.days.length,
+      filename: scriptExportFilename(this.scriptTitle, this.scriptId, 'shoot schedule'),
     }).catch(err => console.error('Call sheet export failed:', err));
   }
 }

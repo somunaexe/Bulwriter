@@ -44,6 +44,7 @@ import { MembershipService } from '../../services/membership.service';
 import { AutoSaveService } from '../../services/autosave.service';
 import { ProjectService, Project } from '../../services/project.service';
 import { ScriptService, Script } from '../../services/script.service';
+import { scriptExportFilename } from '../../editor/export-filename';
 import { fileToBackgroundDataUri } from '../../editor/background-image';
 import { exportScreenplayJson, importScreenplayJson } from '../../editor/json-transfer';
 import { exportScreenplayHtml } from '../../editor/html-export';
@@ -440,12 +441,8 @@ export class EditorComponent implements OnInit, OnDestroy {
     view.focus();
   }
 
-  // Export downloads are named after the script, not its id — falls back
-  // to the id only if the script hasn't loaded yet or has no title.
   private get exportFilename(): string {
-    const title = this.script?.title?.trim();
-    if (!title) return this.scriptId;
-    return title.replace(/[\\/:*?"<>|]/g, '-');
+    return scriptExportFilename(this.script?.title, this.scriptId);
   }
 
   showImportModal = false;
