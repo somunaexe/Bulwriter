@@ -80,6 +80,32 @@
   flex-shrink: 0;
 }
 
+.stripboard-day-header-actions {
+  display: flex;
+  align-items: center;
+  gap: .15rem;
+}
+
+.call-sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: .85rem;
+}
+
+.call-sheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+
+  .input-sm { width: 100%; }
+}
+
+.call-sheet-scene-count {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: -.25rem 0 0;
+}
+
 .stripboard-strip-list {
   flex: 1;
   overflow-y: auto;

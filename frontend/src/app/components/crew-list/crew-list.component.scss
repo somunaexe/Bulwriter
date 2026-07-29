@@ -1,0 +1,59 @@
+.crew-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-bottom: .75rem;
+}
+
+.crew-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.crew-item-fields {
+  display: flex;
+  gap: .4rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.crew-role    { flex: 0 0 30%; }
+.crew-name    { flex: 0 0 30%; }
+.crew-contact { flex: 1; min-width: 0; }
+.crew-notes   { flex: 1; min-width: 0; }
+
+.crew-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { color: var(--delete-fg); }
+}
+
+.crew-add {
+  margin-top: .5rem;
+}
+
+.crew-add-form {
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+  flex-wrap: wrap;
+
+  .crew-role, .crew-name, .crew-contact { flex: 1 1 140px; min-width: 0; }
+}
+
+@media (max-width: 640px) {
+  .crew-item { flex-wrap: wrap; }
+  .crew-item-fields { flex-direction: column; }
+  .crew-role, .crew-name, .crew-contact { flex: 1 1 auto; }
+}

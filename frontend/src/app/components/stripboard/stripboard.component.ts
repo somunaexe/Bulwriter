@@ -1,15 +1,19 @@
 import { Component, EventEmitter, HostListener, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { SyncService } from '../../services/sync.service';
-import { ScheduleService, StripInput } from '../../services/schedule.service';
+import { ScheduleService, StripInput, DayMetaInput, ScheduleDayMeta } from '../../services/schedule.service';
+import { ProjectService } from '../../services/project.service';
+import { ModalComponent } from '../modal/modal.component';
 import { computeSceneList, downloadCsv, SceneEntry } from '../../editor/scene-breakdown';
-import { autoSuggestDays, scheduleToCsv, ScheduleDay } from '../../editor/stripboard';
+import { autoSuggestDays, scheduleToCsv, emptyDayMeta, ScheduleDay } from '../../editor/stripboard';
+import { exportCallSheetPdf } from '../../editor/call-sheet-pdf';
 
 @Component({
   selector: 'app-stripboard',
   standalone: true,
-  imports: [CommonModule, DragDropModule],
+  imports: [CommonModule, FormsModule, DragDropModule, ModalComponent],
   templateUrl: './stripboard.component.html',
   styleUrls: ['./stripboard.component.scss'],
 })
@@ -21,15 +25,20 @@ export class StripboardComponent implements OnChanges {
 
   loading = true;
   days: ScheduleDay[] = [];
+  projectTitle = '';
+
+  callSheetDay: ScheduleDay | null = null;
 
   constructor(
     private sync: SyncService,
     private scheduleService: ScheduleService,
+    private projectService: ProjectService,
   ) {}
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    this.close.emit();
+    if (this.callSheetDay) this.callSheetDay = null;
+    else this.close.emit();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -40,13 +49,15 @@ export class StripboardComponent implements OnChanges {
     if (!this.projectId || !this.scriptId) return;
     this.loading = true;
 
+    this.projectService.get(this.projectId).subscribe(p => this.projectTitle = p.title);
+
     const doc = this.sync.getDoc();
     const scenes: SceneEntry[] = doc ? computeSceneList(doc) : [];
     const sceneByKey = new Map(scenes.map(s => [s.sceneKey, s]));
 
     this.scheduleService.list(this.projectId, this.scriptId).subscribe({
-      next: strips => {
-        this.days = strips.length ? this.buildFromSaved(strips, scenes, sceneByKey) : autoSuggestDays(scenes);
+      next: ({ strips, days }) => {
+        this.days = strips.length ? this.buildFromSaved(strips, days, scenes, sceneByKey) : autoSuggestDays(scenes);
         this.loading = false;
       },
       error: () => {
@@ -58,6 +69,7 @@ export class StripboardComponent implements OnChanges {
 
   private buildFromSaved(
     strips: { sceneKey: string; dayNumber: number; position: number }[],
+    dayMetas: ScheduleDayMeta[],
     scenes: SceneEntry[],
     sceneByKey: Map<string, SceneEntry>,
   ): ScheduleDay[] {
@@ -72,17 +84,29 @@ export class StripboardComponent implements OnChanges {
       dayMap.get(strip.dayNumber)!.push(scene);
     }
 
+    const metaByDayNumber = new Map(dayMetas.map(d => [d.dayNumber, d]));
+
     const days: ScheduleDay[] = [...dayMap.keys()]
       .sort((a, b) => a - b)
-      .map((dayNumber, i) => ({ dayNumber: i + 1, strips: dayMap.get(dayNumber)! }));
+      .map((dayNumber, i) => {
+        const meta = metaByDayNumber.get(dayNumber);
+        return {
+          dayNumber: i + 1,
+          strips: dayMap.get(dayNumber)!,
+          shootDate: meta?.shootDate ?? '',
+          callTime: meta?.callTime ?? '',
+          location: meta?.location ?? '',
+          notes: meta?.notes ?? '',
+        };
+      });
 
     // Scenes written since the schedule was last saved have nowhere to
     // go yet — land them on a fresh day at the end rather than silently
     // dropping them from the board.
     const uncovered = scenes.filter(s => !covered.has(s.sceneKey));
-    if (uncovered.length) days.push({ dayNumber: days.length + 1, strips: uncovered });
+    if (uncovered.length) days.push({ dayNumber: days.length + 1, strips: uncovered, ...emptyDayMeta() });
 
-    return days.length ? days : [{ dayNumber: 1, strips: [] }];
+    return days.length ? days : [{ dayNumber: 1, strips: [], ...emptyDayMeta() }];
   }
 
   onDrop(event: CdkDragDrop<SceneEntry[]>): void {
@@ -95,7 +119,7 @@ export class StripboardComponent implements OnChanges {
   }
 
   addDay(): void {
-    this.days.push({ dayNumber: this.days.length + 1, strips: [] });
+    this.days.push({ dayNumber: this.days.length + 1, strips: [], ...emptyDayMeta() });
   }
 
   removeDay(day: ScheduleDay): void {
@@ -114,15 +138,42 @@ export class StripboardComponent implements OnChanges {
     this.renumber();
 
     const strips: StripInput[] = [];
+    const days: DayMetaInput[] = [];
     this.days.forEach(day => {
       day.strips.forEach((scene, i) => {
         strips.push({ sceneKey: scene.sceneKey, dayNumber: day.dayNumber, position: i });
       });
+      days.push({
+        dayNumber: day.dayNumber,
+        shootDate: day.shootDate,
+        callTime: day.callTime,
+        location: day.location,
+        notes: day.notes,
+      });
     });
-    this.scheduleService.replace(this.projectId, this.scriptId, strips).subscribe();
+    this.scheduleService.replace(this.projectId, this.scriptId, strips, days).subscribe();
   }
 
   exportCsv(): void {
     downloadCsv(scheduleToCsv(this.days), `${this.scriptId}-schedule`);
+  }
+
+  // ── Call sheet ───────────────────────────────────────────────────
+
+  openCallSheet(day: ScheduleDay): void {
+    this.callSheetDay = day;
+  }
+
+  closeCallSheet(): void {
+    this.callSheetDay = null;
+    this.persist();
+  }
+
+  exportCallSheet(): void {
+    if (!this.callSheetDay) return;
+    exportCallSheetPdf(this.callSheetDay, {
+      projectTitle: this.projectTitle || 'Untitled project',
+      totalDays: this.days.length,
+    }).catch(err => console.error('Call sheet export failed:', err));
   }
 }

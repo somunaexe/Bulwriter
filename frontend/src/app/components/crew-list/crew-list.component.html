@@ -1,0 +1,31 @@
+<div class="crew-list-wrap">
+  <p class="loading-msg" *ngIf="loading">Loading…</p>
+
+  <ng-container *ngIf="!loading">
+    <p class="empty-msg" *ngIf="!members.length && !showAddForm">No crew added yet.</p>
+
+    <ul class="crew-list" *ngIf="members.length">
+      <li class="crew-item" *ngFor="let m of members">
+        <div class="crew-item-fields">
+          <input class="input-sm crew-role" placeholder="Role…" [(ngModel)]="m.role" (blur)="save(m)" [disabled]="!canEdit" />
+          <input class="input-sm crew-name" placeholder="Name…" [(ngModel)]="m.name" (blur)="save(m)" [disabled]="!canEdit" />
+          <input class="input-sm crew-contact" placeholder="Contact…" [(ngModel)]="m.contact" (blur)="save(m)" [disabled]="!canEdit" />
+        </div>
+        <input class="input-sm crew-notes" placeholder="Notes…" [(ngModel)]="m.notes" (blur)="save(m)" [disabled]="!canEdit" />
+        <button *ngIf="canEdit" class="crew-remove" (click)="remove(m)" aria-label="Remove crew member">×</button>
+      </li>
+    </ul>
+
+    <div class="crew-add" *ngIf="canEdit">
+      <button class="btn-ghost" *ngIf="!showAddForm" (click)="showAddForm = true">+ Add crew member</button>
+
+      <div class="crew-add-form" *ngIf="showAddForm">
+        <input class="input-sm crew-role" placeholder="Role (e.g. DP)…" [(ngModel)]="newRole" (keydown.enter)="addMember()" autofocus />
+        <input class="input-sm crew-name" placeholder="Name…" [(ngModel)]="newName" (keydown.enter)="addMember()" />
+        <input class="input-sm crew-contact" placeholder="Contact…" [(ngModel)]="newContact" (keydown.enter)="addMember()" />
+        <button class="btn-save" (click)="addMember()" [disabled]="!newName.trim()">Add</button>
+        <button class="btn-ghost" (click)="showAddForm = false">Cancel</button>
+      </div>
+    </div>
+  </ng-container>
+</div>

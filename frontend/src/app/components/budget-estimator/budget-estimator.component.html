@@ -1,0 +1,67 @@
+<app-modal title="Budget estimate" (closed)="close.emit()">
+  <div *ngIf="loading" class="loading">Loading…</div>
+
+  <div class="budget-form" *ngIf="!loading">
+    <div class="budget-row">
+      <span class="budget-row-label">Shoot days ({{ dayCount }})</span>
+      <span class="budget-row-rate">
+        <span class="budget-currency">$</span>
+        <input class="input-sm" type="number" min="0" step="1" [(ngModel)]="dayRate" (blur)="saveRates()" [disabled]="!canEdit" />
+      </span>
+      <span class="budget-row-total">{{ dayTotal | currency }}</span>
+    </div>
+
+    <div class="budget-row">
+      <span class="budget-row-label">Locations ({{ locationCount }})</span>
+      <span class="budget-row-rate">
+        <span class="budget-currency">$</span>
+        <input class="input-sm" type="number" min="0" step="1" [(ngModel)]="locationRate" (blur)="saveRates()" [disabled]="!canEdit" />
+      </span>
+      <span class="budget-row-total">{{ locationTotal | currency }}</span>
+    </div>
+
+    <div class="budget-row">
+      <span class="budget-row-label">Cast ({{ castCount }})</span>
+      <span class="budget-row-rate">
+        <span class="budget-currency">$</span>
+        <input class="input-sm" type="number" min="0" step="1" [(ngModel)]="castRate" (blur)="saveRates()" [disabled]="!canEdit" />
+      </span>
+      <span class="budget-row-total">{{ castTotal | currency }}</span>
+    </div>
+
+    <div class="budget-row">
+      <span class="budget-row-label">Props ({{ propCount }})</span>
+      <span class="budget-row-rate">
+        <span class="budget-currency">$</span>
+        <input class="input-sm" type="number" min="0" step="1" [(ngModel)]="propRate" (blur)="saveRates()" [disabled]="!canEdit" />
+      </span>
+      <span class="budget-row-total">{{ propTotal | currency }}</span>
+    </div>
+
+    <hr class="panel-divider" />
+
+    <h3 class="section-label">Other costs</h3>
+
+    <ul class="budget-line-items" *ngIf="lineItems.length">
+      <li *ngFor="let item of lineItems" class="budget-line-item">
+        <span class="budget-line-item-label">{{ item.label }}</span>
+        <span class="budget-line-item-amount">{{ item.amount | currency }}</span>
+        <button *ngIf="canEdit" class="breakdown-chip-remove" (click)="removeLineItem(item)" aria-label="Remove line item">×</button>
+      </li>
+    </ul>
+    <p class="stats-empty" *ngIf="!lineItems.length">No other costs added yet.</p>
+
+    <div class="budget-add-item" *ngIf="canEdit">
+      <input class="input-sm" placeholder="Label (e.g. Insurance)…" [(ngModel)]="newItemLabel" (keydown.enter)="addLineItem()" />
+      <input class="input-sm budget-add-amount" type="number" min="0" step="1" placeholder="Amount" [(ngModel)]="newItemAmount" (keydown.enter)="addLineItem()" />
+      <button class="btn-ghost" (click)="addLineItem()" [disabled]="!newItemLabel.trim() || newItemAmount === null">Add</button>
+    </div>
+
+    <hr class="panel-divider" />
+
+    <div class="budget-grand-total">
+      <span>Estimated total</span>
+      <span class="budget-grand-total-amount">{{ grandTotal | currency }}</span>
+    </div>
+  </div>
+</app-modal>
