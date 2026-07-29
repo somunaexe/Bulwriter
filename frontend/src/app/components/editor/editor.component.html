@@ -159,6 +159,7 @@
       *ngIf="showBreakdown"
       [projectId]="projectId"
       [scriptId]="scriptId"
+      [scriptTitle]="script?.title || ''"
       [canEdit]="canEdit"
       (close)="showBreakdown = false">
     </app-breakdown-drawer>
@@ -178,6 +179,7 @@
       *ngIf="showCasting"
       [projectId]="projectId"
       [scriptId]="scriptId"
+      [scriptTitle]="script?.title || ''"
       [canEdit]="canEdit"
       (close)="showCasting = false">
     </app-casting-board>
@@ -186,6 +188,7 @@
       *ngIf="showStripboard"
       [projectId]="projectId"
       [scriptId]="scriptId"
+      [scriptTitle]="script?.title || ''"
       [canEdit]="canEdit"
       (close)="showStripboard = false">
     </app-stripboard>

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { SyncService } from '../../services/sync.service';
 import { SceneBreakdownService } from '../../services/scene-breakdown.service';
 import { computeSceneList, breakdownToCsv, downloadCsv, BreakdownRow } from '../../editor/scene-breakdown';
+import { scriptExportFilename } from '../../editor/export-filename';
 
 interface LocationSummary { name: string; sceneCount: number; }
 interface CastSummary { name: string; sceneCount: number; }
@@ -19,6 +20,7 @@ interface PropSummary { name: string; sceneCount: number; }
 export class BreakdownDrawerComponent implements OnChanges {
   @Input() projectId = '';
   @Input() scriptId = '';
+  @Input() scriptTitle = '';
   @Input() canEdit = false;
   @Output() close = new EventEmitter<void>();
 
@@ -125,6 +127,6 @@ export class BreakdownDrawerComponent implements OnChanges {
 
   exportCsv(): void {
     const csv = breakdownToCsv(this.rows);
-    downloadCsv(csv, `${this.scriptId}-breakdown`);
+    downloadCsv(csv, scriptExportFilename(this.scriptTitle, this.scriptId, 'breakdown'));
   }
 }

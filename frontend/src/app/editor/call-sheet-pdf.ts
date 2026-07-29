@@ -3,6 +3,7 @@ import { ScheduleDay } from './stripboard';
 export interface CallSheetOptions {
   projectTitle: string;
   totalDays: number;
+  filename: string;
 }
 
 const PAGE_W = 8.5;
@@ -102,5 +103,5 @@ export async function exportCallSheetPdf(day: ScheduleDay, opts: CallSheetOption
     }
   }
 
-  pdf.save(`call-sheet-day-${day.dayNumber}.pdf`);
+  pdf.save(`${opts.filename} - Day ${day.dayNumber}.pdf`);
 }
