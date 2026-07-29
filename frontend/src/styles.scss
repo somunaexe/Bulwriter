@@ -57,6 +57,32 @@
   --navbar-h: 56px;
 }
 
+/* Dark theme — same variable names, dark values, toggled via the
+   data-theme attribute on <html> (see ThemeService). --page-bg and
+   --page-text are deliberately NOT overridden here: the manuscript page
+   itself stays paper-white in both themes, same as Google Docs/Word,
+   since it's meant to represent the actual printed page, not app chrome. */
+:root[data-theme="dark"] {
+  --bg:        #1c1a16;
+  --surface:   #262320;
+  --surface-2: #302b24;
+  --border:    #423b30;
+  --text:      #ede6d8;
+  --muted:     #9c9184;
+  --accent:    #d9a256;
+  --accent-rgb: 217, 162, 86;
+  --on-accent: #241a0a;
+
+  --insert:    #1f3327;
+  --delete:    #3a2220;
+  --insert-fg: #6fce8f;
+  --delete-fg: #e2776a;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35), 0 1px 1px rgba(0, 0, 0, .25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, .55), 0 4px 14px rgba(0, 0, 0, .35);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {

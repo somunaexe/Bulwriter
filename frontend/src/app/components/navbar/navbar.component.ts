@@ -1,5 +1,6 @@
 import { Component, ElementRef, HostListener, inject, OnInit } from '@angular/core';
 import { ClerkService } from '../../services/clerk.service';
+import { ThemeService } from '../../services/theme.service';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 
@@ -13,6 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 
 export class NavbarComponent implements OnInit {
   clerk = inject(ClerkService);
+  theme = inject(ThemeService);
 
   signedIn$ = this.clerk.isSignedIn$;
   user$ = this.clerk.user$;

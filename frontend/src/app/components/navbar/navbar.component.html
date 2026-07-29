@@ -10,6 +10,14 @@
 
   <!-- Right: account -->
   <div class="auth">
+    <button
+      class="theme-toggle"
+      (click)="theme.toggle()"
+      [attr.aria-label]="(theme.theme$ | async) === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+      [title]="(theme.theme$ | async) === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+      {{ (theme.theme$ | async) === 'dark' ? 'Light' : 'Dark' }}
+    </button>
+
     <ng-container *ngIf="signedIn$ | async; else signedOut">
       <div class="account" *ngIf="user$ | async as user">
         <button class="account-btn" (click)="toggleAccount()" [class.open]="accountOpen">
