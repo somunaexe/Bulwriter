@@ -16,6 +16,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
 	"github.com/somunaexe/bulwriter/backend/internal/schedule"
+	"github.com/somunaexe/bulwriter/backend/internal/scouting"
 	"github.com/somunaexe/bulwriter/backend/internal/script"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 	"github.com/somunaexe/bulwriter/backend/internal/membership"
@@ -30,6 +31,7 @@ type router struct {
 	members   *membership.Store  // ← add this
 	breakdown *breakdown.Store
 	schedule  *schedule.Store
+	scouting  *scouting.Store
 	clerk     *clerkapi.Client
 }
 
@@ -42,6 +44,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		members:   membership.NewStore(db),
 		breakdown: breakdown.NewStore(db),
 		schedule:  schedule.NewStore(db),
+		scouting:  scouting.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -131,7 +134,16 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// Per-project editor background image (owner only)
 	api.HandleFunc("/projects/{projectId}/background", r.setProjectBackground).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/background", r.clearProjectBackground).Methods("DELETE")
-	
+
+	// Location scouting — candidate real-world locations per unique
+	// location the script needs (locations themselves are derived live
+	// from the script text on the frontend, same as breakdown).
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting", r.listScoutCandidates).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting", r.addScoutCandidate).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}", r.updateScoutCandidate).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}/select", r.selectScoutCandidate).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}", r.removeScoutCandidate).Methods("DELETE")
+
 	return c.Handler(mx)
 }
 
@@ -704,6 +716,123 @@ func (r *router) clearProjectBackground(w http.ResponseWriter, req *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (r *router) listScoutCandidates(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	candidates, err := r.scouting.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if candidates == nil {
+		candidates = []*scouting.Candidate{}
+	}
+	writeJSON(w, http.StatusOK, candidates)
+}
+
+type scoutCandidateBody struct {
+	LocationKey string `json:"locationKey"`
+	Name        string `json:"name"`
+	Address     string `json:"address"`
+	Notes       string `json:"notes"`
+	Photo       string `json:"photo"`
+}
+
+func (r *router) addScoutCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body scoutCandidateBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.LocationKey == "" {
+		writeErr(w, http.StatusBadRequest, "locationKey is required, and the payload must fit within the size limit")
+		return
+	}
+
+	c, err := r.scouting.Add(vars["scriptId"], body.LocationKey, body.Name, body.Address, body.Notes, body.Photo)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (r *router) updateScoutCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body scoutCandidateBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
+		return
+	}
+
+	c, err := r.scouting.Update(vars["scriptId"], vars["candidateId"], body.Name, body.Address, body.Notes, body.Photo)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
+}
+
+func (r *router) selectScoutCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.scouting.Select(vars["scriptId"], vars["candidateId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (r *router) removeScoutCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.scouting.Remove(vars["scriptId"], vars["candidateId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (r *router) getMyRole(w http.ResponseWriter, req *http.Request) {

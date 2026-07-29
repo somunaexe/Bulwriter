@@ -40,7 +40,7 @@ export function autoSuggestDays(scenes: SceneEntry[]): ScheduleDay[] {
   return days.length ? days : [{ dayNumber: 1, strips: [] }];
 }
 
-function normalizeLocation(heading: string): string {
+export function normalizeLocation(heading: string): string {
   return heading
     .replace(/^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|INT\.?|EXT\.?)\s*/i, '')
     .replace(/\s*-\s*(DAY|NIGHT|MORNING|EVENING|DAWN|DUSK|CONTINUOUS|LATER)\s*$/i, '')
