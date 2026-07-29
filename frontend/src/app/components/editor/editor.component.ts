@@ -14,6 +14,7 @@ import { VersionControlService, Branch } from '../../services/version-control.se
 import { BranchPanelComponent } from '../branch-panel/branch-panel.component';
 import { DiffViewerComponent } from '../diff-viewer/diff-viewer.component';
 import { CollaboratorStackComponent } from '../collaborator-stack/collaborator-stack.component';
+import { BreakdownDrawerComponent } from '../breakdown-drawer/breakdown-drawer.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -42,7 +43,7 @@ import { fileToBackgroundDataUri } from '../../editor/background-image';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -648,6 +649,14 @@ export class EditorComponent implements OnInit, OnDestroy {
         this.clearBodyBackground();
       },
     });
+  }
+
+  // ── Production menu ──────────────────────────────────────────────
+
+  showBreakdown = false;
+
+  openBreakdown(): void {
+    this.showBreakdown = true;
   }
 
   // ── Revisions menu ───────────────────────────────────────────────

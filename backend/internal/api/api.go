@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/somunaexe/bulwriter/backend/internal/breakdown"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
@@ -21,22 +22,24 @@ import (
 )
 
 type router struct {
-	hub		 *hub.Hub
-	store	 *snapshot.Store
-	projects *project.Store
-	scripts	 *script.Store
-	members  *membership.Store  // ← add this
-	clerk    *clerkapi.Client
+	hub		  *hub.Hub
+	store	  *snapshot.Store
+	projects  *project.Store
+	scripts	  *script.Store
+	members   *membership.Store  // ← add this
+	breakdown *breakdown.Store
+	clerk     *clerkapi.Client
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	r := &router{
-		hub:      h,
-		store:    snapshot.NewStore(db),
-		projects: project.NewStore(db),
-		scripts:  script.NewStore((db)),
-		members:  membership.NewStore(db),
-		clerk:    clerkapi.NewClient(),
+		hub:       h,
+		store:     snapshot.NewStore(db),
+		projects:  project.NewStore(db),
+		scripts:   script.NewStore((db)),
+		members:   membership.NewStore(db),
+		breakdown: breakdown.NewStore(db),
+		clerk:     clerkapi.NewClient(),
 	}
 
 	mx := mux.NewRouter()
@@ -95,6 +98,12 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 
 	// Diff between two snapshots
 	api.HandleFunc("/diff", r.diff).Methods("GET") // ?from=<id>&to=<id>
+
+	// Scene breakdown — production tags (props, notes) per scene.
+	// Locations/cast are derived live from the script text on the
+	// frontend, not stored here.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/breakdown", r.listBreakdown).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/breakdown", r.upsertBreakdown).Methods("PUT")
 
 	// Members & Invites
 	api.HandleFunc("/projects/{projectId}/members", r.listMembers).Methods("GET")
@@ -366,6 +375,50 @@ func (r *router) diff(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, lines)
+}
+
+func (r *router) listBreakdown(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	items, err := r.breakdown.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if items == nil {
+		items = []*breakdown.SceneBreakdown{}
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (r *router) upsertBreakdown(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		SceneKey string   `json:"sceneKey"`
+		Props    []string `json:"props"`
+		Notes    string   `json:"notes"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.SceneKey == "" {
+		writeErr(w, http.StatusBadRequest, "sceneKey is required")
+		return
+	}
+
+	b, err := r.breakdown.Upsert(vars["scriptId"], body.SceneKey, body.Props, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, b)
 }
 
 // memberWithProfile adds Clerk-sourced display info (name/email/avatar) on

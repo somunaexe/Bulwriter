@@ -6,6 +6,7 @@ import { WebsocketProvider } from 'y-websocket';
 import { ySyncPlugin, yUndoPlugin, yCursorPlugin } from 'y-prosemirror';
 import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
+import { Node as PMNode } from 'prosemirror-model';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
 import { dropCursor } from 'prosemirror-dropcursor';
@@ -83,6 +84,13 @@ export class SyncService implements OnDestroy {
     // Import toFountain dynamically to avoid circular deps
     const { toFountain } = require('../editor/fountain-export');
     return toFountain(view.state.doc);
+  }
+
+  // The current ProseMirror document — for features that need to walk
+  // the doc's structure directly (e.g. scene breakdown) rather than the
+  // Fountain text getContent() produces.
+  getDoc(): PMNode | null {
+    return this.session?.view.state.doc ?? null;
   }
 
   endSession(): void {
