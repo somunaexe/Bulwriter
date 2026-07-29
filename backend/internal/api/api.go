@@ -22,6 +22,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/scouting"
 	"github.com/somunaexe/bulwriter/backend/internal/script"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
+	"github.com/somunaexe/bulwriter/backend/internal/story"
 	"github.com/somunaexe/bulwriter/backend/internal/membership"
 	"database/sql"
 )
@@ -38,6 +39,7 @@ type router struct {
 	crew      *crew.Store
 	casting   *casting.Store
 	budget    *budget.Store
+	story     *story.Store
 	clerk     *clerkapi.Client
 }
 
@@ -54,6 +56,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		crew:      crew.NewStore(db),
 		casting:   casting.NewStore(db),
 		budget:    budget.NewStore(db),
+		story:     story.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -138,6 +141,16 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/budget", r.setBudgetEstimate).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/budget/line-items", r.addBudgetLineItem).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/budget/line-items/{itemId}", r.removeBudgetLineItem).Methods("DELETE")
+
+	// Story bible — Phase 1 (Development): the idea/logline/synopsis
+	// stage that happens before a script is written. Genre/tone/theme/
+	// core question are shared project-wide (a series keeps these
+	// consistent across episodes); logline/synopsis are per script.
+	api.HandleFunc("/projects/{projectId}/story", r.getStory).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/story", r.setStoryBible).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/story/notes", r.addStoryIdeaNote).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/story/notes/{noteId}", r.removeStoryIdeaNote).Methods("DELETE")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/story", r.setScriptStory).Methods("PUT")
 
 	// Members & Invites
 	api.HandleFunc("/projects/{projectId}/members", r.listMembers).Methods("GET")
@@ -681,6 +694,178 @@ func (r *router) removeBudgetLineItem(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type storyScriptRow struct {
+	ScriptID string `json:"scriptId"`
+	Title    string `json:"title"`
+	Logline  string `json:"logline"`
+	Synopsis string `json:"synopsis"`
+}
+
+type storyResponse struct {
+	Bible     *story.Bible      `json:"bible"`
+	IdeaNotes []*story.IdeaNote `json:"ideaNotes"`
+	Scripts   []storyScriptRow  `json:"scripts"`
+}
+
+func (r *router) getStory(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	projectID := vars["projectId"]
+
+	bible, err := r.story.GetBible(projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	notes, err := r.story.ListIdeaNotes(projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if notes == nil {
+		notes = []*story.IdeaNote{}
+	}
+
+	scripts, err := r.scripts.List(projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	stories, err := r.story.ListScriptStories(projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	storyByScriptID := make(map[string]*story.ScriptStory, len(stories))
+	for _, ss := range stories {
+		storyByScriptID[ss.ScriptID] = ss
+	}
+
+	rows := make([]storyScriptRow, 0, len(scripts))
+	for _, sc := range scripts {
+		row := storyScriptRow{ScriptID: sc.ID, Title: sc.Title}
+		if ss, ok := storyByScriptID[sc.ID]; ok {
+			row.Logline = ss.Logline
+			row.Synopsis = ss.Synopsis
+		}
+		rows = append(rows, row)
+	}
+
+	writeJSON(w, http.StatusOK, storyResponse{Bible: bible, IdeaNotes: notes, Scripts: rows})
+}
+
+func (r *router) setStoryBible(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		CoreQuestion string `json:"coreQuestion"`
+		Genre        string `json:"genre"`
+		Tone         string `json:"tone"`
+		Theme        string `json:"theme"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	bible, err := r.story.SetBible(vars["projectId"], body.CoreQuestion, body.Genre, body.Tone, body.Theme)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, bible)
+}
+
+func (r *router) addStoryIdeaNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Text == "" {
+		writeErr(w, http.StatusBadRequest, "text is required")
+		return
+	}
+
+	note, err := r.story.AddIdeaNote(vars["projectId"], body.Text)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, note)
+}
+
+func (r *router) removeStoryIdeaNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.story.RemoveIdeaNote(vars["projectId"], vars["noteId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) setScriptStory(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Logline  string `json:"logline"`
+		Synopsis string `json:"synopsis"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	ss, err := r.story.SetScriptStory(vars["scriptId"], body.Logline, body.Synopsis)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, ss)
 }
 
 // memberWithProfile adds Clerk-sourced display info (name/email/avatar) on

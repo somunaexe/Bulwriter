@@ -1,0 +1,95 @@
+<div class="dashboard story-page">
+
+  <header class="dash-header">
+    <button class="btn-ghost back-link" (click)="backToProject()">← {{ project?.title || 'Project' }}</button>
+    <h1 class="logo">Story bible</h1>
+  </header>
+
+  <p class="loading-msg" *ngIf="loading">Loading…</p>
+
+  <ng-container *ngIf="!loading">
+    <section class="story-section" *ngIf="bible">
+      <h2 class="section-label">The idea</h2>
+      <label class="story-field">
+        <span>Core question / emotion</span>
+        <textarea
+          class="story-textarea"
+          rows="2"
+          [(ngModel)]="bible.coreQuestion"
+          (blur)="saveBible()"
+          [readonly]="!canEdit"
+          placeholder="What do you want the audience to leave with?"></textarea>
+      </label>
+
+      <div class="story-field-row">
+        <label class="story-field">
+          <span>Genre</span>
+          <input class="input-sm" [(ngModel)]="bible.genre" (blur)="saveBible()" [disabled]="!canEdit" placeholder="e.g. Psychological thriller" />
+        </label>
+        <label class="story-field">
+          <span>Tone</span>
+          <input class="input-sm" [(ngModel)]="bible.tone" (blur)="saveBible()" [disabled]="!canEdit" placeholder="e.g. Bleak, darkly funny" />
+        </label>
+        <label class="story-field">
+          <span>Theme</span>
+          <input class="input-sm" [(ngModel)]="bible.theme" (blur)="saveBible()" [disabled]="!canEdit" placeholder="e.g. Grief and denial" />
+        </label>
+      </div>
+    </section>
+
+    <section class="story-section">
+      <h2 class="section-label">Idea notes</h2>
+      <p class="story-hint">Write down every version without filtering — nothing here gets overwritten by a later one.</p>
+
+      <ul class="idea-note-list" *ngIf="ideaNotes.length">
+        <li class="idea-note" *ngFor="let note of ideaNotes">
+          <p>{{ note.text }}</p>
+          <button *ngIf="canEdit" class="btn-icon" (click)="removeNote(note)" aria-label="Remove note">✕</button>
+        </li>
+      </ul>
+      <p class="empty-msg" *ngIf="!ideaNotes.length">No notes yet.</p>
+
+      <div class="idea-note-add" *ngIf="canEdit">
+        <textarea
+          class="story-textarea"
+          rows="2"
+          [(ngModel)]="newNoteText"
+          placeholder="A personal experience, a news story, a dream, a photograph, a 'what if'…"></textarea>
+        <button class="btn-save" (click)="addNote()" [disabled]="!newNoteText.trim()">Add note</button>
+      </div>
+    </section>
+
+    <section class="story-section">
+      <h2 class="section-label">
+        Story development ({{ scripts.length }} script{{ scripts.length === 1 ? '' : 's' }})
+      </h2>
+      <p class="empty-msg" *ngIf="!scripts.length">No scripts yet — create one from the project page.</p>
+
+      <div class="script-story-row" *ngFor="let row of scripts">
+        <div class="script-story-header">
+          <button class="btn-ghost" (click)="openScript(row.scriptId)">{{ row.title }} →</button>
+        </div>
+        <label class="story-field">
+          <span>Logline</span>
+          <textarea
+            class="story-textarea"
+            rows="2"
+            [(ngModel)]="row.logline"
+            (blur)="saveScriptStory(row)"
+            [readonly]="!canEdit"
+            placeholder="One or two sentences: who, what, what's at stake"></textarea>
+        </label>
+        <label class="story-field">
+          <span>Synopsis</span>
+          <textarea
+            class="story-textarea"
+            rows="4"
+            [(ngModel)]="row.synopsis"
+            (blur)="saveScriptStory(row)"
+            [readonly]="!canEdit"
+            placeholder="A paragraph or page summarising the full story arc"></textarea>
+        </label>
+      </div>
+    </section>
+  </ng-container>
+</div>
