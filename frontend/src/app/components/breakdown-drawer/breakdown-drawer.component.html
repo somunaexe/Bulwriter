@@ -1,0 +1,100 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Scene breakdown</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-ghost" (click)="exportCsv()" [disabled]="!rows.length">Export CSV</button>
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div class="breakdown-tabs">
+    <button class="breakdown-tab" [class.active]="view === 'scenes'" (click)="view = 'scenes'">By scene</button>
+    <button class="breakdown-tab" [class.active]="view === 'summary'" (click)="view = 'summary'">Summary</button>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading breakdown…</div>
+
+  <div class="breakdown-body" *ngIf="!loading">
+
+    <ng-container *ngIf="view === 'scenes'">
+      <p class="empty-msg" *ngIf="!rows.length">No scenes yet — write a scene heading to get started.</p>
+
+      <div class="breakdown-scene" *ngFor="let row of rows">
+        <div class="breakdown-scene-header">
+          <span class="breakdown-scene-number">{{ row.number }}</span>
+          <span class="breakdown-scene-heading">{{ row.heading }}</span>
+        </div>
+
+        <div class="breakdown-scene-field">
+          <span class="breakdown-field-label">Cast</span>
+          <div class="breakdown-chips" *ngIf="row.cast.length; else noCast">
+            <span class="breakdown-chip breakdown-chip-cast" *ngFor="let c of row.cast">{{ c }}</span>
+          </div>
+          <ng-template #noCast><span class="breakdown-field-empty">No dialogue in this scene</span></ng-template>
+        </div>
+
+        <div class="breakdown-scene-field">
+          <span class="breakdown-field-label">Props</span>
+          <div class="breakdown-chips">
+            <span class="breakdown-chip breakdown-chip-prop" *ngFor="let p of row.props">
+              {{ p }}
+              <button *ngIf="canEdit" class="breakdown-chip-remove" (click)="removeProp(row, p)" aria-label="Remove prop">×</button>
+            </span>
+          </div>
+          <input
+            *ngIf="canEdit"
+            class="input-sm breakdown-prop-input"
+            placeholder="Add a prop and press Enter…"
+            [(ngModel)]="propDraft[row.sceneKey]"
+            (keydown.enter)="addProp(row)" />
+        </div>
+
+        <div class="breakdown-scene-field">
+          <span class="breakdown-field-label">Notes</span>
+          <textarea
+            class="breakdown-notes"
+            [readonly]="!canEdit"
+            placeholder="Other requirements — locations, wardrobe, extras, VFX…"
+            [(ngModel)]="row.notes"
+            (blur)="onNotesBlur(row)"
+          ></textarea>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="view === 'summary'">
+      <div class="breakdown-summary-grid">
+        <section class="breakdown-summary-section">
+          <h3 class="section-label">Locations ({{ locations.length }})</h3>
+          <ul class="stats-list" *ngIf="locations.length; else noLoc">
+            <li *ngFor="let l of locations">
+              {{ l.name }} <span class="stats-count">{{ l.sceneCount }} scene{{ l.sceneCount === 1 ? '' : 's' }}</span>
+            </li>
+          </ul>
+          <ng-template #noLoc><p class="stats-empty">No scene headings yet.</p></ng-template>
+        </section>
+
+        <section class="breakdown-summary-section">
+          <h3 class="section-label">Cast ({{ cast.length }})</h3>
+          <ul class="stats-list" *ngIf="cast.length; else noCastSum">
+            <li *ngFor="let c of cast">
+              {{ c.name }} <span class="stats-count">{{ c.sceneCount }} scene{{ c.sceneCount === 1 ? '' : 's' }}</span>
+            </li>
+          </ul>
+          <ng-template #noCastSum><p class="stats-empty">No characters yet.</p></ng-template>
+        </section>
+
+        <section class="breakdown-summary-section">
+          <h3 class="section-label">Props ({{ props.length }})</h3>
+          <ul class="stats-list" *ngIf="props.length; else noProps">
+            <li *ngFor="let p of props">
+              {{ p.name }} <span class="stats-count">{{ p.sceneCount }} scene{{ p.sceneCount === 1 ? '' : 's' }}</span>
+            </li>
+          </ul>
+          <ng-template #noProps><p class="stats-empty">No props tagged yet.</p></ng-template>
+        </section>
+      </div>
+    </ng-container>
+
+  </div>
+</div>

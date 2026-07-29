@@ -781,41 +781,49 @@ ol.stats-list {
 .ProseMirror .collaboration-cursor__caret { border-left: 2px solid #ff6b6b; }
 .ProseMirror .collaboration-cursor__label { background: #ff6b6b; color: #fff; font-size: 11px; border-radius: 3px; padding: 0 4px; }
 
-/* ── Diff drawer ── */
-.diff-backdrop {
+/* ── Slide-in side drawers (diff viewer, scene breakdown) — shared
+   positioning/chrome; each drawer's own body content is styled
+   separately (.diff-body below; .breakdown-* in
+   breakdown-drawer.component.scss). ── */
+.diff-backdrop,
+.breakdown-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, .4);
-  z-index: 90; /* below .diff-drawer (100), above everything else */
-  animation: diff-backdrop-fade-in .22s ease-out;
+  z-index: 90; /* below the drawer itself (100), above everything else */
+  animation: drawer-backdrop-fade-in .22s ease-out;
 }
 
-.diff-drawer {
+.diff-drawer,
+.breakdown-drawer {
   position: fixed;
   right: 0;
   top: 0;
   bottom: 0;
-  width: 480px;
   background: var(--surface);
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   z-index: 100;
   box-shadow: -4px 0 24px rgba(0,0,0,.4);
-  animation: diff-drawer-slide-in .22s ease-out;
+  animation: drawer-slide-in .22s ease-out;
 }
 
-@keyframes diff-drawer-slide-in {
+.diff-drawer      { width: 480px; }
+.breakdown-drawer { width: 640px; }
+
+@keyframes drawer-slide-in {
   from { transform: translateX(100%); }
   to   { transform: translateX(0); }
 }
 
-@keyframes diff-backdrop-fade-in {
+@keyframes drawer-backdrop-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-.diff-header {
+.diff-header,
+.breakdown-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -825,13 +833,15 @@ ol.stats-list {
   font-size: 14px;
 }
 
-.diff-header .btn-icon {
+.diff-header .btn-icon,
+.breakdown-header .btn-icon {
   font-size: 18px;
   line-height: 1;
   padding: .35rem .6rem;
   border-radius: 6px;
 }
-.diff-header .btn-icon:hover {
+.diff-header .btn-icon:hover,
+.breakdown-header .btn-icon:hover {
   background: rgba(0, 0, 0, .06);
 }
 
@@ -1024,7 +1034,8 @@ ol.stats-list {
   .pm-mount .ProseMirror [data-element="parenthetical"] { margin-left: 5ch; max-width: 100%; }
   .pm-mount .ProseMirror [data-element="dialogue"]      { margin-left: 3ch; max-width: 100%; }
 
-  .diff-drawer {
+  .diff-drawer,
+  .breakdown-drawer {
     width: 100%;
     max-width: 100vw;
   }
