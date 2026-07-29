@@ -137,6 +137,7 @@
           <app-menu-dropdown label="Production">
             <button (click)="openBreakdown()">Scene breakdown</button>
             <button (click)="openStripboard()">Shooting schedule</button>
+            <button (click)="openBudget()">Budget estimate</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Help">
@@ -176,6 +177,14 @@
       [canEdit]="canEdit"
       (close)="showStripboard = false">
     </app-stripboard>
+
+    <app-budget-estimator
+      *ngIf="showBudget"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showBudget = false">
+    </app-budget-estimator>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">

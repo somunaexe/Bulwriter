@@ -16,6 +16,7 @@ import { DiffViewerComponent } from '../diff-viewer/diff-viewer.component';
 import { CollaboratorStackComponent } from '../collaborator-stack/collaborator-stack.component';
 import { BreakdownDrawerComponent } from '../breakdown-drawer/breakdown-drawer.component';
 import { StripboardComponent } from '../stripboard/stripboard.component';
+import { BudgetEstimatorComponent } from '../budget-estimator/budget-estimator.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -51,7 +52,7 @@ import { importPdfToText } from '../../editor/pdf-import';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, BudgetEstimatorComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -712,6 +713,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   showBreakdown = false;
   showStripboard = false;
+  showBudget = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -719,6 +721,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openStripboard(): void {
     this.showStripboard = true;
+  }
+
+  openBudget(): void {
+    this.showBudget = true;
   }
 
   // ── Revisions menu ───────────────────────────────────────────────
