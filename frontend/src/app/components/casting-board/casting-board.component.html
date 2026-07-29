@@ -1,0 +1,42 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Casting</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-ghost" (click)="exportCsv()" [disabled]="!rows.length">Export CSV</button>
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading casting…</div>
+
+  <div class="casting-body" *ngIf="!loading">
+    <p class="empty-msg" *ngIf="!rows.length">No characters with dialogue yet.</p>
+
+    <div class="casting-role" *ngFor="let row of rows">
+      <div class="casting-role-header">
+        <span class="casting-role-name">{{ row.characterName }}</span>
+        <span class="casting-role-scenes">{{ row.sceneCount }} scene{{ row.sceneCount === 1 ? '' : 's' }}</span>
+        <select class="casting-status input-sm" [class]="'casting-status-' + row.status"
+                [(ngModel)]="row.status" (change)="save(row)" [disabled]="!canEdit">
+          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <div class="casting-role-fields">
+        <label class="casting-field">
+          <span class="casting-field-label">Actor</span>
+          <input class="input-sm" placeholder="Actor name…" [(ngModel)]="row.actorName" (blur)="save(row)" [disabled]="!canEdit" />
+        </label>
+        <label class="casting-field">
+          <span class="casting-field-label">Contact</span>
+          <input class="input-sm" placeholder="Email or phone…" [(ngModel)]="row.contact" (blur)="save(row)" [disabled]="!canEdit" />
+        </label>
+      </div>
+
+      <label class="casting-field">
+        <span class="casting-field-label">Notes</span>
+        <textarea class="casting-notes" placeholder="Audition notes, availability…" [(ngModel)]="row.notes" (blur)="save(row)" [readonly]="!canEdit"></textarea>
+      </label>
+    </div>
+  </div>
+</div>

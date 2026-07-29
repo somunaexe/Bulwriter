@@ -15,6 +15,7 @@ import { BranchPanelComponent } from '../branch-panel/branch-panel.component';
 import { DiffViewerComponent } from '../diff-viewer/diff-viewer.component';
 import { CollaboratorStackComponent } from '../collaborator-stack/collaborator-stack.component';
 import { BreakdownDrawerComponent } from '../breakdown-drawer/breakdown-drawer.component';
+import { CastingBoardComponent } from '../casting-board/casting-board.component';
 import { StripboardComponent } from '../stripboard/stripboard.component';
 import {
   screenplaySchema,
@@ -44,7 +45,7 @@ import { fileToBackgroundDataUri } from '../../editor/background-image';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, CastingBoardComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -656,6 +657,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   showBreakdown = false;
   showStripboard = false;
+  showCasting = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -663,6 +665,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openStripboard(): void {
     this.showStripboard = true;
+  }
+
+  openCasting(): void {
+    this.showCasting = true;
   }
 
   // ── Revisions menu ───────────────────────────────────────────────

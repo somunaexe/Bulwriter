@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/somunaexe/bulwriter/backend/internal/breakdown"
+	"github.com/somunaexe/bulwriter/backend/internal/casting"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
@@ -30,6 +31,7 @@ type router struct {
 	members   *membership.Store  // ← add this
 	breakdown *breakdown.Store
 	schedule  *schedule.Store
+	casting   *casting.Store
 	clerk     *clerkapi.Client
 }
 
@@ -42,6 +44,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		members:   membership.NewStore(db),
 		breakdown: breakdown.NewStore(db),
 		schedule:  schedule.NewStore(db),
+		casting:   casting.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -112,6 +115,12 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// unit on every reorder rather than patched strip-by-strip.
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.getSchedule).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.replaceSchedule).Methods("PUT")
+
+	// Casting — actor/contact/status per character. Characters
+	// themselves are derived live from the script text on the frontend,
+	// same as breakdown's locations/cast, not stored here.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting", r.listCasting).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting", r.upsertCasting).Methods("PUT")
 
 	// Members & Invites
 	api.HandleFunc("/projects/{projectId}/members", r.listMembers).Methods("GET")
@@ -427,6 +436,52 @@ func (r *router) upsertBreakdown(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, b)
+}
+
+func (r *router) listCasting(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	roles, err := r.casting.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if roles == nil {
+		roles = []*casting.Role{}
+	}
+	writeJSON(w, http.StatusOK, roles)
+}
+
+func (r *router) upsertCasting(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		CharacterName string `json:"characterName"`
+		ActorName     string `json:"actorName"`
+		Contact       string `json:"contact"`
+		Status        string `json:"status"`
+		Notes         string `json:"notes"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.CharacterName == "" {
+		writeErr(w, http.StatusBadRequest, "characterName is required")
+		return
+	}
+
+	c, err := r.casting.Upsert(vars["scriptId"], body.CharacterName, body.ActorName, body.Contact, body.Status, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
 }
 
 func (r *router) getSchedule(w http.ResponseWriter, req *http.Request) {
