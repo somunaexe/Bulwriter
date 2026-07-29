@@ -12,6 +12,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/somunaexe/bulwriter/backend/internal/breakdown"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
+	"github.com/somunaexe/bulwriter/backend/internal/crew"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
@@ -30,6 +31,7 @@ type router struct {
 	members   *membership.Store  // ← add this
 	breakdown *breakdown.Store
 	schedule  *schedule.Store
+	crew      *crew.Store
 	clerk     *clerkapi.Client
 }
 
@@ -42,6 +44,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		members:   membership.NewStore(db),
 		breakdown: breakdown.NewStore(db),
 		schedule:  schedule.NewStore(db),
+		crew:      crew.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -131,7 +134,14 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// Per-project editor background image (owner only)
 	api.HandleFunc("/projects/{projectId}/background", r.setProjectBackground).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/background", r.clearProjectBackground).Methods("DELETE")
-	
+
+	// Crew — the below-the-line production team, distinct from
+	// project_members (crew members aren't Bulwriter accounts).
+	api.HandleFunc("/projects/{projectId}/crew", r.listCrew).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/crew", r.addCrewMember).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/crew/{memberId}", r.updateCrewMember).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/crew/{memberId}", r.removeCrewMember).Methods("DELETE")
+
 	return c.Handler(mx)
 }
 
@@ -704,6 +714,103 @@ func (r *router) clearProjectBackground(w http.ResponseWriter, req *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (r *router) listCrew(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	members, err := r.crew.List(vars["projectId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if members == nil {
+		members = []*crew.Member{}
+	}
+	writeJSON(w, http.StatusOK, members)
+}
+
+func (r *router) addCrewMember(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Role    string `json:"role"`
+		Name    string `json:"name"`
+		Contact string `json:"contact"`
+		Notes   string `json:"notes"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Name == "" {
+		writeErr(w, http.StatusBadRequest, "name is required")
+		return
+	}
+
+	m, err := r.crew.Add(vars["projectId"], body.Role, body.Name, body.Contact, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, m)
+}
+
+func (r *router) updateCrewMember(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Role    string `json:"role"`
+		Name    string `json:"name"`
+		Contact string `json:"contact"`
+		Notes   string `json:"notes"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Name == "" {
+		writeErr(w, http.StatusBadRequest, "name is required")
+		return
+	}
+
+	m, err := r.crew.Update(vars["projectId"], vars["memberId"], body.Role, body.Name, body.Contact, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, m)
+}
+
+func (r *router) removeCrewMember(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.crew.Remove(vars["projectId"], vars["memberId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (r *router) getMyRole(w http.ResponseWriter, req *http.Request) {

@@ -45,6 +45,15 @@
     ></app-collaborator-stack>
   </section>
 
+  <section class="collaborators">
+    <h2 class="section-label">Crew</h2>
+
+    <app-crew-list
+      [projectId]="projectId"
+      [canEdit]="canEdit"
+    ></app-crew-list>
+  </section>
+
   <app-modal *ngIf="showInviteModal" title="Invite collaborator" (closed)="showInviteModal = false">
     <div class="find-replace-form">
       <input
