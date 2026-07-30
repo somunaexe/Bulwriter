@@ -38,7 +38,7 @@
           <div class="breakdown-chips">
             <span class="breakdown-chip breakdown-chip-prop" *ngFor="let p of row.props">
               {{ p }}
-              <button *ngIf="canEdit" class="breakdown-chip-remove" (click)="removeProp(row, p)" aria-label="Remove prop">×</button>
+              <button *ngIf="canEdit" class="breakdown-chip-remove" (click)="removeTag(row, 'props', p)" aria-label="Remove prop">×</button>
             </span>
           </div>
           <input
@@ -46,7 +46,39 @@
             class="input-sm breakdown-prop-input"
             placeholder="Add a prop and press Enter…"
             [(ngModel)]="propDraft[row.sceneKey]"
-            (keydown.enter)="addProp(row)" />
+            (keydown.enter)="addTag(row, 'props')" />
+        </div>
+
+        <div class="breakdown-scene-field">
+          <span class="breakdown-field-label">Costumes</span>
+          <div class="breakdown-chips">
+            <span class="breakdown-chip breakdown-chip-prop" *ngFor="let c of row.costumes">
+              {{ c }}
+              <button *ngIf="canEdit" class="breakdown-chip-remove" (click)="removeTag(row, 'costumes', c)" aria-label="Remove costume">×</button>
+            </span>
+          </div>
+          <input
+            *ngIf="canEdit"
+            class="input-sm breakdown-prop-input"
+            placeholder="Add a costume and press Enter…"
+            [(ngModel)]="costumeDraft[row.sceneKey]"
+            (keydown.enter)="addTag(row, 'costumes')" />
+        </div>
+
+        <div class="breakdown-scene-field">
+          <span class="breakdown-field-label">Set dressing</span>
+          <div class="breakdown-chips">
+            <span class="breakdown-chip breakdown-chip-prop" *ngFor="let d of row.setDressing">
+              {{ d }}
+              <button *ngIf="canEdit" class="breakdown-chip-remove" (click)="removeTag(row, 'setDressing', d)" aria-label="Remove set dressing item">×</button>
+            </span>
+          </div>
+          <input
+            *ngIf="canEdit"
+            class="input-sm breakdown-prop-input"
+            placeholder="Add a set dressing item and press Enter…"
+            [(ngModel)]="dressingDraft[row.sceneKey]"
+            (keydown.enter)="addTag(row, 'setDressing')" />
         </div>
 
         <div class="breakdown-scene-field">
@@ -54,7 +86,7 @@
           <textarea
             class="breakdown-notes"
             [readonly]="!canEdit"
-            placeholder="Other requirements — locations, wardrobe, extras, VFX…"
+            placeholder="Other requirements — locations, extras, VFX…"
             [(ngModel)]="row.notes"
             (blur)="onNotesBlur(row)"
           ></textarea>
@@ -92,6 +124,26 @@
             </li>
           </ul>
           <ng-template #noProps><p class="stats-empty">No props tagged yet.</p></ng-template>
+        </section>
+
+        <section class="breakdown-summary-section">
+          <h3 class="section-label">Costumes ({{ costumes.length }})</h3>
+          <ul class="stats-list" *ngIf="costumes.length; else noCostumes">
+            <li *ngFor="let c of costumes">
+              {{ c.name }} <span class="stats-count">{{ c.sceneCount }} scene{{ c.sceneCount === 1 ? '' : 's' }}</span>
+            </li>
+          </ul>
+          <ng-template #noCostumes><p class="stats-empty">No costumes tagged yet.</p></ng-template>
+        </section>
+
+        <section class="breakdown-summary-section">
+          <h3 class="section-label">Set dressing ({{ setDressing.length }})</h3>
+          <ul class="stats-list" *ngIf="setDressing.length; else noDressing">
+            <li *ngFor="let d of setDressing">
+              {{ d.name }} <span class="stats-count">{{ d.sceneCount }} scene{{ d.sceneCount === 1 ? '' : 's' }}</span>
+            </li>
+          </ul>
+          <ng-template #noDressing><p class="stats-empty">No set dressing tagged yet.</p></ng-template>
         </section>
       </div>
     </ng-container>

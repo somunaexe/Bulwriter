@@ -53,6 +53,8 @@ export function computeSceneList(doc: PMNode): SceneEntry[] {
 
 export interface BreakdownRow extends SceneEntry {
   props: string[];
+  costumes: string[];
+  setDressing: string[];
   notes: string;
 }
 
@@ -61,7 +63,7 @@ export function csvCell(value: string): string {
 }
 
 export function breakdownToCsv(rows: BreakdownRow[]): string {
-  const header = ['#', 'Scene', 'Cast', 'Props', 'Notes'];
+  const header = ['#', 'Scene', 'Cast', 'Props', 'Costumes', 'Set dressing', 'Notes'];
   const lines = [header.map(csvCell).join(',')];
 
   for (const row of rows) {
@@ -70,6 +72,8 @@ export function breakdownToCsv(rows: BreakdownRow[]): string {
       row.heading,
       row.cast.join('; '),
       row.props.join('; '),
+      row.costumes.join('; '),
+      row.setDressing.join('; '),
       row.notes,
     ].map(csvCell).join(','));
   }

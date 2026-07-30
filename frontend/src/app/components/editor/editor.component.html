@@ -132,7 +132,9 @@
             <button (click)="openCasting()">Casting</button>
             <button (click)="openBudget()">Budget estimate</button>
             <button (click)="openShotList()">Shot list &amp; storyboards</button>
+            <button (click)="openRehearsals()">Rehearsals</button>
             <button (click)="openMusicVfx()">Music &amp; VFX</button>
+            <button (click)="openContinuity()">Continuity notes</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Post-Production">
@@ -223,6 +225,16 @@
       (close)="showShotList = false">
     </app-shot-list>
 
+    <div class="breakdown-backdrop" *ngIf="showRehearsals" (click)="showRehearsals = false"></div>
+
+    <app-rehearsal-tracker
+      *ngIf="showRehearsals"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showRehearsals = false">
+    </app-rehearsal-tracker>
+
     <div class="breakdown-backdrop" *ngIf="showMusicVfx" (click)="showMusicVfx = false"></div>
 
     <app-music-vfx
@@ -232,6 +244,16 @@
       [canEdit]="canEdit"
       (close)="showMusicVfx = false">
     </app-music-vfx>
+
+    <div class="breakdown-backdrop" *ngIf="showContinuity" (click)="showContinuity = false"></div>
+
+    <app-continuity-notes
+      *ngIf="showContinuity"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showContinuity = false">
+    </app-continuity-notes>
 
     <div class="breakdown-backdrop" *ngIf="showPressKit" (click)="showPressKit = false"></div>
 

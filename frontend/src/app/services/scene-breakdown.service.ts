@@ -8,6 +8,8 @@ export interface SceneBreakdownTag {
   scriptId: string;
   sceneKey: string;
   props: string[];
+  costumes: string[];
+  setDressing: string[];
   notes: string;
   updatedAt: string;
 }
@@ -24,10 +26,13 @@ export class SceneBreakdownService {
     );
   }
 
-  upsert(projectId: string, scriptId: string, sceneKey: string, props: string[], notes: string): Observable<SceneBreakdownTag> {
+  upsert(
+    projectId: string, scriptId: string, sceneKey: string,
+    props: string[], costumes: string[], setDressing: string[], notes: string,
+  ): Observable<SceneBreakdownTag> {
     return this.http.put<SceneBreakdownTag>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/breakdown`,
-      { sceneKey, props, notes }
+      { sceneKey, props, costumes, setDressing, notes }
     );
   }
 }

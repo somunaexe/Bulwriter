@@ -15,6 +15,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/budget"
 	"github.com/somunaexe/bulwriter/backend/internal/casting"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
+	"github.com/somunaexe/bulwriter/backend/internal/continuity"
 	"github.com/somunaexe/bulwriter/backend/internal/credits"
 	"github.com/somunaexe/bulwriter/backend/internal/crew"
 	"github.com/somunaexe/bulwriter/backend/internal/distribution"
@@ -25,6 +26,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/musicvfx"
 	"github.com/somunaexe/bulwriter/backend/internal/presskit"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
+	"github.com/somunaexe/bulwriter/backend/internal/rehearsal"
 	"github.com/somunaexe/bulwriter/backend/internal/schedule"
 	"github.com/somunaexe/bulwriter/backend/internal/scouting"
 	"github.com/somunaexe/bulwriter/backend/internal/script"
@@ -52,6 +54,8 @@ type router struct {
 	milestones   *milestone.Store
 	distribution *distribution.Store
 	credits      *credits.Store
+	rehearsals   *rehearsal.Store
+	continuity   *continuity.Store
 	clerk        *clerkapi.Client
 }
 
@@ -75,6 +79,8 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		milestones:   milestone.NewStore(db),
 		distribution: distribution.NewStore(db),
 		credits:      credits.NewStore(db),
+		rehearsals:   rehearsal.NewStore(db),
+		continuity:   continuity.NewStore(db),
 		clerk:        clerkapi.NewClient(),
 	}
 
@@ -212,6 +218,13 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots/{shotId}", r.updateShot).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots/{shotId}", r.removeShot).Methods("DELETE")
 
+	// Rehearsals — Phase 2 (Pre-Production) "Design & Prep" gap: a
+	// lightweight, position-ordered log of rehearsal sessions per script.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/rehearsals", r.listRehearsals).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/rehearsals", r.addRehearsal).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/rehearsals/{rehearsalId}", r.updateRehearsal).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/rehearsals/{rehearsalId}", r.removeRehearsal).Methods("DELETE")
+
 	// Music & VFX — two lightweight suggestion lists per scene (kind =
 	// "music" | "vfx"), same shape either way: a description, a simple
 	// progress status, and notes.
@@ -219,6 +232,13 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx", r.addMusicVfxNote).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx/{noteId}", r.updateMusicVfxNote).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx/{noteId}", r.removeMusicVfxNote).Methods("DELETE")
+
+	// Continuity notes — Phase 3 (Production) script-supervisor gap: a
+	// per-scene log of props/costume/eyeline details between takes.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/continuity", r.listContinuityNotes).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/continuity", r.addContinuityNote).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/continuity/{noteId}", r.updateContinuityNote).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/continuity/{noteId}", r.removeContinuityNote).Methods("DELETE")
 
 	// Press kit — Phase 5 (Distribution & Release): director's statement,
 	// poster, and a stills list live here; synopsis/logline are read
@@ -546,16 +566,18 @@ func (r *router) upsertBreakdown(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var body struct {
-		SceneKey string   `json:"sceneKey"`
-		Props    []string `json:"props"`
-		Notes    string   `json:"notes"`
+		SceneKey    string   `json:"sceneKey"`
+		Props       []string `json:"props"`
+		Costumes    []string `json:"costumes"`
+		SetDressing []string `json:"setDressing"`
+		Notes       string   `json:"notes"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.SceneKey == "" {
 		writeErr(w, http.StatusBadRequest, "sceneKey is required")
 		return
 	}
 
-	b, err := r.breakdown.Upsert(vars["scriptId"], body.SceneKey, body.Props, body.Notes)
+	b, err := r.breakdown.Upsert(vars["scriptId"], body.SceneKey, body.Props, body.Costumes, body.SetDressing, body.Notes)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2284,4 +2306,192 @@ func (r *router) setCredits(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, c)
+}
+
+func (r *router) listRehearsals(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	list, err := r.rehearsals.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if list == nil {
+		list = []*rehearsal.Rehearsal{}
+	}
+	writeJSON(w, http.StatusOK, list)
+}
+
+type rehearsalBody struct {
+	Date  string `json:"date"`
+	Time  string `json:"time"`
+	Focus string `json:"focus"`
+	Notes string `json:"notes"`
+}
+
+func (r *router) addRehearsal(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body rehearsalBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	re, err := r.rehearsals.Add(vars["scriptId"], body.Date, body.Time, body.Focus, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, re)
+}
+
+func (r *router) updateRehearsal(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body rehearsalBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	re, err := r.rehearsals.Update(vars["scriptId"], vars["rehearsalId"], body.Date, body.Time, body.Focus, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, re)
+}
+
+func (r *router) removeRehearsal(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.rehearsals.Remove(vars["scriptId"], vars["rehearsalId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) listContinuityNotes(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	notes, err := r.continuity.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if notes == nil {
+		notes = []*continuity.Note{}
+	}
+	writeJSON(w, http.StatusOK, notes)
+}
+
+type continuityNoteBody struct {
+	SceneKey string `json:"sceneKey"`
+	Take     string `json:"take"`
+	Note     string `json:"note"`
+	Flagged  bool   `json:"flagged"`
+}
+
+func (r *router) addContinuityNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body continuityNoteBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.SceneKey == "" {
+		writeErr(w, http.StatusBadRequest, "sceneKey is required")
+		return
+	}
+
+	n, err := r.continuity.Add(vars["scriptId"], body.SceneKey, body.Take, body.Note, body.Flagged)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, n)
+}
+
+func (r *router) updateContinuityNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body continuityNoteBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	n, err := r.continuity.Update(vars["scriptId"], vars["noteId"], body.Take, body.Note, body.Flagged)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, n)
+}
+
+func (r *router) removeContinuityNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.continuity.Remove(vars["scriptId"], vars["noteId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
