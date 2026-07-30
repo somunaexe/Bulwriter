@@ -27,6 +27,7 @@ import { FestivalTrackerComponent } from '../festival-tracker/festival-tracker.c
 import { CreditsComponent } from '../credits/credits.component';
 import { RehearsalTrackerComponent } from '../rehearsal-tracker/rehearsal-tracker.component';
 import { ContinuityNotesComponent } from '../continuity-notes/continuity-notes.component';
+import { WorkflowOverviewComponent } from '../workflow-overview/workflow-overview.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -64,7 +65,7 @@ import { importPdfToText } from '../../editor/pdf-import';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent, MilestoneTrackerComponent, FestivalTrackerComponent, CreditsComponent, RehearsalTrackerComponent, ContinuityNotesComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent, MilestoneTrackerComponent, FestivalTrackerComponent, CreditsComponent, RehearsalTrackerComponent, ContinuityNotesComponent, WorkflowOverviewComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -777,6 +778,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   showCredits = false;
   showRehearsals = false;
   showContinuity = false;
+  showWorkflowOverview = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -828,6 +830,32 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openCredits(): void {
     this.showCredits = true;
+  }
+
+  openWorkflowOverview(): void {
+    this.showWorkflowOverview = true;
+  }
+
+  // Dispatches a workflow-overview row click to the matching drawer's
+  // own open method — keeps the mapping in one place rather than
+  // wiring 11 separate (openFeature)="..." handlers in the template.
+  onWorkflowFeature(key: string): void {
+    this.showWorkflowOverview = false;
+    switch (key) {
+      case 'breakdown': this.openBreakdown(); break;
+      case 'casting': this.openCasting(); break;
+      case 'scouting': this.openScouting(); break;
+      case 'stripboard': this.openStripboard(); break;
+      case 'budget': this.openBudget(); break;
+      case 'shotlist': this.openShotList(); break;
+      case 'rehearsals': this.openRehearsals(); break;
+      case 'musicvfx': this.openMusicVfx(); break;
+      case 'continuity': this.openContinuity(); break;
+      case 'milestones': this.openMilestones(); break;
+      case 'credits': this.openCredits(); break;
+      case 'presskit': this.openPressKit(); break;
+      case 'festival': this.openFestivalTracker(); break;
+    }
   }
 
   // ── Revisions menu ───────────────────────────────────────────────

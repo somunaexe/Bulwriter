@@ -1,0 +1,37 @@
+<div class="wf-backdrop" (click)="close.emit()">
+  <div class="wf-panel" (click)="$event.stopPropagation()">
+    <header class="breakdown-header">
+      <span>Workflow overview</span>
+      <div class="breakdown-header-actions">
+        <button class="btn-icon" (click)="close.emit()">✕</button>
+      </div>
+    </header>
+
+    <div *ngIf="loading" class="loading">Loading workflow status…</div>
+
+    <div class="wf-body" *ngIf="!loading">
+      <section class="wf-phase" *ngFor="let phase of phases">
+        <div class="wf-phase-header">
+          <h3 class="wf-phase-name">{{ phase.name }}</h3>
+          <div class="wf-phase-bar-track">
+            <div class="wf-phase-bar-fill" [style.width.%]="progressOf(phase)"></div>
+          </div>
+          <span class="wf-phase-percent">{{ progressOf(phase) }}%</span>
+        </div>
+
+        <div class="wf-items">
+          <a
+            *ngFor="let item of phase.items"
+            class="wf-item"
+            [class.clickable]="true"
+            [routerLink]="item.routerLink || null"
+            (click)="!item.routerLink && open(item.key)">
+            <span class="wf-dot" [class]="'wf-dot-' + item.status"></span>
+            <span class="wf-item-label">{{ item.label }}</span>
+            <span class="wf-item-detail">{{ item.detail }}</span>
+          </a>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
