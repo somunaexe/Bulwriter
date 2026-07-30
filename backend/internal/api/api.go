@@ -8,15 +8,18 @@ import (
 	"net/http"
 	"strings"
 
+	"database/sql"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/somunaexe/bulwriter/backend/internal/breakdown"
-	"github.com/somunaexe/bulwriter/backend/internal/casting"
 	"github.com/somunaexe/bulwriter/backend/internal/budget"
+	"github.com/somunaexe/bulwriter/backend/internal/casting"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
 	"github.com/somunaexe/bulwriter/backend/internal/crew"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
+	"github.com/somunaexe/bulwriter/backend/internal/membership"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
+	"github.com/somunaexe/bulwriter/backend/internal/milestone"
 	"github.com/somunaexe/bulwriter/backend/internal/musicvfx"
 	"github.com/somunaexe/bulwriter/backend/internal/presskit"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
@@ -26,53 +29,53 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/shotlist"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 	"github.com/somunaexe/bulwriter/backend/internal/story"
-	"github.com/somunaexe/bulwriter/backend/internal/membership"
-	"database/sql"
 )
 
 type router struct {
-	hub		  *hub.Hub
-	store	  *snapshot.Store
-	projects  *project.Store
-	scripts	  *script.Store
-	members   *membership.Store  // ← add this
-	breakdown *breakdown.Store
-	schedule  *schedule.Store
-	scouting  *scouting.Store
-	crew      *crew.Store
-	casting   *casting.Store
-	budget    *budget.Store
-	story     *story.Store
-	shots     *shotlist.Store
-	musicvfx  *musicvfx.Store
-	presskit  *presskit.Store
-	clerk     *clerkapi.Client
+	hub        *hub.Hub
+	store      *snapshot.Store
+	projects   *project.Store
+	scripts    *script.Store
+	members    *membership.Store // ← add this
+	breakdown  *breakdown.Store
+	schedule   *schedule.Store
+	scouting   *scouting.Store
+	crew       *crew.Store
+	casting    *casting.Store
+	budget     *budget.Store
+	story      *story.Store
+	shots      *shotlist.Store
+	musicvfx   *musicvfx.Store
+	presskit   *presskit.Store
+	milestones *milestone.Store
+	clerk      *clerkapi.Client
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	r := &router{
-		hub:       h,
-		store:     snapshot.NewStore(db),
-		projects:  project.NewStore(db),
-		scripts:   script.NewStore((db)),
-		members:   membership.NewStore(db),
-		breakdown: breakdown.NewStore(db),
-		schedule:  schedule.NewStore(db),
-		scouting:  scouting.NewStore(db),
-		crew:      crew.NewStore(db),
-		casting:   casting.NewStore(db),
-		budget:    budget.NewStore(db),
-		story:     story.NewStore(db),
-		shots:     shotlist.NewStore(db),
-		musicvfx:  musicvfx.NewStore(db),
-		presskit:  presskit.NewStore(db),
-		clerk:     clerkapi.NewClient(),
+		hub:        h,
+		store:      snapshot.NewStore(db),
+		projects:   project.NewStore(db),
+		scripts:    script.NewStore((db)),
+		members:    membership.NewStore(db),
+		breakdown:  breakdown.NewStore(db),
+		schedule:   schedule.NewStore(db),
+		scouting:   scouting.NewStore(db),
+		crew:       crew.NewStore(db),
+		casting:    casting.NewStore(db),
+		budget:     budget.NewStore(db),
+		story:      story.NewStore(db),
+		shots:      shotlist.NewStore(db),
+		musicvfx:   musicvfx.NewStore(db),
+		presskit:   presskit.NewStore(db),
+		milestones: milestone.NewStore(db),
+		clerk:      clerkapi.NewClient(),
 	}
 
 	mx := mux.NewRouter()
 
 	// Public routes — no auth needed
-	
+
 	// Public health check
 	mx.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -82,12 +85,12 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// CORS — allow Angular dev server
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
- 			"http://localhost:4200",
+			"http://localhost:4200",
 			"https://*.app.github.dev",
- 			"https://d1hspb5r4tyd4l.cloudfront.net",
+			"https://d1hspb5r4tyd4l.cloudfront.net",
 		},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
 
@@ -98,7 +101,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// Protected routes — wrap with RequireAuth
 	api := mx.PathPrefix("/api").Subrouter()
 	// api.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    // 	w.WriteHeader(http.StatusOK)
+	// 	w.WriteHeader(http.StatusOK)
 	// })
 
 	api.Use(middleware.RequireAuth)
@@ -107,7 +110,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects", r.listProjects).Methods("GET")
 	api.HandleFunc("/projects", r.createProject).Methods("POST")
 	api.HandleFunc("/projects/{projectId}", r.getProject).Methods("GET")
-	
+
 	// Scripts
 	api.HandleFunc("/projects/{projectId}/scripts", r.listScripts).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts", r.createScript).Methods("POST")
@@ -222,6 +225,14 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit/stills/{stillId}", r.removePressKitStill).Methods("DELETE")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit/bios/{kind}/{personId}", r.setPressKitBio).Methods("PUT")
 
+	// Milestones — Phase 4 (Post-Production): a lightweight, ordered
+	// checklist of post stages (rough cut, picture lock, sound mix,
+	// color grade, final export, etc.), each with a status and notes.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/milestones", r.listMilestones).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/milestones", r.addMilestone).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/milestones/{milestoneId}", r.updateMilestone).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/milestones/{milestoneId}", r.removeMilestone).Methods("DELETE")
+
 	// Crew — the below-the-line production team, distinct from
 	// project_members (crew members aren't Bulwriter accounts).
 	api.HandleFunc("/projects/{projectId}/crew", r.listCrew).Methods("GET")
@@ -295,13 +306,13 @@ func (r *router) createProject(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *router) getProject(w http.ResponseWriter, req *http.Request) {
-    vars := mux.Vars(req)
-    p, err := r.projects.Get(vars["projectId"])
-    if err != nil {
-        writeErr(w, http.StatusNotFound, err.Error())
-        return
-    }
-    writeJSON(w, http.StatusOK, p)
+	vars := mux.Vars(req)
+	p, err := r.projects.Get(vars["projectId"])
+	if err != nil {
+		writeErr(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
 }
 
 func (r *router) listScripts(w http.ResponseWriter, req *http.Request) {
@@ -355,7 +366,7 @@ func (r *router) createScript(w http.ResponseWriter, req *http.Request) {
 	// 	writeErr(w, http.StatusInternalServerError, err.Error())
 	// 	return
 	// }
-	
+
 	writeJSON(w, http.StatusCreated, sc)
 }
 
@@ -405,8 +416,8 @@ func (r *router) commit(w http.ResponseWriter, req *http.Request) {
 	userID := middleware.UserIDFromContext(req)
 
 	var body struct {
-		Content  string `json:"content"`
-		Message  string `json:"message"`
+		Content string `json:"content"`
+		Message string `json:"message"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
@@ -1880,4 +1891,97 @@ func (r *router) getMyRole(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"role": role})
+}
+
+func (r *router) listMilestones(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	milestones, err := r.milestones.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if milestones == nil {
+		milestones = []*milestone.Milestone{}
+	}
+	writeJSON(w, http.StatusOK, milestones)
+}
+
+type milestoneBody struct {
+	Label  string `json:"label"`
+	Status string `json:"status"`
+	Notes  string `json:"notes"`
+}
+
+func (r *router) addMilestone(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body milestoneBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Label == "" {
+		writeErr(w, http.StatusBadRequest, "label is required")
+		return
+	}
+
+	m, err := r.milestones.Add(vars["scriptId"], body.Label, body.Status, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, m)
+}
+
+func (r *router) updateMilestone(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body milestoneBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	m, err := r.milestones.Update(vars["scriptId"], vars["milestoneId"], body.Label, body.Status, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, m)
+}
+
+func (r *router) removeMilestone(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.milestones.Remove(vars["scriptId"], vars["milestoneId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

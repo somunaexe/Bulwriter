@@ -32,21 +32,31 @@ type StripInput struct {
 // Strip, and always rewritten together with strips (see Replace) so the
 // two stay aligned when days are added/removed/renumbered.
 type DayMeta struct {
-	ScriptID  string    `json:"scriptId"`
-	DayNumber int       `json:"dayNumber"`
-	ShootDate string    `json:"shootDate"`
-	CallTime  string    `json:"callTime"`
-	Location  string    `json:"location"`
-	Notes     string    `json:"notes"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ScriptID        string    `json:"scriptId"`
+	DayNumber       int       `json:"dayNumber"`
+	ShootDate       string    `json:"shootDate"`
+	CallTime        string    `json:"callTime"`
+	Location        string    `json:"location"`
+	Notes           string    `json:"notes"`
+	DataBackedUp    bool      `json:"dataBackedUp"`
+	DailiesReviewed bool      `json:"dailiesReviewed"`
+	CameraReport    string    `json:"cameraReport"`
+	SoundReport     string    `json:"soundReport"`
+	WrapNotes       string    `json:"wrapNotes"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 type DayMetaInput struct {
-	DayNumber int    `json:"dayNumber"`
-	ShootDate string `json:"shootDate"`
-	CallTime  string `json:"callTime"`
-	Location  string `json:"location"`
-	Notes     string `json:"notes"`
+	DayNumber       int    `json:"dayNumber"`
+	ShootDate       string `json:"shootDate"`
+	CallTime        string `json:"callTime"`
+	Location        string `json:"location"`
+	Notes           string `json:"notes"`
+	DataBackedUp    bool   `json:"dataBackedUp"`
+	DailiesReviewed bool   `json:"dailiesReviewed"`
+	CameraReport    string `json:"cameraReport"`
+	SoundReport     string `json:"soundReport"`
+	WrapNotes       string `json:"wrapNotes"`
 }
 
 type Store struct {
@@ -81,7 +91,8 @@ func (s *Store) List(scriptID string) ([]*Strip, error) {
 
 func (s *Store) ListDays(scriptID string) ([]*DayMeta, error) {
 	rows, err := s.db.Query(
-		`SELECT script_id, day_number, shoot_date, call_time, location, notes, updated_at
+		`SELECT script_id, day_number, shoot_date, call_time, location, notes,
+		        data_backed_up, dailies_reviewed, camera_report, sound_report, wrap_notes, updated_at
 		 FROM schedule_days WHERE script_id = $1
 		 ORDER BY day_number ASC`, scriptID,
 	)
@@ -93,7 +104,10 @@ func (s *Store) ListDays(scriptID string) ([]*DayMeta, error) {
 	var out []*DayMeta
 	for rows.Next() {
 		d := &DayMeta{}
-		if err := rows.Scan(&d.ScriptID, &d.DayNumber, &d.ShootDate, &d.CallTime, &d.Location, &d.Notes, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&d.ScriptID, &d.DayNumber, &d.ShootDate, &d.CallTime, &d.Location, &d.Notes,
+			&d.DataBackedUp, &d.DailiesReviewed, &d.CameraReport, &d.SoundReport, &d.WrapNotes, &d.UpdatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("scanning schedule day: %w", err)
 		}
 		out = append(out, d)
@@ -146,18 +160,27 @@ func (s *Store) Replace(scriptID string, strips []StripInput, days []DayMetaInpu
 	outDays := make([]*DayMeta, 0, len(days))
 	for _, in := range days {
 		d := &DayMeta{
-			ScriptID:  scriptID,
-			DayNumber: in.DayNumber,
-			ShootDate: in.ShootDate,
-			CallTime:  in.CallTime,
-			Location:  in.Location,
-			Notes:     in.Notes,
-			UpdatedAt: now,
+			ScriptID:        scriptID,
+			DayNumber:       in.DayNumber,
+			ShootDate:       in.ShootDate,
+			CallTime:        in.CallTime,
+			Location:        in.Location,
+			Notes:           in.Notes,
+			DataBackedUp:    in.DataBackedUp,
+			DailiesReviewed: in.DailiesReviewed,
+			CameraReport:    in.CameraReport,
+			SoundReport:     in.SoundReport,
+			WrapNotes:       in.WrapNotes,
+			UpdatedAt:       now,
 		}
 		if _, err := tx.Exec(
-			`INSERT INTO schedule_days (script_id, day_number, shoot_date, call_time, location, notes, updated_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			d.ScriptID, d.DayNumber, d.ShootDate, d.CallTime, d.Location, d.Notes, d.UpdatedAt,
+			`INSERT INTO schedule_days (
+			   script_id, day_number, shoot_date, call_time, location, notes,
+			   data_backed_up, dailies_reviewed, camera_report, sound_report, wrap_notes, updated_at
+			 )
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+			d.ScriptID, d.DayNumber, d.ShootDate, d.CallTime, d.Location, d.Notes,
+			d.DataBackedUp, d.DailiesReviewed, d.CameraReport, d.SoundReport, d.WrapNotes, d.UpdatedAt,
 		); err != nil {
 			return nil, nil, fmt.Errorf("inserting schedule day: %w", err)
 		}

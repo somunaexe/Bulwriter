@@ -77,6 +77,32 @@
 
     <p class="call-sheet-scene-count">{{ callSheetDay.strips.length }} scene{{ callSheetDay.strips.length === 1 ? '' : 's' }} scheduled this day.</p>
 
+    <hr class="panel-divider" />
+
+    <h3 class="section-label">Daily wrap log</h3>
+
+    <label class="call-sheet-checkbox">
+      <input type="checkbox" [(ngModel)]="callSheetDay.dataBackedUp" [disabled]="!canEdit" />
+      <span>Footage &amp; sound data backed up</span>
+    </label>
+    <label class="call-sheet-checkbox">
+      <input type="checkbox" [(ngModel)]="callSheetDay.dailiesReviewed" [disabled]="!canEdit" />
+      <span>Dailies reviewed</span>
+    </label>
+
+    <label class="call-sheet-field">
+      <span class="breakdown-field-label">Camera report</span>
+      <textarea class="breakdown-notes" placeholder="Mags shot, gate checks, issues…" [(ngModel)]="callSheetDay.cameraReport" [readonly]="!canEdit"></textarea>
+    </label>
+    <label class="call-sheet-field">
+      <span class="breakdown-field-label">Sound report</span>
+      <textarea class="breakdown-notes" placeholder="Rolls recorded, ADR flags, issues…" [(ngModel)]="callSheetDay.soundReport" [readonly]="!canEdit"></textarea>
+    </label>
+    <label class="call-sheet-field">
+      <span class="breakdown-field-label">Wrap notes</span>
+      <textarea class="breakdown-notes" placeholder="Wrap meeting notes, tomorrow's prep…" [(ngModel)]="callSheetDay.wrapNotes" [readonly]="!canEdit"></textarea>
+    </label>
+
     <div class="find-replace-actions">
       <button class="btn-ghost" (click)="closeCallSheet()">Close</button>
       <button class="btn-save" (click)="exportCallSheet()">Export PDF</button>

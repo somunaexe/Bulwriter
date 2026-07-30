@@ -10,12 +10,23 @@ export interface ScheduleDay {
   callTime: string;
   location: string;
   notes: string;
+  dataBackedUp: boolean;
+  dailiesReviewed: boolean;
+  cameraReport: string;
+  soundReport: string;
+  wrapNotes: string;
 }
 
 const MAX_STRIPS_PER_DAY = 6;
 
-export function emptyDayMeta(): Pick<ScheduleDay, 'shootDate' | 'callTime' | 'location' | 'notes'> {
-  return { shootDate: '', callTime: '', location: '', notes: '' };
+type DayMetaFields = 'shootDate' | 'callTime' | 'location' | 'notes'
+  | 'dataBackedUp' | 'dailiesReviewed' | 'cameraReport' | 'soundReport' | 'wrapNotes';
+
+export function emptyDayMeta(): Pick<ScheduleDay, DayMetaFields> {
+  return {
+    shootDate: '', callTime: '', location: '', notes: '',
+    dataBackedUp: false, dailiesReviewed: false, cameraReport: '', soundReport: '', wrapNotes: '',
+  };
 }
 
 /** Groups scenes by location (heading text, time-of-day stripped —

@@ -1,0 +1,44 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Milestones</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading milestones…</div>
+
+  <div class="ms-body" *ngIf="!loading">
+    <div class="ms-section-header">
+      <h3 class="section-label">Milestones ({{ milestones.length }})</h3>
+      <button *ngIf="canEdit" class="ms-add-btn" [class.open]="showAdd" (click)="toggleAdd()" aria-label="Add a milestone">+</button>
+    </div>
+
+    <p class="empty-msg" *ngIf="!milestones.length">No milestones tracked yet.</p>
+
+    <div class="ms-list" *ngIf="milestones.length">
+      <div class="ms-item" *ngFor="let m of milestones">
+        <div class="ms-item-row">
+          <input class="input-sm" placeholder="Milestone…" [(ngModel)]="m.label" (blur)="save(m)" [disabled]="!canEdit" />
+          <select class="ms-status input-sm" [class]="'ms-status-' + m.status"
+                  [(ngModel)]="m.status" (change)="save(m)" [disabled]="!canEdit">
+            <option *ngFor="let s of statuses" [value]="s">{{ s.replace('_', ' ') }}</option>
+          </select>
+          <button *ngIf="canEdit" class="ms-remove-btn" (click)="remove(m)" aria-label="Remove milestone">×</button>
+        </div>
+        <textarea class="ms-notes" placeholder="Notes…" [(ngModel)]="m.notes" (blur)="save(m)" [readonly]="!canEdit"></textarea>
+      </div>
+    </div>
+
+    <div class="ms-add" *ngIf="canEdit && showAdd">
+      <div class="ms-item-row">
+        <input class="input-sm" placeholder="Milestone (e.g. Picture lock)…" [(ngModel)]="newLabel" (keydown.enter)="addMilestone()" />
+        <select class="ms-status input-sm" [(ngModel)]="newStatus">
+          <option *ngFor="let s of statuses" [value]="s">{{ s.replace('_', ' ') }}</option>
+        </select>
+      </div>
+      <textarea class="ms-notes" placeholder="Notes…" [(ngModel)]="newNotes" (keydown.enter)="addMilestone()"></textarea>
+      <button class="btn-save" (click)="addMilestone()" [disabled]="!newLabel.trim()">Add milestone</button>
+    </div>
+  </div>
+</div>

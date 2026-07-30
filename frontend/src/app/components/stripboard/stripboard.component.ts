@@ -99,6 +99,11 @@ export class StripboardComponent implements OnChanges {
           callTime: meta?.callTime ?? '',
           location: meta?.location ?? '',
           notes: meta?.notes ?? '',
+          dataBackedUp: meta?.dataBackedUp ?? false,
+          dailiesReviewed: meta?.dailiesReviewed ?? false,
+          cameraReport: meta?.cameraReport ?? '',
+          soundReport: meta?.soundReport ?? '',
+          wrapNotes: meta?.wrapNotes ?? '',
         };
       });
 
@@ -151,6 +156,11 @@ export class StripboardComponent implements OnChanges {
         callTime: day.callTime,
         location: day.location,
         notes: day.notes,
+        dataBackedUp: day.dataBackedUp,
+        dailiesReviewed: day.dailiesReviewed,
+        cameraReport: day.cameraReport,
+        soundReport: day.soundReport,
+        wrapNotes: day.wrapNotes,
       });
     });
     this.scheduleService.replace(this.projectId, this.scriptId, strips, days).subscribe();
