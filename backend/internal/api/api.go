@@ -16,6 +16,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/casting"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
 	"github.com/somunaexe/bulwriter/backend/internal/crew"
+	"github.com/somunaexe/bulwriter/backend/internal/distribution"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/membership"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
@@ -32,44 +33,46 @@ import (
 )
 
 type router struct {
-	hub        *hub.Hub
-	store      *snapshot.Store
-	projects   *project.Store
-	scripts    *script.Store
-	members    *membership.Store // ← add this
-	breakdown  *breakdown.Store
-	schedule   *schedule.Store
-	scouting   *scouting.Store
-	crew       *crew.Store
-	casting    *casting.Store
-	budget     *budget.Store
-	story      *story.Store
-	shots      *shotlist.Store
-	musicvfx   *musicvfx.Store
-	presskit   *presskit.Store
-	milestones *milestone.Store
-	clerk      *clerkapi.Client
+	hub          *hub.Hub
+	store        *snapshot.Store
+	projects     *project.Store
+	scripts      *script.Store
+	members      *membership.Store // ← add this
+	breakdown    *breakdown.Store
+	schedule     *schedule.Store
+	scouting     *scouting.Store
+	crew         *crew.Store
+	casting      *casting.Store
+	budget       *budget.Store
+	story        *story.Store
+	shots        *shotlist.Store
+	musicvfx     *musicvfx.Store
+	presskit     *presskit.Store
+	milestones   *milestone.Store
+	distribution *distribution.Store
+	clerk        *clerkapi.Client
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	r := &router{
-		hub:        h,
-		store:      snapshot.NewStore(db),
-		projects:   project.NewStore(db),
-		scripts:    script.NewStore((db)),
-		members:    membership.NewStore(db),
-		breakdown:  breakdown.NewStore(db),
-		schedule:   schedule.NewStore(db),
-		scouting:   scouting.NewStore(db),
-		crew:       crew.NewStore(db),
-		casting:    casting.NewStore(db),
-		budget:     budget.NewStore(db),
-		story:      story.NewStore(db),
-		shots:      shotlist.NewStore(db),
-		musicvfx:   musicvfx.NewStore(db),
-		presskit:   presskit.NewStore(db),
-		milestones: milestone.NewStore(db),
-		clerk:      clerkapi.NewClient(),
+		hub:          h,
+		store:        snapshot.NewStore(db),
+		projects:     project.NewStore(db),
+		scripts:      script.NewStore((db)),
+		members:      membership.NewStore(db),
+		breakdown:    breakdown.NewStore(db),
+		schedule:     schedule.NewStore(db),
+		scouting:     scouting.NewStore(db),
+		crew:         crew.NewStore(db),
+		casting:      casting.NewStore(db),
+		budget:       budget.NewStore(db),
+		story:        story.NewStore(db),
+		shots:        shotlist.NewStore(db),
+		musicvfx:     musicvfx.NewStore(db),
+		presskit:     presskit.NewStore(db),
+		milestones:   milestone.NewStore(db),
+		distribution: distribution.NewStore(db),
+		clerk:        clerkapi.NewClient(),
 	}
 
 	mx := mux.NewRouter()
@@ -232,6 +235,19 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/milestones", r.addMilestone).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/milestones/{milestoneId}", r.updateMilestone).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/milestones/{milestoneId}", r.removeMilestone).Methods("DELETE")
+
+	// Festival & release tracker — Phase 5 (Distribution & Release):
+	// festival submissions (deadline, fee, status, premiere-rule flag)
+	// and online release links (platform, URL, release date). Two
+	// independent lists shown together in one drawer.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/festivals", r.listFestivals).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/festivals", r.addFestival).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/festivals/{festivalId}", r.updateFestival).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/festivals/{festivalId}", r.removeFestival).Methods("DELETE")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/release-links", r.listReleaseLinks).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/release-links", r.addReleaseLink).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/release-links/{linkId}", r.updateReleaseLink).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/release-links/{linkId}", r.removeReleaseLink).Methods("DELETE")
 
 	// Crew — the below-the-line production team, distinct from
 	// project_members (crew members aren't Bulwriter accounts).
@@ -1980,6 +1996,198 @@ func (r *router) removeMilestone(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := r.milestones.Remove(vars["scriptId"], vars["milestoneId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) listFestivals(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	festivals, err := r.distribution.ListFestivals(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if festivals == nil {
+		festivals = []*distribution.FestivalSubmission{}
+	}
+	writeJSON(w, http.StatusOK, festivals)
+}
+
+type festivalBody struct {
+	FestivalName     string  `json:"festivalName"`
+	Deadline         string  `json:"deadline"`
+	Fee              float64 `json:"fee"`
+	Status           string  `json:"status"`
+	PremiereRequired bool    `json:"premiereRequired"`
+	Notes            string  `json:"notes"`
+}
+
+func (r *router) addFestival(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body festivalBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.FestivalName == "" {
+		writeErr(w, http.StatusBadRequest, "festivalName is required")
+		return
+	}
+
+	f, err := r.distribution.AddFestival(vars["scriptId"], body.FestivalName, body.Deadline, body.Fee, body.Status, body.PremiereRequired, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, f)
+}
+
+func (r *router) updateFestival(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body festivalBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	f, err := r.distribution.UpdateFestival(
+		vars["scriptId"], vars["festivalId"], body.FestivalName, body.Deadline, body.Fee, body.Status, body.PremiereRequired, body.Notes,
+	)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, f)
+}
+
+func (r *router) removeFestival(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.distribution.RemoveFestival(vars["scriptId"], vars["festivalId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) listReleaseLinks(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	links, err := r.distribution.ListReleaseLinks(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if links == nil {
+		links = []*distribution.ReleaseLink{}
+	}
+	writeJSON(w, http.StatusOK, links)
+}
+
+type releaseLinkBody struct {
+	Platform    string `json:"platform"`
+	URL         string `json:"url"`
+	ReleaseDate string `json:"releaseDate"`
+	Notes       string `json:"notes"`
+}
+
+func (r *router) addReleaseLink(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body releaseLinkBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Platform == "" {
+		writeErr(w, http.StatusBadRequest, "platform is required")
+		return
+	}
+
+	l, err := r.distribution.AddReleaseLink(vars["scriptId"], body.Platform, body.URL, body.ReleaseDate, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, l)
+}
+
+func (r *router) updateReleaseLink(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body releaseLinkBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	l, err := r.distribution.UpdateReleaseLink(vars["scriptId"], vars["linkId"], body.Platform, body.URL, body.ReleaseDate, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, l)
+}
+
+func (r *router) removeReleaseLink(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.distribution.RemoveReleaseLink(vars["scriptId"], vars["linkId"]); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

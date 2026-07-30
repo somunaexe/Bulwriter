@@ -1,0 +1,102 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Festival &amp; release</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading…</div>
+
+  <div class="ft-body" *ngIf="!loading">
+
+    <div class="ft-section-header">
+      <h3 class="section-label">Festival submissions ({{ festivals.length }})</h3>
+      <button *ngIf="canEdit" class="ft-add-btn" [class.open]="showAddFestival" (click)="toggleAddFestival()" aria-label="Add a festival submission">+</button>
+    </div>
+
+    <p class="empty-msg" *ngIf="!festivals.length">No festival submissions tracked yet.</p>
+
+    <div class="ft-list" *ngIf="festivals.length">
+      <div class="ft-festival" *ngFor="let f of festivals">
+        <div class="ft-row">
+          <input class="input-sm" placeholder="Festival name…" [(ngModel)]="f.festivalName" (blur)="saveFestival(f)" [disabled]="!canEdit" />
+          <select class="ft-status input-sm" [class]="'ft-status-' + f.status"
+                  [(ngModel)]="f.status" (change)="saveFestival(f)" [disabled]="!canEdit">
+            <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+          </select>
+          <button *ngIf="canEdit" class="ft-remove-btn" (click)="removeFestival(f)" aria-label="Remove festival submission">×</button>
+        </div>
+        <div class="ft-row">
+          <label class="ft-inline-field">
+            <span>Deadline</span>
+            <input class="input-sm" type="date" [(ngModel)]="f.deadline" (blur)="saveFestival(f)" [disabled]="!canEdit" />
+          </label>
+          <label class="ft-inline-field">
+            <span>Fee</span>
+            <input class="input-sm" type="number" min="0" step="1" [(ngModel)]="f.fee" (blur)="saveFestival(f)" [disabled]="!canEdit" />
+          </label>
+          <label class="ft-checkbox">
+            <input type="checkbox" [(ngModel)]="f.premiereRequired" (change)="saveFestival(f)" [disabled]="!canEdit" />
+            <span>Premiere required</span>
+          </label>
+        </div>
+        <textarea class="ft-notes" placeholder="Result, feedback, awards…" [(ngModel)]="f.notes" (blur)="saveFestival(f)" [readonly]="!canEdit"></textarea>
+      </div>
+    </div>
+
+    <div class="ft-add" *ngIf="canEdit && showAddFestival">
+      <div class="ft-row">
+        <input class="input-sm" placeholder="Festival name…" [(ngModel)]="newFestivalName" (keydown.enter)="addFestival()" />
+      </div>
+      <div class="ft-row">
+        <label class="ft-inline-field">
+          <span>Deadline</span>
+          <input class="input-sm" type="date" [(ngModel)]="newDeadline" />
+        </label>
+        <label class="ft-inline-field">
+          <span>Fee</span>
+          <input class="input-sm" type="number" min="0" step="1" [(ngModel)]="newFee" />
+        </label>
+        <label class="ft-checkbox">
+          <input type="checkbox" [(ngModel)]="newPremiereRequired" />
+          <span>Premiere required</span>
+        </label>
+      </div>
+      <textarea class="ft-notes" placeholder="Notes…" [(ngModel)]="newFestivalNotes"></textarea>
+      <button class="btn-save" (click)="addFestival()" [disabled]="!newFestivalName.trim()">Add submission</button>
+    </div>
+
+    <hr class="panel-divider" />
+
+    <div class="ft-section-header">
+      <h3 class="section-label">Release links ({{ releaseLinks.length }})</h3>
+      <button *ngIf="canEdit" class="ft-add-btn" [class.open]="showAddRelease" (click)="toggleAddRelease()" aria-label="Add a release link">+</button>
+    </div>
+
+    <p class="empty-msg" *ngIf="!releaseLinks.length">No release links added yet.</p>
+
+    <div class="ft-list" *ngIf="releaseLinks.length">
+      <div class="ft-release" *ngFor="let l of releaseLinks">
+        <div class="ft-row">
+          <input class="input-sm" placeholder="Platform (e.g. YouTube)…" [(ngModel)]="l.platform" (blur)="saveRelease(l)" [disabled]="!canEdit" />
+          <input class="input-sm" type="date" [(ngModel)]="l.releaseDate" (blur)="saveRelease(l)" [disabled]="!canEdit" />
+          <button *ngIf="canEdit" class="ft-remove-btn" (click)="removeRelease(l)" aria-label="Remove release link">×</button>
+        </div>
+        <input class="input-sm" placeholder="URL…" [(ngModel)]="l.url" (blur)="saveRelease(l)" [disabled]="!canEdit" />
+        <textarea class="ft-notes" placeholder="Notes…" [(ngModel)]="l.notes" (blur)="saveRelease(l)" [readonly]="!canEdit"></textarea>
+      </div>
+    </div>
+
+    <div class="ft-add" *ngIf="canEdit && showAddRelease">
+      <div class="ft-row">
+        <input class="input-sm" placeholder="Platform (e.g. YouTube)…" [(ngModel)]="newPlatform" />
+        <input class="input-sm" type="date" [(ngModel)]="newReleaseDate" />
+      </div>
+      <input class="input-sm" placeholder="URL…" [(ngModel)]="newUrl" (keydown.enter)="addRelease()" />
+      <textarea class="ft-notes" placeholder="Notes…" [(ngModel)]="newReleaseNotes"></textarea>
+      <button class="btn-save" (click)="addRelease()" [disabled]="!newPlatform.trim()">Add release link</button>
+    </div>
+
+  </div>
+</div>
