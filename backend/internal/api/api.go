@@ -132,11 +132,16 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.getSchedule).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/schedule", r.replaceSchedule).Methods("PUT")
 
-	// Casting — actor/contact/status per character. Characters
-	// themselves are derived live from the script text on the frontend,
-	// same as breakdown's locations/cast, not stored here.
+	// Casting — multiple actor candidates can audition for the same
+	// character (character_name), same "candidates, pick one" shape as
+	// location scouting. Characters themselves are derived live from the
+	// script text on the frontend, same as breakdown's cast, not stored
+	// here.
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting", r.listCasting).Methods("GET")
-	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting", r.upsertCasting).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting", r.addCastingCandidate).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting/{candidateId}", r.updateCastingCandidate).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting/{candidateId}/cast", r.castCastingCandidate).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/casting/{candidateId}", r.removeCastingCandidate).Methods("DELETE")
 	// Budget estimator — per-unit rates (day/location/cast/prop, matched
 	// against counts the frontend derives from the breakdown/schedule)
 	// plus freeform line items for anything else.
@@ -498,18 +503,26 @@ func (r *router) upsertBreakdown(w http.ResponseWriter, req *http.Request) {
 
 func (r *router) listCasting(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	roles, err := r.casting.List(vars["scriptId"])
+	candidates, err := r.casting.List(vars["scriptId"])
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if roles == nil {
-		roles = []*casting.Role{}
+	if candidates == nil {
+		candidates = []*casting.Candidate{}
 	}
-	writeJSON(w, http.StatusOK, roles)
+	writeJSON(w, http.StatusOK, candidates)
 }
 
-func (r *router) upsertCasting(w http.ResponseWriter, req *http.Request) {
+type castingCandidateBody struct {
+	CharacterName string `json:"characterName"`
+	ActorName     string `json:"actorName"`
+	Contact       string `json:"contact"`
+	Status        string `json:"status"`
+	Notes         string `json:"notes"`
+}
+
+func (r *router) addCastingCandidate(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	userID := middleware.UserIDFromContext(req)
 
@@ -522,24 +535,85 @@ func (r *router) upsertCasting(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var body struct {
-		CharacterName string `json:"characterName"`
-		ActorName     string `json:"actorName"`
-		Contact       string `json:"contact"`
-		Status        string `json:"status"`
-		Notes         string `json:"notes"`
-	}
+	var body castingCandidateBody
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.CharacterName == "" {
 		writeErr(w, http.StatusBadRequest, "characterName is required")
 		return
 	}
 
-	c, err := r.casting.Upsert(vars["scriptId"], body.CharacterName, body.ActorName, body.Contact, body.Status, body.Notes)
+	c, err := r.casting.Add(vars["scriptId"], body.CharacterName, body.ActorName, body.Contact, body.Status, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+func (r *router) updateCastingCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body castingCandidateBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	c, err := r.casting.Update(vars["scriptId"], vars["candidateId"], body.ActorName, body.Contact, body.Status, body.Notes)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, c)
+}
+
+func (r *router) castCastingCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.casting.Cast(vars["scriptId"], vars["candidateId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (r *router) removeCastingCandidate(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.casting.Remove(vars["scriptId"], vars["candidateId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type scheduleResponse struct {

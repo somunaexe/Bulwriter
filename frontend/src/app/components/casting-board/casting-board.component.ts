@@ -2,23 +2,29 @@ import { Component, EventEmitter, HostListener, Input, OnChanges, Output, Simple
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SyncService } from '../../services/sync.service';
-import { CastingService, CastingStatus } from '../../services/casting.service';
+import { CastingService, CastingCandidate, CastingStatus } from '../../services/casting.service';
 import { computeSceneList, csvCell, downloadCsv } from '../../editor/scene-breakdown';
 import { scriptExportFilename } from '../../editor/export-filename';
 
-// One row per character derived live from the script (same source as
-// the breakdown's cast summary) — actorName/contact/status/notes are the
-// only parts actually persisted (see CastingService).
-interface CastingRow {
+// One group per character derived live from the script (same source as
+// the breakdown's cast summary) — several actors can audition for the
+// same character, so each group holds a list of candidates rather than
+// a single actor/contact/status/notes row.
+interface CharacterGroup {
   characterName: string;
   sceneCount: number;
-  actorName: string;
-  contact: string;
-  status: CastingStatus;
-  notes: string;
+  candidates: CastingCandidate[];
+  newActorName: string;
+  newContact: string;
+  newStatus: CastingStatus;
+  newNotes: string;
 }
 
-const STATUSES: CastingStatus[] = ['open', 'submitted', 'callback', 'cast'];
+const STATUSES: CastingStatus[] = ['open', 'submitted', 'callback'];
+
+function emptyGroup(characterName: string, sceneCount: number, candidates: CastingCandidate[]): CharacterGroup {
+  return { characterName, sceneCount, candidates, newActorName: '', newContact: '', newStatus: 'open', newNotes: '' };
+}
 
 @Component({
   selector: 'app-casting-board',
@@ -35,7 +41,7 @@ export class CastingBoardComponent implements OnChanges {
   @Output() close = new EventEmitter<void>();
 
   loading = true;
-  rows: CastingRow[] = [];
+  groups: CharacterGroup[] = [];
   statuses = STATUSES;
 
   constructor(
@@ -68,45 +74,81 @@ export class CastingBoardComponent implements OnChanges {
     const sortedNames = [...sceneCounts.entries()].sort((a, b) => b[1] - a[1]);
 
     this.castingService.list(this.projectId, this.scriptId).subscribe({
-      next: roles => {
-        const byName = new Map(roles.map(r => [r.characterName, r]));
-        this.rows = sortedNames.map(([name, sceneCount]) => {
-          const existing = byName.get(name);
-          return {
-            characterName: name,
-            sceneCount,
-            actorName: existing?.actorName ?? '',
-            contact: existing?.contact ?? '',
-            status: existing?.status ?? 'open',
-            notes: existing?.notes ?? '',
-          };
-        });
+      next: candidates => {
+        const byName = new Map<string, CastingCandidate[]>();
+        for (const c of candidates) {
+          if (!byName.has(c.characterName)) byName.set(c.characterName, []);
+          byName.get(c.characterName)!.push(c);
+        }
+
+        this.groups = sortedNames.map(([name, sceneCount]) => emptyGroup(name, sceneCount, byName.get(name) ?? []));
+
+        // A character already tagged with candidates but no longer
+        // speaking in the live script still shows — same reasoning as
+        // breakdown/scouting: no reason to hide casting work already
+        // done just because a cue changed.
+        for (const [name, list] of byName) {
+          if (!sceneCounts.has(name)) this.groups.push(emptyGroup(name, 0, list));
+        }
+
         this.loading = false;
       },
       error: () => {
-        this.rows = sortedNames.map(([name, sceneCount]) => ({
-          characterName: name, sceneCount, actorName: '', contact: '', status: 'open' as CastingStatus, notes: '',
-        }));
+        this.groups = sortedNames.map(([name, sceneCount]) => emptyGroup(name, sceneCount, []));
         this.loading = false;
       },
     });
   }
 
-  save(row: CastingRow): void {
+  save(candidate: CastingCandidate): void {
     if (!this.canEdit) return;
-    this.castingService.upsert(
-      this.projectId, this.scriptId,
-      row.characterName, row.actorName, row.contact, row.status, row.notes,
+    this.castingService.update(
+      this.projectId, this.scriptId, candidate.id,
+      candidate.actorName, candidate.contact, candidate.status, candidate.notes,
     ).subscribe();
   }
 
+  cast(group: CharacterGroup, candidate: CastingCandidate): void {
+    if (!this.canEdit) return;
+    group.candidates.forEach(c => c.isCast = c.id === candidate.id);
+    this.castingService.cast(this.projectId, this.scriptId, candidate.id).subscribe();
+  }
+
+  remove(group: CharacterGroup, candidate: CastingCandidate): void {
+    if (!this.canEdit) return;
+    group.candidates = group.candidates.filter(c => c.id !== candidate.id);
+    this.castingService.remove(this.projectId, this.scriptId, candidate.id).subscribe();
+  }
+
+  addCandidate(group: CharacterGroup): void {
+    const name = group.newActorName.trim();
+    if (!name) return;
+
+    this.castingService.add(
+      this.projectId, this.scriptId, group.characterName,
+      name, group.newContact.trim(), group.newStatus, group.newNotes.trim(),
+    ).subscribe(candidate => {
+      group.candidates.push(candidate);
+      group.newActorName = '';
+      group.newContact = '';
+      group.newStatus = 'open';
+      group.newNotes = '';
+    });
+  }
+
   exportCsv(): void {
-    const header = ['Character', 'Scenes', 'Actor', 'Contact', 'Status', 'Notes'];
+    const header = ['Character', 'Scenes', 'Actor', 'Contact', 'Status', 'Cast', 'Notes'];
     const lines = [header.map(csvCell).join(',')];
-    for (const row of this.rows) {
-      lines.push([
-        row.characterName, String(row.sceneCount), row.actorName, row.contact, row.status, row.notes,
-      ].map(csvCell).join(','));
+    for (const group of this.groups) {
+      if (!group.candidates.length) {
+        lines.push([group.characterName, String(group.sceneCount), '', '', '', '', ''].map(csvCell).join(','));
+        continue;
+      }
+      for (const c of group.candidates) {
+        lines.push([
+          group.characterName, String(group.sceneCount), c.actorName, c.contact, c.status, c.isCast ? 'Yes' : '', c.notes,
+        ].map(csvCell).join(','));
+      }
     }
     downloadCsv(lines.join('\r\n'), scriptExportFilename(this.scriptTitle, this.scriptId, 'casting'));
   }

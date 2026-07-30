@@ -11,16 +11,16 @@
 }
 
 .casting-role {
-  @include surface-panel(var(--radius-md));
-  padding: .9rem 1rem;
-  margin-bottom: .85rem;
+  margin-bottom: 1.5rem;
+
+  &:last-child { margin-bottom: 0; }
 }
 
 .casting-role-header {
   display: flex;
   align-items: center;
   gap: .6rem;
-  margin-bottom: .7rem;
+  margin-bottom: .6rem;
 }
 
 .casting-role-name {
@@ -37,6 +37,38 @@
   color: var(--muted);
 }
 
+.casting-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin-bottom: .6rem;
+}
+
+.casting-candidate {
+  @include surface-panel(var(--radius-md));
+  padding: .75rem;
+  border-color: var(--border);
+
+  &.cast {
+    border-color: var(--insert-fg);
+    box-shadow: 0 0 0 1px rgba(var(--accent-rgb), .15);
+  }
+}
+
+.casting-candidate-fields {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.casting-candidate-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+
+  .input-sm { flex: 1; min-width: 0; }
+}
+
 .casting-status {
   flex-shrink: 0;
   width: auto;
@@ -48,43 +80,44 @@
 .casting-status-open      { color: var(--muted); }
 .casting-status-submitted { color: var(--accent); }
 .casting-status-callback  { color: #b5762f; }
-.casting-status-cast      { color: var(--insert-fg); }
 
-.casting-role-fields {
-  display: flex;
-  gap: .6rem;
-  margin-bottom: .65rem;
-}
-
-.casting-field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-  min-width: 0;
-
-  .input-sm { width: 100%; }
-}
-
-.casting-field-label {
-  display: block;
-  font-size: 10.5px;
+.casting-cast-badge {
+  flex-shrink: 0;
+  font-size: 11px;
   font-weight: 600;
+  color: var(--insert-fg);
   text-transform: uppercase;
-  letter-spacing: .07em;
+  letter-spacing: .04em;
+}
+
+.casting-cast-btn {
+  flex-shrink: 0;
+  padding: .3rem .6rem;
+  font-size: 12px;
+}
+
+.casting-remove-btn {
+  background: none;
+  border: none;
+  padding: 0;
   color: var(--muted);
-  margin-bottom: .35rem;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { color: var(--delete-fg); }
 }
 
 .casting-notes {
   width: 100%;
-  min-height: 48px;
+  min-height: 40px;
   resize: vertical;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: .5rem .6rem;
-  font-size: 13px;
+  padding: .4rem .55rem;
+  font-size: 12.5px;
   font-family: var(--font-ui);
   color: var(--text);
   outline: none;
@@ -93,6 +126,15 @@
   &:read-only { color: var(--muted); cursor: default; }
 }
 
+.casting-add {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+
+  .input-sm { flex: 1 1 140px; min-width: 0; }
+}
+
 @media (max-width: 768px) {
-  .casting-role-fields { flex-direction: column; }
+  .casting-candidate-row { flex-wrap: wrap; }
 }
