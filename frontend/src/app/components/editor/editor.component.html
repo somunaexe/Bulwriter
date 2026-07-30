@@ -38,7 +38,7 @@
       </app-branch-panel>
     </aside>
 
-    <main class="editor-main" #editorMainEl>
+    <main class="editor-main">
 
       <!-- Only useful on mobile: the sidebar (always visible on wider
            screens) already shows the active branch — this would just
@@ -111,15 +111,6 @@
 
           <app-menu-dropdown label="Tools">
             <button (click)="openScriptStats()">Script statistics</button>
-            <ng-container *ngIf="isOwner">
-              <div class="menu-divider"></div>
-              <button (click)="uploadBackgroundImage()">
-                {{ project?.backgroundImage ? 'Change' : 'Upload' }} background image…
-              </button>
-              <button (click)="removeBackgroundImage()" *ngIf="project?.backgroundImage">
-                Remove background image
-              </button>
-            </ng-container>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Production">

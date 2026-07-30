@@ -102,35 +102,6 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Per-project editor background image (EditorComponent, applied via
-   Renderer2 to #editorMainEl) — scoped to .editor-main itself, not
-   <body>, so the image only shows behind the editor's own toolbar row
-   and the open gutter around the manuscript page. The navbar and
-   sidebar (branch panel/collaborators) live outside .editor-main
-   entirely and never see it. Every opaque surface within .editor-main
-   that would otherwise paint over it goes fully transparent under
-   .editor-main.has-bg-image (below) rather than adding its own second
-   translucent layer — two stacked semi-transparent layers compound
-   multiplicatively and crush the image down to barely-visible, so
-   there's exactly one tint decision (baked into --project-bg-layer),
-   applied once. --project-bg-layer is unset (falls back to `none`)
-   unless a project actually has one set. */
-.editor-main {
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-image: var(--project-bg-layer, none);
-}
-
-/* The manuscript page itself (.page-chrome / .pm-mount) is deliberately
-   left out — personalization is for the surrounding editor chrome,
-   never the industry-standard page. */
-.editor-main.has-bg-image .element-toolbar,
-.editor-main.has-bg-image .editor-header {
-  background: transparent;
-}
-
 /* ── Editor layout ──
    height accounts for <app-navbar> sitting above <router-outlet> (it's
    position: sticky, so it occupies real space — a plain 100vh here

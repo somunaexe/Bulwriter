@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import * as Y from 'yjs';
 import {
   Component, OnDestroy,
-  ViewChild, ElementRef, Input, HostListener, Renderer2
+  ViewChild, ElementRef, Input, HostListener
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -54,7 +54,6 @@ import { AutoSaveService } from '../../services/autosave.service';
 import { ProjectService, Project } from '../../services/project.service';
 import { ScriptService, Script } from '../../services/script.service';
 import { scriptExportFilename } from '../../editor/export-filename';
-import { fileToBackgroundDataUri } from '../../editor/background-image';
 import { exportScreenplayJson, importScreenplayJson } from '../../editor/json-transfer';
 import { exportScreenplayHtml } from '../../editor/html-export';
 import { importScreenplayHtml } from '../../editor/html-import';
@@ -75,11 +74,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   collaborators:[] = []
 
   private _mountRef!: ElementRef<HTMLDivElement>;
-
-  // The background image target — .editor-main itself, not <body>, so
-  // it's confined to the editor's own toolbar row and the gutter around
-  // the manuscript page (see applyEditorBackground below).
-  @ViewChild('editorMainEl') editorMainRef?: ElementRef<HTMLElement>;
 
   // Page numbers for the fake-pagination illusion (see .pm-mount
   // .ProseMirror in styles.scss) — {n, top} pairs rendered as absolutely
@@ -195,7 +189,6 @@ export class EditorComponent implements OnInit, OnDestroy {
     private autoSave: AutoSaveService,  // ← add this
     private projectService: ProjectService,
     private scriptService: ScriptService,
-    private renderer: Renderer2,
     private route: ActivatedRoute,
     private router: Router
   ) {}
@@ -206,10 +199,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.projectId = this.route.snapshot.params['projectId'];
     this.scriptId  = this.route.snapshot.params['scriptId'];
 
-    this.projectService.get(this.projectId).subscribe(p => {
-      this.project = p;
-      this.applyEditorBackground();
-    });
+    this.projectService.get(this.projectId).subscribe(p => this.project = p);
 
     this.scriptService.get(this.projectId, this.scriptId).subscribe(s => this.script = s);
 
@@ -232,7 +222,6 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.sync.endSession();
     this.autoSave.stop()
     this.pageResizeObserver?.disconnect();
-    this.clearEditorBackground();
   }
 
   // --page-h/--page-gap are physical CSS units ("11in", ".6in"), not
@@ -693,88 +682,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   goToCollaborators(): void {
     // Navigate back to the project page where collaborators live
     this.router.navigate(['/projects', this.projectId]);
-  }
-
-  // ── Tools menu: background image ────────────────────────────────
-  // A project-wide personalization behind the editor's own chrome
-  // (toolbar row + the open gutter around the page) — deliberately
-  // excluded from the manuscript page itself (.page-chrome / .pm-mount
-  // stay opaque) so it never competes with the actual script, and
-  // excluded from the navbar/sidebar (branch panel, collaborators),
-  // which live outside .editor-main entirely and so never see it.
-  // Applied via Renderer2 to the #editorMainEl ViewChild rather than a
-  // template binding since it's imperative, event-driven state (set on
-  // load, on upload, on remove), not something derived every render.
-
-  private backgroundLayerValue(): string {
-    if (!this.project?.backgroundImage) return 'none';
-    // A light tint in the app's own --bg colour, layered under the
-    // image — keeps text over it readable without crushing the image
-    // down to nothing. The toolbar row goes fully transparent under
-    // .editor-main.has-bg-image (see styles.scss) so it shows exactly
-    // this same layer, not a second faded copy stacked on top of it.
-    return `linear-gradient(rgba(246, 241, 230, .6), rgba(246, 241, 230, .6)), url("${this.project.backgroundImage}")`;
-  }
-
-  private applyEditorBackground(): void {
-    if (!this.project?.backgroundImage) {
-      this.clearEditorBackground();
-      return;
-    }
-    const el = this.editorMainRef?.nativeElement;
-    if (!el) return;
-    this.renderer.setStyle(el, '--project-bg-layer', this.backgroundLayerValue());
-    this.renderer.addClass(el, 'has-bg-image');
-  }
-
-  private clearEditorBackground(): void {
-    const el = this.editorMainRef?.nativeElement;
-    if (!el) return;
-    this.renderer.removeStyle(el, '--project-bg-layer');
-    this.renderer.removeClass(el, 'has-bg-image');
-  }
-
-  uploadBackgroundImage(): void {
-    if (!this.isOwner) return;
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-
-    input.onchange = async (event: Event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      let dataUri: string;
-      try {
-        dataUri = await fileToBackgroundDataUri(file);
-      } catch (err) {
-        alert(err instanceof Error ? err.message : 'Could not process that image.');
-        return;
-      }
-
-      this.projectService.setBackground(this.projectId, dataUri).subscribe({
-        next: () => {
-          if (this.project) this.project = { ...this.project, backgroundImage: dataUri };
-          this.applyEditorBackground();
-        },
-        error: () => alert('Could not upload background image.'),
-      });
-    };
-
-    document.body.appendChild(input);
-    input.click();
-    document.body.removeChild(input);
-  }
-
-  removeBackgroundImage(): void {
-    if (!this.isOwner) return;
-    this.projectService.clearBackground(this.projectId).subscribe({
-      next: () => {
-        if (this.project) this.project = { ...this.project, backgroundImage: undefined };
-        this.clearEditorBackground();
-      },
-    });
   }
 
   // ── Production menu ──────────────────────────────────────────────

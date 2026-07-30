@@ -196,10 +196,6 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// Roles
 	api.HandleFunc("/projects/{projectId}/my-role", r.getMyRole).Methods("GET")
 
-	// Per-project editor background image (owner only)
-	api.HandleFunc("/projects/{projectId}/background", r.setProjectBackground).Methods("PUT")
-	api.HandleFunc("/projects/{projectId}/background", r.clearProjectBackground).Methods("DELETE")
-
 	// Location scouting — candidate real-world locations per unique
 	// location the script needs (locations themselves are derived live
 	// from the script text on the frontend, same as breakdown).
@@ -1215,64 +1211,12 @@ func (r *router) declineInvite(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "declined"})
 }
 
-// maxBackgroundImageBytes bounds the request body for a project's
-// background image — the client resizes/compresses the image before
-// upload, so this is generous headroom for the resulting data URI, not a
-// budget for raw uploads.
-const maxBackgroundImageBytes = 6 << 20
-
-func (r *router) setProjectBackground(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	userID := middleware.UserIDFromContext(req)
-
-	role, err := r.members.GetRole(vars["projectId"], userID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if !middleware.RequireRole(w, role, middleware.RoleOwner) {
-		return
-	}
-
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
-	var body struct {
-		Image string `json:"image"`
-	}
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid or too large image payload")
-		return
-	}
-	if !strings.HasPrefix(body.Image, "data:image/") {
-		writeErr(w, http.StatusBadRequest, "image must be a data URI")
-		return
-	}
-
-	if err := r.projects.SetBackgroundImage(vars["projectId"], body.Image); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-}
-
-func (r *router) clearProjectBackground(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	userID := middleware.UserIDFromContext(req)
-
-	role, err := r.members.GetRole(vars["projectId"], userID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if !middleware.RequireRole(w, role, middleware.RoleOwner) {
-		return
-	}
-
-	if err := r.projects.ClearBackgroundImage(vars["projectId"]); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-}
+// maxImageUploadBytes bounds the request body for any handler that
+// accepts a data-URI image (press kit stills/poster, shot storyboards,
+// scouting photos, etc.) — the client resizes/compresses images before
+// upload, so this is generous headroom for the resulting data URI, not
+// a budget for raw uploads.
+const maxImageUploadBytes = 6 << 20
 
 func (r *router) listScoutCandidates(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
@@ -1322,7 +1266,7 @@ func (r *router) addScoutCandidate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
 	var body scoutCandidateBody
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.LocationKey == "" {
 		writeErr(w, http.StatusBadRequest, "locationKey is required, and the payload must fit within the size limit")
@@ -1382,7 +1326,7 @@ func (r *router) updateScoutCandidate(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
 	var body scoutCandidateBody
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
@@ -1505,7 +1449,7 @@ func (r *router) addShot(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
 	var body shotBody
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.SceneKey == "" {
 		writeErr(w, http.StatusBadRequest, "sceneKey is required, and the payload must fit within the size limit")
@@ -1533,7 +1477,7 @@ func (r *router) updateShot(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
 	var body shotBody
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
@@ -1769,7 +1713,7 @@ func (r *router) setPressKit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
 	var body struct {
 		DirectorStatement string `json:"directorStatement"`
 		Poster            string `json:"poster"`
@@ -1807,7 +1751,7 @@ func (r *router) addPressKitStill(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
 	var body pressKitStillBody
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
@@ -1835,7 +1779,7 @@ func (r *router) updatePressKitStill(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
 	var body pressKitStillBody
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
