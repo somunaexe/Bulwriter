@@ -27,6 +27,11 @@ export interface ScheduleDayMeta {
   callTime: string;
   location: string;
   notes: string;
+  dataBackedUp: boolean;
+  dailiesReviewed: boolean;
+  cameraReport: string;
+  soundReport: string;
+  wrapNotes: string;
   updatedAt: string;
 }
 
@@ -36,6 +41,11 @@ export interface DayMetaInput {
   callTime: string;
   location: string;
   notes: string;
+  dataBackedUp: boolean;
+  dailiesReviewed: boolean;
+  cameraReport: string;
+  soundReport: string;
+  wrapNotes: string;
 }
 
 export interface ScheduleResponse {

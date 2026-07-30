@@ -135,6 +135,10 @@
             <button (click)="openMusicVfx()">Music &amp; VFX</button>
           </app-menu-dropdown>
 
+          <app-menu-dropdown label="Post-Production">
+            <button (click)="openMilestones()">Milestones</button>
+          </app-menu-dropdown>
+
           <app-menu-dropdown label="Distribution">
             <button (click)="openPressKit()">Press kit</button>
           </app-menu-dropdown>
@@ -237,6 +241,16 @@
       [canEdit]="canEdit"
       (close)="showPressKit = false">
     </app-press-kit>
+
+    <div class="breakdown-backdrop" *ngIf="showMilestones" (click)="showMilestones = false"></div>
+
+    <app-milestone-tracker
+      *ngIf="showMilestones"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showMilestones = false">
+    </app-milestone-tracker>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">

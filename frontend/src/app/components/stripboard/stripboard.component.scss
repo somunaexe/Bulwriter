@@ -100,6 +100,17 @@
   .input-sm { width: 100%; }
 }
 
+.call-sheet-checkbox {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+
+  input[type="checkbox"] { cursor: pointer; }
+}
+
 .call-sheet-scene-count {
   font-size: 12.5px;
   color: var(--muted);

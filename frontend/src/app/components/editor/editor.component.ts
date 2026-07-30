@@ -22,6 +22,7 @@ import { BudgetEstimatorComponent } from '../budget-estimator/budget-estimator.c
 import { ShotListComponent } from '../shot-list/shot-list.component';
 import { MusicVfxComponent } from '../music-vfx/music-vfx.component';
 import { PressKitComponent } from '../press-kit/press-kit.component';
+import { MilestoneTrackerComponent } from '../milestone-tracker/milestone-tracker.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -59,7 +60,7 @@ import { importPdfToText } from '../../editor/pdf-import';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent, MilestoneTrackerComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -767,6 +768,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   showShotList = false;
   showMusicVfx = false;
   showPressKit = false;
+  showMilestones = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -798,6 +800,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openPressKit(): void {
     this.showPressKit = true;
+  }
+
+  openMilestones(): void {
+    this.showMilestones = true;
   }
 
   // ── Revisions menu ───────────────────────────────────────────────
