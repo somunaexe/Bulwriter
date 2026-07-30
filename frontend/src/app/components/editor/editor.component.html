@@ -33,6 +33,7 @@
         (saveSnapshot)="saveSnapshot()"
         (branchSelected)="onBranchSelected($event)"
         (compareDrafts)="openDiff($event.from, $event.to)"
+        (autoSaveIntervalChange)="onAutoSaveIntervalChange($event)"
       >
       </app-branch-panel>
     </aside>
@@ -109,14 +110,6 @@
           <!-- </app-menu-dropdown> -->
 
           <app-menu-dropdown label="Tools">
-            <button (click)="toggleAutoSave()">
-              {{ (autoSaveState$ | async)?.enabled ? 'Disable' : 'Enable' }} auto-save
-            </button>
-            <div class="menu-divider"></div>
-            <button (click)="setAutoSaveInterval(1)">Auto-save every 1 min</button>
-            <button (click)="setAutoSaveInterval(2)">Auto-save every 2 mins</button>
-            <button (click)="setAutoSaveInterval(5)">Auto-save every 5 mins</button>
-            <button (click)="setAutoSaveInterval(10)">Auto-save every 10 mins</button>
             <button (click)="openScriptStats()">Script statistics</button>
             <ng-container *ngIf="isOwner">
               <div class="menu-divider"></div>

@@ -3,7 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { VersionControlService, Branch, Snapshot } from '../../services/version-control.service';
-import { AutoSaveState } from '../../services/autosave.service';
+import { AutoSaveState, AutoSaveInterval } from '../../services/autosave.service';
+
+// 0 stands in for "off" on the slider — AutoSaveInterval itself has no
+// off value, since AutoSaveService only has an interval while it also
+// tracks enabled/disabled separately.
+type SliderValue = 0 | AutoSaveInterval;
 
 @Component({
   selector: 'app-branch-panel',
@@ -28,6 +33,12 @@ export class BranchPanelComponent implements OnInit {
 
   @Output() branchSelected = new EventEmitter<Branch>();
   @Output() compareDrafts  = new EventEmitter<{ from: string; to: string }>();
+  @Output() autoSaveIntervalChange = new EventEmitter<SliderValue>();
+
+  // The slider's dot positions, left to right — index 0 is always
+  // "off" (auto-save disabled), the rest are AutoSaveService's real
+  // intervals in ascending order.
+  readonly autoSaveIntervals: SliderValue[] = [0, 1, 2, 5, 10];
 
   branches: Branch[]     = [];
   history: Snapshot[]    = [];
@@ -68,6 +79,37 @@ export class BranchPanelComponent implements OnInit {
 
   private storageKey(): string {
     return `bulwriter:lastBranch:${this.scriptId}`;
+  }
+
+  // ── Auto-save slider ────────────────────────────────────────────
+
+  sliderIndexFor(state: AutoSaveState): number {
+    const value: SliderValue = state.enabled ? state.intervalMinutes : 0;
+    const idx = this.autoSaveIntervals.indexOf(value);
+    return idx === -1 ? 0 : idx;
+  }
+
+  // The filled (green) portion of the track runs from the left edge
+  // up to the selected dot — a plain 0%-at-"off" gradient handles the
+  // off case on its own, no special-casing needed.
+  trackBackground(state: AutoSaveState): string {
+    const percent = (this.sliderIndexFor(state) / (this.autoSaveIntervals.length - 1)) * 100;
+    return `linear-gradient(to right, var(--insert-fg) 0%, var(--insert-fg) ${percent}%, var(--border) ${percent}%, var(--border) 100%)`;
+  }
+
+  // Dot 0 ("off") is red only while it's the selected one — everywhere
+  // else it's swept into the green fill like any other passed dot, so
+  // red reads as a distinct "auto-save is off" signal rather than just
+  // the start of an empty progress bar.
+  dotColor(i: number, state: AutoSaveState): string {
+    const selected = this.sliderIndexFor(state);
+    if (i === 0) return selected === 0 ? 'var(--delete-fg)' : 'var(--insert-fg)';
+    return selected >= i ? 'var(--insert-fg)' : 'var(--border)';
+  }
+
+  onAutoSaveSlider(event: Event): void {
+    const idx = Number((event.target as HTMLInputElement).value);
+    this.autoSaveIntervalChange.emit(this.autoSaveIntervals[idx] ?? 0);
   }
 
   // Disables the Create button both for an empty name and for one that

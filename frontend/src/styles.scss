@@ -1091,6 +1091,80 @@ ol.stats-list {
 .status-saved   { color: var(--muted); }
 .status-pending { color: var(--muted); }
 
+// Auto-save interval slider — replaces the old Tools-menu buttons.
+// Track fill/dot colors are computed per-render in branch-panel.
+// component.ts (they depend on the current AutoSaveState), so this
+// only supplies layout/shape; .autosave-slider-track's own
+// [style.background] carries the actual green/border split.
+.autosave-slider-row {
+  margin: .5rem 0 .75rem;
+}
+
+.autosave-slider-track {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  margin: 0 4px; // keeps the end dots' centers inside the track's rounded caps
+}
+
+.autosave-slider-dot {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: background .15s;
+}
+
+.autosave-slider-input {
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  right: -4px;
+  transform: translateY(-50%);
+  width: calc(100% + 8px);
+  height: 16px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+
+  &::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 16px;
+  }
+  &::-moz-range-track {
+    background: transparent;
+    height: 16px;
+    border: none;
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    box-shadow: var(--shadow-sm);
+    margin-top: 0;
+    cursor: pointer;
+  }
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+  }
+}
+
 /* ══════════════════════════ Responsive — editor ══════════════════════════
    Below 768px the two big desktop assumptions break: a 260px fixed sidebar
    column eats most of a phone's width, and the literal 1in/1.5in industry
