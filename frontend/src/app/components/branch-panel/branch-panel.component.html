@@ -18,23 +18,44 @@
   <hr class="panel-divider" />
 
   <ng-container *ngIf="activeBranch">
-    <div class="section-label-row">
-      <h3 class="section-label">History</h3>
-      <div class="autosave-status" *ngIf="autoSaveState$ | async as state">
-        <span class="autosave-dot"
-              [class.on]="state.enabled"
-              [title]="state.enabled ? 'Auto-save on' : 'Auto-save off'"
-        ></span>
-        <span class="autosave-interval">{{ state.intervalMinutes }}m</span>
-        <span *ngIf="state.saving" class="status-saving">Saving…</span>
-        <span *ngIf="!state.saving && state.lastSaved" class="status-saved">
-          Saved {{ state.lastSaved | date:'HH:mm' }}
-        </span>
-        <span *ngIf="!state.saving && !state.lastSaved" class="status-pending">
-          Not saved yet
-        </span>
+    <ng-container *ngIf="autoSaveState$ | async as autoSaveState">
+      <div class="section-label-row">
+        <h3 class="section-label">History</h3>
+        <div class="autosave-status">
+          <span class="autosave-dot"
+                [class.on]="autoSaveState.enabled"
+                [title]="autoSaveState.enabled ? 'Auto-save on' : 'Auto-save off'"
+          ></span>
+          <span class="autosave-interval">{{ autoSaveState.enabled ? autoSaveState.intervalMinutes + 'm' : 'off' }}</span>
+          <span *ngIf="autoSaveState.saving" class="status-saving">Saving…</span>
+          <span *ngIf="!autoSaveState.saving && autoSaveState.lastSaved" class="status-saved">
+            Saved {{ autoSaveState.lastSaved | date:'HH:mm' }}
+          </span>
+          <span *ngIf="!autoSaveState.saving && !autoSaveState.lastSaved" class="status-pending">
+            Not saved yet
+          </span>
+        </div>
       </div>
-    </div>
+
+      <div class="autosave-slider-row">
+        <div class="autosave-slider-track" [style.background]="trackBackground(autoSaveState)">
+          <span class="autosave-slider-dot"
+                *ngFor="let opt of autoSaveIntervals; let i = index"
+                [style.left.%]="i * (100 / (autoSaveIntervals.length - 1))"
+                [style.background]="dotColor(i, autoSaveState)"
+          ></span>
+          <input
+            type="range"
+            class="autosave-slider-input"
+            min="0"
+            [max]="autoSaveIntervals.length - 1"
+            step="1"
+            [value]="sliderIndexFor(autoSaveState)"
+            (input)="onAutoSaveSlider($event)"
+            aria-label="Auto-save interval" />
+        </div>
+      </div>
+    </ng-container>
 
     <!-- Creating a new snapshot sits directly above the list it's
          about to join — the newest entry always lands at the top. -->

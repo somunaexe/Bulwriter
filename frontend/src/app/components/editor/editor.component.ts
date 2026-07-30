@@ -363,12 +363,16 @@ export class EditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  toggleAutoSave(): void {
-    const current = this.autoSave.state$.getValue().enabled;
-    this.autoSave.setEnabled(!current);
-  }
-
-  setAutoSaveInterval(minutes: 1 | 2 | 5 | 10): void {
+  // Driven by the branch panel's auto-save slider — 0 is the "off" dot,
+  // anything else both enables auto-save (if it wasn't already) and
+  // sets the interval in one motion, since the slider collapses what
+  // used to be two separate Tools-menu actions into a single control.
+  onAutoSaveIntervalChange(minutes: 0 | 1 | 2 | 5 | 10): void {
+    if (minutes === 0) {
+      this.autoSave.setEnabled(false);
+      return;
+    }
+    if (!this.autoSave.state$.getValue().enabled) this.autoSave.setEnabled(true);
     this.autoSave.setInterval(minutes);
   }
 
