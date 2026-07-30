@@ -69,6 +69,10 @@
            stretching full-width like the header/toolbar above. -->
       <div class="page-chrome">
         <nav class="menu-bar">
+          <app-menu-dropdown label="Overview">
+            <button (click)="openWorkflowOverview()">Workflow overview</button>
+          </app-menu-dropdown>
+
           <app-menu-dropdown label="File">
             <button (click)="saveDraftNow()" [disabled]="!activeBranch || !canEdit">Save draft</button>
             <div class="menu-divider"></div>
@@ -254,6 +258,14 @@
       [canEdit]="canEdit"
       (close)="showContinuity = false">
     </app-continuity-notes>
+
+    <app-workflow-overview
+      *ngIf="showWorkflowOverview"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      (close)="showWorkflowOverview = false"
+      (openFeature)="onWorkflowFeature($event)">
+    </app-workflow-overview>
 
     <div class="breakdown-backdrop" *ngIf="showPressKit" (click)="showPressKit = false"></div>
 
