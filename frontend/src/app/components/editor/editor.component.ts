@@ -76,6 +76,11 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   private _mountRef!: ElementRef<HTMLDivElement>;
 
+  // The background image target — .editor-main itself, not <body>, so
+  // it's confined to the editor's own toolbar row and the gutter around
+  // the manuscript page (see applyEditorBackground below).
+  @ViewChild('editorMainEl') editorMainRef?: ElementRef<HTMLElement>;
+
   // Page numbers for the fake-pagination illusion (see .pm-mount
   // .ProseMirror in styles.scss) — {n, top} pairs rendered as absolutely
   // positioned siblings of the ProseMirror mount, one per virtual page,
@@ -203,7 +208,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
     this.projectService.get(this.projectId).subscribe(p => {
       this.project = p;
-      this.applyBodyBackground();
+      this.applyEditorBackground();
     });
 
     this.scriptService.get(this.projectId, this.scriptId).subscribe(s => this.script = s);
@@ -227,7 +232,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.sync.endSession();
     this.autoSave.stop()
     this.pageResizeObserver?.disconnect();
-    this.clearBodyBackground();
+    this.clearEditorBackground();
   }
 
   // --page-h/--page-gap are physical CSS units ("11in", ".6in"), not
@@ -691,37 +696,42 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   // ── Tools menu: background image ────────────────────────────────
-  // A project-wide personalization behind the editor's chrome (navbar,
-  // sidebar, toolbars) — deliberately excluded from the manuscript page
-  // itself (.page-chrome / .pm-mount stay opaque) so it never competes
-  // with the actual script. Applied to <body> (via Renderer2), not just
-  // this component's own template root — the navbar lives outside
-  // EditorComponent entirely, so a binding on .editor-layout alone could
-  // never reach it.
+  // A project-wide personalization behind the editor's own chrome
+  // (toolbar row + the open gutter around the page) — deliberately
+  // excluded from the manuscript page itself (.page-chrome / .pm-mount
+  // stay opaque) so it never competes with the actual script, and
+  // excluded from the navbar/sidebar (branch panel, collaborators),
+  // which live outside .editor-main entirely and so never see it.
+  // Applied via Renderer2 to the #editorMainEl ViewChild rather than a
+  // template binding since it's imperative, event-driven state (set on
+  // load, on upload, on remove), not something derived every render.
 
   private backgroundLayerValue(): string {
     if (!this.project?.backgroundImage) return 'none';
     // A light tint in the app's own --bg colour, layered under the
     // image — keeps text over it readable without crushing the image
-    // down to nothing. Every chrome surface (navbar/sidebar/toolbars)
-    // goes fully transparent under body.has-bg-image (see styles.scss)
-    // so they all show exactly this same layer, not a second faded
-    // copy stacked on top of it.
+    // down to nothing. The toolbar row goes fully transparent under
+    // .editor-main.has-bg-image (see styles.scss) so it shows exactly
+    // this same layer, not a second faded copy stacked on top of it.
     return `linear-gradient(rgba(246, 241, 230, .6), rgba(246, 241, 230, .6)), url("${this.project.backgroundImage}")`;
   }
 
-  private applyBodyBackground(): void {
+  private applyEditorBackground(): void {
     if (!this.project?.backgroundImage) {
-      this.clearBodyBackground();
+      this.clearEditorBackground();
       return;
     }
-    this.renderer.setStyle(document.body, '--project-bg-layer', this.backgroundLayerValue());
-    this.renderer.addClass(document.body, 'has-bg-image');
+    const el = this.editorMainRef?.nativeElement;
+    if (!el) return;
+    this.renderer.setStyle(el, '--project-bg-layer', this.backgroundLayerValue());
+    this.renderer.addClass(el, 'has-bg-image');
   }
 
-  private clearBodyBackground(): void {
-    this.renderer.removeStyle(document.body, '--project-bg-layer');
-    this.renderer.removeClass(document.body, 'has-bg-image');
+  private clearEditorBackground(): void {
+    const el = this.editorMainRef?.nativeElement;
+    if (!el) return;
+    this.renderer.removeStyle(el, '--project-bg-layer');
+    this.renderer.removeClass(el, 'has-bg-image');
   }
 
   uploadBackgroundImage(): void {
@@ -746,7 +756,7 @@ export class EditorComponent implements OnInit, OnDestroy {
       this.projectService.setBackground(this.projectId, dataUri).subscribe({
         next: () => {
           if (this.project) this.project = { ...this.project, backgroundImage: dataUri };
-          this.applyBodyBackground();
+          this.applyEditorBackground();
         },
         error: () => alert('Could not upload background image.'),
       });
@@ -762,7 +772,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.projectService.clearBackground(this.projectId).subscribe({
       next: () => {
         if (this.project) this.project = { ...this.project, backgroundImage: undefined };
-        this.clearBodyBackground();
+        this.clearEditorBackground();
       },
     });
   }

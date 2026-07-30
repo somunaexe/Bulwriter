@@ -103,18 +103,19 @@ html, body {
 }
 
 /* Per-project editor background image (EditorComponent, applied via
-   Renderer2 since the navbar it also needs to reach lives outside the
-   editor's own component tree) — set on <body> so one continuous,
-   fixed image spans literally everywhere at once: navbar, sidebar,
-   toolbars, the open gutter around the manuscript page. Every chrome
-   surface that would otherwise paint over it goes fully transparent
-   under body.has-bg-image (below) rather than adding its own second
+   Renderer2 to #editorMainEl) — scoped to .editor-main itself, not
+   <body>, so the image only shows behind the editor's own toolbar row
+   and the open gutter around the manuscript page. The navbar and
+   sidebar (branch panel/collaborators) live outside .editor-main
+   entirely and never see it. Every opaque surface within .editor-main
+   that would otherwise paint over it goes fully transparent under
+   .editor-main.has-bg-image (below) rather than adding its own second
    translucent layer — two stacked semi-transparent layers compound
    multiplicatively and crush the image down to barely-visible, so
    there's exactly one tint decision (baked into --project-bg-layer),
    applied once. --project-bg-layer is unset (falls back to `none`)
    unless a project actually has one set. */
-body {
+.editor-main {
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
@@ -122,13 +123,11 @@ body {
   background-image: var(--project-bg-layer, none);
 }
 
-/* The manuscript page itself (.page-chrome / .pm-mount) and modals are
-   deliberately left out — personalization is for the surrounding
-   chrome, never the industry-standard page or a transient overlay. */
-body.has-bg-image .navbar,
-body.has-bg-image .sidebar,
-body.has-bg-image .element-toolbar,
-body.has-bg-image .editor-header {
+/* The manuscript page itself (.page-chrome / .pm-mount) is deliberately
+   left out — personalization is for the surrounding editor chrome,
+   never the industry-standard page. */
+.editor-main.has-bg-image .element-toolbar,
+.editor-main.has-bg-image .editor-header {
   background: transparent;
 }
 
