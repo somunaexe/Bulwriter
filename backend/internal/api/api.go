@@ -17,6 +17,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/crew"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
+	"github.com/somunaexe/bulwriter/backend/internal/musicvfx"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
 	"github.com/somunaexe/bulwriter/backend/internal/schedule"
 	"github.com/somunaexe/bulwriter/backend/internal/scouting"
@@ -42,6 +43,7 @@ type router struct {
 	budget    *budget.Store
 	story     *story.Store
 	shots     *shotlist.Store
+	musicvfx  *musicvfx.Store
 	clerk     *clerkapi.Client
 }
 
@@ -60,6 +62,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		budget:    budget.NewStore(db),
 		story:     story.NewStore(db),
 		shots:     shotlist.NewStore(db),
+		musicvfx:  musicvfx.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -196,6 +199,14 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots", r.addShot).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots/{shotId}", r.updateShot).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots/{shotId}", r.removeShot).Methods("DELETE")
+
+	// Music & VFX — two lightweight suggestion lists per scene (kind =
+	// "music" | "vfx"), same shape either way: a description, a simple
+	// progress status, and notes.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx", r.listMusicVfxNotes).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx", r.addMusicVfxNote).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx/{noteId}", r.updateMusicVfxNote).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx/{noteId}", r.removeMusicVfxNote).Methods("DELETE")
 
 	// Crew — the below-the-line production team, distinct from
 	// project_members (crew members aren't Bulwriter accounts).
@@ -1478,6 +1489,101 @@ func (r *router) removeShot(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := r.shots.Remove(vars["scriptId"], vars["shotId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) listMusicVfxNotes(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	notes, err := r.musicvfx.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if notes == nil {
+		notes = []*musicvfx.Note{}
+	}
+	writeJSON(w, http.StatusOK, notes)
+}
+
+type musicVfxNoteBody struct {
+	SceneKey    string `json:"sceneKey"`
+	Kind        string `json:"kind"`
+	Description string `json:"description"`
+	Status      string `json:"status"`
+	Notes       string `json:"notes"`
+}
+
+func (r *router) addMusicVfxNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body musicVfxNoteBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.SceneKey == "" || (body.Kind != "music" && body.Kind != "vfx") {
+		writeErr(w, http.StatusBadRequest, "sceneKey is required and kind must be \"music\" or \"vfx\"")
+		return
+	}
+
+	n, err := r.musicvfx.Add(vars["scriptId"], body.SceneKey, body.Kind, body.Description, body.Status, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, n)
+}
+
+func (r *router) updateMusicVfxNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body musicVfxNoteBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	n, err := r.musicvfx.Update(vars["scriptId"], vars["noteId"], body.Description, body.Status, body.Notes)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, n)
+}
+
+func (r *router) removeMusicVfxNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.musicvfx.Remove(vars["scriptId"], vars["noteId"]); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

@@ -132,6 +132,7 @@
             <button (click)="openCasting()">Casting</button>
             <button (click)="openBudget()">Budget estimate</button>
             <button (click)="openShotList()">Shot list &amp; storyboards</button>
+            <button (click)="openMusicVfx()">Music &amp; VFX</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Help">
@@ -211,6 +212,16 @@
       [canEdit]="canEdit"
       (close)="showShotList = false">
     </app-shot-list>
+
+    <div class="breakdown-backdrop" *ngIf="showMusicVfx" (click)="showMusicVfx = false"></div>
+
+    <app-music-vfx
+      *ngIf="showMusicVfx"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showMusicVfx = false">
+    </app-music-vfx>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">

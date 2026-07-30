@@ -1,0 +1,59 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Music &amp; VFX</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading notes…</div>
+
+  <div class="mvfx-body" *ngIf="!loading">
+    <p class="empty-msg" *ngIf="!groups.length">No scene headings yet.</p>
+
+    <div class="mvfx-scene" *ngFor="let group of groups">
+      <div class="mvfx-scene-header">
+        <span class="mvfx-scene-heading">{{ group.heading || 'Untitled scene' }}</span>
+      </div>
+
+      <ng-container *ngFor="let kind of kinds">
+        <div class="mvfx-kind">
+          <div class="mvfx-kind-header">
+            <span class="mvfx-kind-label">{{ kind === 'music' ? 'Music' : 'VFX' }}</span>
+            <button
+              *ngIf="canEdit"
+              class="mvfx-kind-add-btn"
+              [class.open]="(kind === 'music' ? group.music : group.vfx).showAdd"
+              (click)="toggleAdd(group, kind)"
+              [attr.aria-label]="'Add ' + (kind === 'music' ? 'music' : 'VFX') + ' note'">+</button>
+          </div>
+
+          <div class="mvfx-note-list" *ngIf="(kind === 'music' ? group.music : group.vfx).notes.length">
+            <div class="mvfx-note" *ngFor="let note of (kind === 'music' ? group.music : group.vfx).notes">
+              <div class="mvfx-note-row">
+                <input class="input-sm" placeholder="Description…" [(ngModel)]="note.description" (blur)="save(note)" [disabled]="!canEdit" />
+                <select class="mvfx-status input-sm" [class]="'mvfx-status-' + note.status"
+                        [(ngModel)]="note.status" (change)="save(note)" [disabled]="!canEdit">
+                  <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+                </select>
+                <button *ngIf="canEdit" class="mvfx-remove-btn" (click)="remove(group, kind, note)" aria-label="Remove note">×</button>
+              </div>
+              <textarea class="mvfx-notes" placeholder="Notes…" [(ngModel)]="note.notes" (blur)="save(note)" [readonly]="!canEdit"></textarea>
+            </div>
+          </div>
+
+          <div class="mvfx-add" *ngIf="canEdit && (kind === 'music' ? group.music : group.vfx).showAdd">
+            <div class="mvfx-add-row">
+              <input class="input-sm" placeholder="Description…" [(ngModel)]="(kind === 'music' ? group.music : group.vfx).newDescription" (keydown.enter)="addNote(group, kind)" />
+              <select class="mvfx-status input-sm" [(ngModel)]="(kind === 'music' ? group.music : group.vfx).newStatus">
+                <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+              </select>
+            </div>
+            <textarea class="mvfx-notes" placeholder="Notes…" [(ngModel)]="(kind === 'music' ? group.music : group.vfx).newNotes"></textarea>
+            <button class="btn-save mvfx-add-btn" (click)="addNote(group, kind)" [disabled]="!(kind === 'music' ? group.music : group.vfx).newDescription.trim()">Add</button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
