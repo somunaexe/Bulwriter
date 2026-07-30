@@ -137,6 +137,7 @@
 
           <app-menu-dropdown label="Post-Production">
             <button (click)="openMilestones()">Milestones</button>
+            <button (click)="openCredits()">Credits</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Distribution">
@@ -252,6 +253,17 @@
       [canEdit]="canEdit"
       (close)="showMilestones = false">
     </app-milestone-tracker>
+
+    <div class="breakdown-backdrop" *ngIf="showCredits" (click)="showCredits = false"></div>
+
+    <app-credits
+      *ngIf="showCredits"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [scriptTitle]="script?.title || ''"
+      [canEdit]="canEdit"
+      (close)="showCredits = false">
+    </app-credits>
 
     <div class="breakdown-backdrop" *ngIf="showFestivalTracker" (click)="showFestivalTracker = false"></div>
 

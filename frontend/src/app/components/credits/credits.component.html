@@ -1,0 +1,53 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Credits</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-ghost" (click)="exportText()" [disabled]="loading">Export .txt</button>
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading credits…</div>
+
+  <div class="cr-body" *ngIf="!loading">
+
+    <section class="cr-section">
+      <h3 class="section-label">Cast ({{ cast.length }})</h3>
+      <p class="cr-readonly-hint">Pulled from Casting — mark actors as cast there.</p>
+      <p class="empty-msg" *ngIf="!cast.length">No cast marked as cast yet.</p>
+      <ul class="cr-list" *ngIf="cast.length">
+        <li class="cr-row" *ngFor="let c of cast">
+          <span class="cr-role">{{ c.characterName || 'Unnamed role' }}</span>
+          <span class="cr-dots"></span>
+          <span class="cr-name">{{ c.actorName || 'TBD' }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="cr-section">
+      <h3 class="section-label">Crew ({{ crew.length }})</h3>
+      <p class="cr-readonly-hint">Pulled from the crew list — add crew there.</p>
+      <p class="empty-msg" *ngIf="!crew.length">No crew added yet.</p>
+      <ul class="cr-list" *ngIf="crew.length">
+        <li class="cr-row" *ngFor="let m of crew">
+          <span class="cr-role">{{ m.role || 'Crew' }}</span>
+          <span class="cr-dots"></span>
+          <span class="cr-name">{{ m.name }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="cr-section">
+      <h3 class="section-label">Additional credits</h3>
+      <p class="cr-readonly-hint">Music licences, location acknowledgements, funding/sponsor logos…</p>
+      <textarea
+        class="cr-textarea"
+        rows="6"
+        placeholder="Music: &quot;Track name&quot; by Artist, licensed via...&#10;Filmed on location at...&#10;Made possible with support from..."
+        [(ngModel)]="additionalCredits"
+        (blur)="saveAdditionalCredits()"
+        [readonly]="!canEdit"></textarea>
+    </section>
+
+  </div>
+</div>

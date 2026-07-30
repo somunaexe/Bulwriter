@@ -1,0 +1,75 @@
+@use 'mixins' as *;
+
+.cr-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.cr-section {
+  margin-bottom: 1.5rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.cr-readonly-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: .5rem;
+}
+
+.cr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.cr-row {
+  @include surface-panel(var(--radius-sm));
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  padding: .5rem .65rem;
+  border-color: var(--border);
+}
+
+.cr-role {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.cr-dots {
+  flex: 1;
+  min-width: 12px;
+  border-bottom: 1px dotted var(--border);
+  transform: translateY(-3px);
+}
+
+.cr-name {
+  font-size: 13px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.cr-textarea {
+  width: 100%;
+  resize: vertical;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .55rem .7rem;
+  font-size: 13px;
+  font-family: var(--font-body);
+  color: var(--text);
+  outline: none;
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+
+  &:focus { border-color: var(--accent); }
+  &:read-only { color: var(--muted); cursor: default; }
+}

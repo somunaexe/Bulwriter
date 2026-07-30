@@ -24,6 +24,7 @@ import { MusicVfxComponent } from '../music-vfx/music-vfx.component';
 import { PressKitComponent } from '../press-kit/press-kit.component';
 import { MilestoneTrackerComponent } from '../milestone-tracker/milestone-tracker.component';
 import { FestivalTrackerComponent } from '../festival-tracker/festival-tracker.component';
+import { CreditsComponent } from '../credits/credits.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -61,7 +62,7 @@ import { importPdfToText } from '../../editor/pdf-import';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent, MilestoneTrackerComponent, FestivalTrackerComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent, MilestoneTrackerComponent, FestivalTrackerComponent, CreditsComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -771,6 +772,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   showPressKit = false;
   showMilestones = false;
   showFestivalTracker = false;
+  showCredits = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -810,6 +812,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openFestivalTracker(): void {
     this.showFestivalTracker = true;
+  }
+
+  openCredits(): void {
+    this.showCredits = true;
   }
 
   // ── Revisions menu ───────────────────────────────────────────────
