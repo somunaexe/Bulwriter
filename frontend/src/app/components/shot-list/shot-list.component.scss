@@ -130,12 +130,16 @@
   &:hover { color: var(--delete-fg); }
 }
 
+// Deliberately narrow and locked to one row (no wrap) — these three
+// inputs are really one field (shot size / camera angle / camera
+// movement combined), and should read as one connected control rather
+// than three separate ones.
 .shot-type-fields {
   display: flex;
-  gap: .4rem;
-  flex-wrap: wrap;
+  gap: .3rem;
+  flex-wrap: nowrap;
 
-  .input-sm { flex: 1 1 140px; min-width: 0; }
+  .input-sm { flex: 1 1 0; min-width: 0; padding-left: .4rem; padding-right: .4rem; }
 }
 
 .shot-description {

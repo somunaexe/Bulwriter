@@ -35,9 +35,9 @@
               <button *ngIf="canEdit" class="shot-remove-btn" (click)="remove(group, shot)" aria-label="Remove shot">×</button>
             </div>
             <div class="shot-type-fields">
-              <input class="input-sm" placeholder="Shot size (e.g. Wide, Close-up)…" [(ngModel)]="shot.shotSize" (blur)="save(shot)" [disabled]="!canEdit" />
-              <input class="input-sm" placeholder="Camera angle (e.g. High, Low, Eye level)…" [(ngModel)]="shot.cameraAngle" (blur)="save(shot)" [disabled]="!canEdit" />
-              <input class="input-sm" placeholder="Camera movement (e.g. Pan, Dolly, Static)…" [(ngModel)]="shot.cameraMovement" (blur)="save(shot)" [disabled]="!canEdit" />
+              <input class="input-sm" placeholder="Size…" title="Shot size (e.g. Wide, Close-up)" [(ngModel)]="shot.shotSize" (blur)="save(shot)" [disabled]="!canEdit" />
+              <input class="input-sm" placeholder="Angle…" title="Camera angle (e.g. High, Low, Eye level)" [(ngModel)]="shot.cameraAngle" (blur)="save(shot)" [disabled]="!canEdit" />
+              <input class="input-sm" placeholder="Movement…" title="Camera movement (e.g. Pan, Dolly, Static)" [(ngModel)]="shot.cameraMovement" (blur)="save(shot)" [disabled]="!canEdit" />
             </div>
             <textarea class="shot-description" placeholder="Description…" [(ngModel)]="shot.description" (blur)="save(shot)" [readonly]="!canEdit"></textarea>
           </div>
@@ -58,9 +58,9 @@
 
         <div class="shot-fields">
           <div class="shot-type-fields">
-            <input class="input-sm" placeholder="Shot size (e.g. Wide, Close-up)…" [(ngModel)]="group.newShotSize" (keydown.enter)="addShot(group)" />
-            <input class="input-sm" placeholder="Camera angle (e.g. High, Low, Eye level)…" [(ngModel)]="group.newCameraAngle" (keydown.enter)="addShot(group)" />
-            <input class="input-sm" placeholder="Camera movement (e.g. Pan, Dolly, Static)…" [(ngModel)]="group.newCameraMovement" (keydown.enter)="addShot(group)" />
+            <input class="input-sm" placeholder="Size…" title="Shot size (e.g. Wide, Close-up)" [(ngModel)]="group.newShotSize" (keydown.enter)="addShot(group)" />
+            <input class="input-sm" placeholder="Angle…" title="Camera angle (e.g. High, Low, Eye level)" [(ngModel)]="group.newCameraAngle" (keydown.enter)="addShot(group)" />
+            <input class="input-sm" placeholder="Movement…" title="Camera movement (e.g. Pan, Dolly, Static)" [(ngModel)]="group.newCameraMovement" (keydown.enter)="addShot(group)" />
           </div>
           <textarea class="shot-description" placeholder="Description…" [(ngModel)]="group.newDescription"></textarea>
           <button class="btn-ghost shot-add-btn" (click)="addShot(group)">+ Add shot</button>
