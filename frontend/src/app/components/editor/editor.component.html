@@ -135,6 +135,10 @@
             <button (click)="openMusicVfx()">Music &amp; VFX</button>
           </app-menu-dropdown>
 
+          <app-menu-dropdown label="Distribution">
+            <button (click)="openPressKit()">Press kit</button>
+          </app-menu-dropdown>
+
           <app-menu-dropdown label="Help">
             <button (click)="openShortcuts()">Keyboard shortcuts</button>
           </app-menu-dropdown>
@@ -222,6 +226,17 @@
       [canEdit]="canEdit"
       (close)="showMusicVfx = false">
     </app-music-vfx>
+
+    <div class="breakdown-backdrop" *ngIf="showPressKit" (click)="showPressKit = false"></div>
+
+    <app-press-kit
+      *ngIf="showPressKit"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [scriptTitle]="script?.title || ''"
+      [canEdit]="canEdit"
+      (close)="showPressKit = false">
+    </app-press-kit>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">

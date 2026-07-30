@@ -176,6 +176,25 @@ func (s *Store) ListScriptStories(projectID string) ([]*ScriptStory, error) {
 	return out, rows.Err()
 }
 
+// GetScriptStory returns one script's logline/synopsis directly, or
+// blank defaults if nothing has been saved yet — used by callers (like
+// the press kit) that already have a scriptID in hand and don't need
+// the rest of the project's script list alongside it.
+func (s *Store) GetScriptStory(scriptID string) (*ScriptStory, error) {
+	ss := &ScriptStory{ScriptID: scriptID}
+	err := s.db.QueryRow(
+		`SELECT logline, synopsis, updated_at FROM script_stories WHERE script_id = $1`, scriptID,
+	).Scan(&ss.Logline, &ss.Synopsis, &ss.UpdatedAt)
+	if err == sql.ErrNoRows {
+		ss.UpdatedAt = time.Now()
+		return ss, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("querying script story: %w", err)
+	}
+	return ss, nil
+}
+
 func (s *Store) SetScriptStory(scriptID, logline, synopsis string) (*ScriptStory, error) {
 	ss := &ScriptStory{
 		ScriptID:  scriptID,

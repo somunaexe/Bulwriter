@@ -21,6 +21,7 @@ import { StripboardComponent } from '../stripboard/stripboard.component';
 import { BudgetEstimatorComponent } from '../budget-estimator/budget-estimator.component';
 import { ShotListComponent } from '../shot-list/shot-list.component';
 import { MusicVfxComponent } from '../music-vfx/music-vfx.component';
+import { PressKitComponent } from '../press-kit/press-kit.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -58,7 +59,7 @@ import { importPdfToText } from '../../editor/pdf-import';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -765,6 +766,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   showBudget = false;
   showShotList = false;
   showMusicVfx = false;
+  showPressKit = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -792,6 +794,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openMusicVfx(): void {
     this.showMusicVfx = true;
+  }
+
+  openPressKit(): void {
+    this.showPressKit = true;
   }
 
   // ── Revisions menu ───────────────────────────────────────────────

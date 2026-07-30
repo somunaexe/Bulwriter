@@ -1,0 +1,117 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Press kit</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-ghost" (click)="exportPdf()" [disabled]="loading || exporting">
+        {{ exporting ? 'Exporting…' : 'Export PDF' }}
+      </button>
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading press kit…</div>
+
+  <div class="pk-body" *ngIf="!loading">
+
+    <section class="pk-section">
+      <h3 class="section-label">Synopsis &amp; logline</h3>
+      <p class="pk-readonly-hint">Pulled from the Story Bible — edit it there.</p>
+      <p class="pk-logline" *ngIf="logline">{{ logline }}</p>
+      <p class="pk-synopsis" *ngIf="synopsis">{{ synopsis }}</p>
+      <p class="empty-msg" *ngIf="!logline && !synopsis">No logline or synopsis yet.</p>
+    </section>
+
+    <section class="pk-section" *ngIf="pressKit">
+      <h3 class="section-label">Director's statement</h3>
+      <textarea
+        class="pk-textarea"
+        rows="4"
+        placeholder="A note from the director about this film…"
+        [(ngModel)]="pressKit.directorStatement"
+        (blur)="saveDirectorStatement()"
+        [readonly]="!canEdit"></textarea>
+    </section>
+
+    <section class="pk-section" *ngIf="pressKit">
+      <h3 class="section-label">Poster</h3>
+      <div class="pk-visual pk-visual-lg">
+        <ng-container *ngIf="pressKit.poster; else noPoster">
+          <img class="pk-image pk-image-lg" [src]="pressKit.poster" alt="Poster" />
+          <span class="pk-image-filename" *ngIf="pressKit.posterFilename" [title]="pressKit.posterFilename">{{ pressKit.posterFilename }}</span>
+          <button *ngIf="canEdit" class="pk-image-remove" (click)="removePoster()" aria-label="Remove poster">×</button>
+        </ng-container>
+        <ng-template #noPoster>
+          <input *ngIf="canEdit" type="file" accept="image/*" class="pk-file-input" (change)="onPosterSelected($event)" />
+        </ng-template>
+      </div>
+    </section>
+
+    <section class="pk-section">
+      <div class="pk-section-header">
+        <h3 class="section-label">Stills ({{ stills.length }})</h3>
+        <button *ngIf="canEdit" class="pk-add-btn" [class.open]="showAddStill" (click)="toggleAddStill()" aria-label="Add a still">+</button>
+      </div>
+
+      <div class="pk-still-list" *ngIf="stills.length">
+        <div class="pk-still" *ngFor="let still of stills">
+          <div class="pk-visual">
+            <ng-container *ngIf="still.image; else stillNoImage">
+              <img class="pk-image" [src]="still.image" alt="Still" />
+              <span class="pk-image-filename" *ngIf="still.imageFilename" [title]="still.imageFilename">{{ still.imageFilename }}</span>
+              <button *ngIf="canEdit" class="pk-image-remove" (click)="removeStillImage(still)" aria-label="Remove image">×</button>
+            </ng-container>
+            <ng-template #stillNoImage>
+              <input *ngIf="canEdit" type="file" accept="image/*" class="pk-file-input" (change)="onStillImageSelected(still, $event)" />
+            </ng-template>
+          </div>
+          <div class="pk-still-fields">
+            <input class="input-sm" placeholder="Caption…" [(ngModel)]="still.caption" (blur)="saveStillCaption(still)" [disabled]="!canEdit" />
+            <button *ngIf="canEdit" class="pk-remove-btn" (click)="removeStill(still)">Remove still</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pk-add" *ngIf="canEdit && showAddStill">
+        <div class="pk-visual">
+          <ng-container *ngIf="newStillImage; else addNoImage">
+            <img class="pk-image" [src]="newStillImage" alt="New still preview" />
+            <span class="pk-image-filename" *ngIf="newStillImageFilename" [title]="newStillImageFilename">{{ newStillImageFilename }}</span>
+            <button class="pk-image-remove" (click)="removeNewStillImage()" aria-label="Remove image">×</button>
+          </ng-container>
+          <ng-template #addNoImage>
+            <input type="file" accept="image/*" class="pk-file-input" (change)="onNewStillImageSelected($event)" />
+          </ng-template>
+        </div>
+        <div class="pk-still-fields">
+          <input class="input-sm" placeholder="Caption…" [(ngModel)]="newStillCaption" (keydown.enter)="addStill()" />
+          <button class="btn-save" (click)="addStill()" [disabled]="!newStillImage">Add still</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="pk-section">
+      <h3 class="section-label">Cast bios ({{ cast.length }})</h3>
+      <p class="empty-msg" *ngIf="!cast.length">No cast marked as cast yet — set one in Casting.</p>
+      <div class="pk-bio-row" *ngFor="let row of cast">
+        <div class="pk-bio-header">
+          <span class="pk-bio-name">{{ row.actorName || 'Unnamed actor' }}</span>
+          <span class="pk-bio-role">as {{ row.characterName }}</span>
+        </div>
+        <textarea class="pk-textarea" rows="2" placeholder="Actor bio…" [(ngModel)]="row.bio" (blur)="saveCastBio(row)" [readonly]="!canEdit"></textarea>
+      </div>
+    </section>
+
+    <section class="pk-section">
+      <h3 class="section-label">Crew bios ({{ crew.length }})</h3>
+      <p class="empty-msg" *ngIf="!crew.length">No crew added yet.</p>
+      <div class="pk-bio-row" *ngFor="let row of crew">
+        <div class="pk-bio-header">
+          <span class="pk-bio-name">{{ row.name }}</span>
+          <span class="pk-bio-role" *ngIf="row.role">{{ row.role }}</span>
+        </div>
+        <textarea class="pk-textarea" rows="2" placeholder="Crew bio…" [(ngModel)]="row.bio" (blur)="saveCrewBio(row)" [readonly]="!canEdit"></textarea>
+      </div>
+    </section>
+
+  </div>
+</div>
