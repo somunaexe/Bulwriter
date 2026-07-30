@@ -10,6 +10,15 @@
   margin-top: 2.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
+
+  // The collaborator stack above already draws its own border-bottom
+  // (see .collab-stack) — a second .collaborators section right after
+  // it would otherwise draw a second divider immediately below that one.
+  & + & {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
 }
 
 .member-list, .invite-list {

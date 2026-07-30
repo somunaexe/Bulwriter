@@ -8,12 +8,11 @@ import { MembershipService } from '../../services/membership.service';
 import { ProjectService, Project } from '../../services/project.service';
 import { CollaboratorStackComponent } from '../collaborator-stack/collaborator-stack.component';
 import { ModalComponent } from '../modal/modal.component';
-import { CrewListComponent } from '../crew-list/crew-list.component';
 
 @Component({
   selector: 'app-project',
   standalone: true,
-  imports: [CommonModule, FormsModule, CollaboratorStackComponent, ModalComponent, CrewListComponent],
+  imports: [CommonModule, FormsModule, CollaboratorStackComponent, ModalComponent],
   templateUrl: './project.component.html',
   styleUrl: './project.component.scss'
 })

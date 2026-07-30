@@ -52,10 +52,12 @@
   <section class="collaborators">
     <h2 class="section-label">Crew</h2>
 
-    <app-crew-list
+    <app-collaborator-stack
       [projectId]="projectId"
-      [canEdit]="canEdit"
-    ></app-crew-list>
+      mode="crew"
+      [canManage]="canEdit"
+      [invitePopover]="true"
+    ></app-collaborator-stack>
   </section>
 
   <app-modal *ngIf="showInviteModal" title="Invite collaborator" (closed)="showInviteModal = false">

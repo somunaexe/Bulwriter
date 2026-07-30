@@ -61,10 +61,15 @@
    data-theme attribute on <html> (see ThemeService). --page-bg and
    --page-text are deliberately NOT overridden here: the manuscript page
    itself stays paper-white in both themes, same as Google Docs/Word,
-   since it's meant to represent the actual printed page, not app chrome. */
+   since it's meant to represent the actual printed page, not app chrome.
+   --surface (navbar/cards) is the darkest value here, closest to pure
+   black — the dark-mode equivalent of --surface being pure white in
+   light mode. --bg (the open chrome around the page) sits a step
+   lighter/warmer than that, same relationship as light mode's --bg
+   being a step warmer than its pure-white --surface. */
 :root[data-theme="dark"] {
-  --bg:        #1c1a16;
-  --surface:   #262320;
+  --bg:        #262320;
+  --surface:   #1c1a16;
   --surface-2: #302b24;
   --border:    #423b30;
   --text:      #ede6d8;
