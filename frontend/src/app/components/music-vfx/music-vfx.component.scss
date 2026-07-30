@@ -1,0 +1,150 @@
+@use 'mixins' as *;
+
+.mvfx-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.mvfx-scene {
+  @include surface-panel(var(--radius-md));
+  padding: .9rem 1rem;
+  margin-bottom: .85rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.mvfx-scene-header {
+  margin-bottom: .7rem;
+}
+
+.mvfx-scene-heading {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.mvfx-kind {
+  margin-top: .75rem;
+
+  &:first-of-type { margin-top: 0; }
+}
+
+.mvfx-kind-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-bottom: .5rem;
+}
+
+.mvfx-kind-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+// Same "+" toggle convention as the shot list's per-scene add trigger —
+// rotates into an × while its add form is open.
+.mvfx-kind-add-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .12s, color .12s, transform .12s;
+
+  &:hover { border-color: var(--accent); color: var(--accent); }
+
+  &.open {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: rotate(45deg);
+  }
+}
+
+.mvfx-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-bottom: .5rem;
+}
+
+.mvfx-note,
+.mvfx-add {
+  @include surface-panel(var(--radius-sm));
+  padding: .6rem;
+  border-color: var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.mvfx-note-row,
+.mvfx-add-row {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+
+  .input-sm { flex: 1; min-width: 0; }
+}
+
+.mvfx-status {
+  flex-shrink: 0;
+  width: auto;
+  text-transform: capitalize;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mvfx-status-suggested { color: var(--muted); }
+.mvfx-status-confirmed { color: var(--accent); }
+.mvfx-status-done      { color: var(--insert-fg); }
+
+.mvfx-remove-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { color: var(--delete-fg); }
+}
+
+.mvfx-notes {
+  width: 100%;
+  min-height: 36px;
+  resize: vertical;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .4rem .55rem;
+  font-size: 12.5px;
+  font-family: var(--font-ui);
+  color: var(--text);
+  outline: none;
+
+  &:focus { border-color: var(--accent); }
+  &:read-only { color: var(--muted); cursor: default; }
+}
+
+.mvfx-add-btn {
+  align-self: flex-end;
+}
