@@ -1,0 +1,244 @@
+@use 'mixins' as *;
+
+.pk-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.pk-section {
+  margin-bottom: 1.5rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.pk-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-bottom: .3rem;
+
+  .section-label { margin: 0; }
+}
+
+.pk-readonly-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: .5rem;
+}
+
+.pk-logline {
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--text);
+  margin-bottom: .5rem;
+}
+
+.pk-synopsis {
+  font-size: 13px;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.pk-textarea {
+  width: 100%;
+  resize: vertical;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .55rem .7rem;
+  font-size: 13.5px;
+  font-family: var(--font-body);
+  color: var(--text);
+  outline: none;
+  box-shadow: var(--shadow-sm);
+
+  &:focus { border-color: var(--accent); }
+  &:read-only { color: var(--muted); cursor: default; }
+}
+
+// Fixed-width column so the image/file-input/filename stack stays a
+// consistent size beside the fields, whether or not there's an image
+// yet — same convention as the shot list / location scouting.
+.pk-visual {
+  position: relative;
+  width: 110px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+}
+
+.pk-visual-lg {
+  width: 220px;
+}
+
+.pk-image {
+  width: 110px;
+  height: 78px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.pk-image-lg {
+  width: 220px;
+  height: 156px;
+}
+
+.pk-image-filename {
+  width: 100%;
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pk-image-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover { color: var(--delete-fg); border-color: var(--delete-fg); }
+}
+
+.pk-file-input {
+  width: 100%;
+  font-size: 11px;
+  color: var(--muted);
+
+  &::file-selector-button,
+  &::-webkit-file-upload-button {
+    display: block;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .35rem .5rem;
+    margin-bottom: .3rem;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+
+  &::file-selector-button:hover,
+  &::-webkit-file-upload-button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+// Same rotate-into-× toggle convention as the shot list's add trigger.
+.pk-add-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .12s, color .12s, transform .12s;
+
+  &:hover { border-color: var(--accent); color: var(--accent); }
+
+  &.open {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: rotate(45deg);
+  }
+}
+
+.pk-still-list {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin-bottom: .6rem;
+}
+
+.pk-still,
+.pk-add {
+  @include surface-panel(var(--radius-md));
+  display: flex;
+  gap: .75rem;
+  padding: .75rem;
+  border-color: var(--border);
+}
+
+.pk-still-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  justify-content: space-between;
+
+  .input-sm { width: 100%; }
+}
+
+.pk-remove-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover { color: var(--delete-fg); }
+}
+
+.pk-bio-row {
+  @include surface-panel(var(--radius-md));
+  padding: .75rem;
+  border-color: var(--border);
+  margin-bottom: .6rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.pk-bio-header {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  margin-bottom: .5rem;
+}
+
+.pk-bio-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pk-bio-role {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+@media (max-width: 768px) {
+  .pk-still, .pk-add { flex-direction: column; }
+  .pk-visual, .pk-visual-lg { width: 100%; }
+  .pk-image, .pk-image-lg { width: 100%; height: 140px; }
+}

@@ -18,6 +18,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
 	"github.com/somunaexe/bulwriter/backend/internal/musicvfx"
+	"github.com/somunaexe/bulwriter/backend/internal/presskit"
 	"github.com/somunaexe/bulwriter/backend/internal/project"
 	"github.com/somunaexe/bulwriter/backend/internal/schedule"
 	"github.com/somunaexe/bulwriter/backend/internal/scouting"
@@ -44,6 +45,7 @@ type router struct {
 	story     *story.Store
 	shots     *shotlist.Store
 	musicvfx  *musicvfx.Store
+	presskit  *presskit.Store
 	clerk     *clerkapi.Client
 }
 
@@ -63,6 +65,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		story:     story.NewStore(db),
 		shots:     shotlist.NewStore(db),
 		musicvfx:  musicvfx.NewStore(db),
+		presskit:  presskit.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -207,6 +210,17 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx", r.addMusicVfxNote).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx/{noteId}", r.updateMusicVfxNote).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/music-vfx/{noteId}", r.removeMusicVfxNote).Methods("DELETE")
+
+	// Press kit — Phase 5 (Distribution & Release): director's statement,
+	// poster, and a stills list live here; synopsis/logline are read
+	// from the Story Bible (Phase 1) rather than duplicated, and cast/
+	// crew bios are keyed against the existing casting/crew records.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit", r.getPressKit).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit", r.setPressKit).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit/stills", r.addPressKitStill).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit/stills/{stillId}", r.updatePressKitStill).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit/stills/{stillId}", r.removePressKitStill).Methods("DELETE")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/press-kit/bios/{kind}/{personId}", r.setPressKitBio).Methods("PUT")
 
 	// Crew — the below-the-line production team, distinct from
 	// project_members (crew members aren't Bulwriter accounts).
@@ -1588,6 +1602,248 @@ func (r *router) removeMusicVfxNote(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type pressKitCastRow struct {
+	CandidateID   string `json:"candidateId"`
+	CharacterName string `json:"characterName"`
+	ActorName     string `json:"actorName"`
+	Bio           string `json:"bio"`
+}
+
+type pressKitCrewRow struct {
+	MemberID string `json:"memberId"`
+	Role     string `json:"role"`
+	Name     string `json:"name"`
+	Bio      string `json:"bio"`
+}
+
+type pressKitResponse struct {
+	PressKit *presskit.PressKit `json:"pressKit"`
+	Stills   []*presskit.Still  `json:"stills"`
+	Logline  string             `json:"logline"`
+	Synopsis string             `json:"synopsis"`
+	Cast     []pressKitCastRow  `json:"cast"`
+	Crew     []pressKitCrewRow  `json:"crew"`
+}
+
+func (r *router) getPressKit(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	projectID := vars["projectId"]
+	scriptID := vars["scriptId"]
+
+	pk, err := r.presskit.GetPressKit(scriptID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	stills, err := r.presskit.ListStills(scriptID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if stills == nil {
+		stills = []*presskit.Still{}
+	}
+
+	bios, err := r.presskit.ListBios(scriptID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	bioByKey := make(map[string]string, len(bios))
+	for _, b := range bios {
+		bioByKey[b.Kind+":"+b.PersonID] = b.Bio
+	}
+
+	ss, err := r.story.GetScriptStory(scriptID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	candidates, err := r.casting.List(scriptID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	cast := make([]pressKitCastRow, 0, len(candidates))
+	for _, c := range candidates {
+		if !c.IsCast {
+			continue
+		}
+		cast = append(cast, pressKitCastRow{
+			CandidateID: c.ID, CharacterName: c.CharacterName, ActorName: c.ActorName,
+			Bio: bioByKey["cast:"+c.ID],
+		})
+	}
+
+	members, err := r.crew.List(projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	crewRows := make([]pressKitCrewRow, 0, len(members))
+	for _, m := range members {
+		crewRows = append(crewRows, pressKitCrewRow{
+			MemberID: m.ID, Role: m.Role, Name: m.Name,
+			Bio: bioByKey["crew:"+m.ID],
+		})
+	}
+
+	writeJSON(w, http.StatusOK, pressKitResponse{
+		PressKit: pk, Stills: stills, Logline: ss.Logline, Synopsis: ss.Synopsis, Cast: cast, Crew: crewRows,
+	})
+}
+
+func (r *router) setPressKit(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body struct {
+		DirectorStatement string `json:"directorStatement"`
+		Poster            string `json:"poster"`
+		PosterFilename    string `json:"posterFilename"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
+		return
+	}
+
+	pk, err := r.presskit.SetPressKit(vars["scriptId"], body.DirectorStatement, body.Poster, body.PosterFilename)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, pk)
+}
+
+type pressKitStillBody struct {
+	Image         string `json:"image"`
+	ImageFilename string `json:"imageFilename"`
+	Caption       string `json:"caption"`
+}
+
+func (r *router) addPressKitStill(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body pressKitStillBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
+		return
+	}
+
+	st, err := r.presskit.AddStill(vars["scriptId"], body.Image, body.ImageFilename, body.Caption)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, st)
+}
+
+func (r *router) updatePressKitStill(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body pressKitStillBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
+		return
+	}
+
+	st, err := r.presskit.UpdateStill(vars["scriptId"], vars["stillId"], body.Image, body.ImageFilename, body.Caption)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, st)
+}
+
+func (r *router) removePressKitStill(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.presskit.RemoveStill(vars["scriptId"], vars["stillId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) setPressKitBio(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	kind := vars["kind"]
+	if kind != "cast" && kind != "crew" {
+		writeErr(w, http.StatusBadRequest, `kind must be "cast" or "crew"`)
+		return
+	}
+
+	var body struct {
+		Bio string `json:"bio"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	b, err := r.presskit.SetBio(vars["scriptId"], kind, vars["personId"], body.Bio)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, b)
 }
 
 func (r *router) removeCrewMember(w http.ResponseWriter, req *http.Request) {
