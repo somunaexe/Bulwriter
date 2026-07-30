@@ -10,6 +10,7 @@ interface SceneGroup {
   sceneKey: string;
   heading: string;
   shots: Shot[];
+  showAdd: boolean;
   newShotSize: string;
   newCameraAngle: string;
   newCameraMovement: string;
@@ -20,7 +21,7 @@ interface SceneGroup {
 
 function emptyGroup(sceneKey: string, heading: string, shots: Shot[]): SceneGroup {
   return {
-    sceneKey, heading, shots,
+    sceneKey, heading, shots, showAdd: false,
     newShotSize: '', newCameraAngle: '', newCameraMovement: '',
     newDescription: '', newImage: '', newImageFilename: '',
   };
@@ -99,6 +100,11 @@ export class ShotListComponent implements OnChanges {
         this.loading = false;
       },
     });
+  }
+
+  toggleAdd(group: SceneGroup): void {
+    if (!this.canEdit) return;
+    group.showAdd = !group.showAdd;
   }
 
   save(shot: Shot): void {
