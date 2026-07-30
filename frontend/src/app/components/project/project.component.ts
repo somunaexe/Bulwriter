@@ -112,4 +112,8 @@ export class ProjectComponent implements OnInit {
   openScript(id: string): void {
     this.router.navigate(['/projects', this.projectId, 'scripts', id]);
   }
+
+  openStory(): void {
+    this.router.navigate(['/projects', this.projectId, 'story']);
+  }
 }

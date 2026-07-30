@@ -1,0 +1,120 @@
+// .dashboard/.dash-header/.logo/.section-label/.input-sm/.btn-save/
+// .btn-ghost/.btn-icon/.loading-msg/.empty-msg are shared globals (see
+// styles.scss) — only what's unique to this page lives here.
+
+.dash-header {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.back-link {
+  align-self: flex-start;
+  font-size: 12.5px;
+}
+
+.story-section {
+  margin-bottom: 2.5rem;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.story-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: .75rem;
+}
+
+.story-field {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  margin-bottom: .9rem;
+
+  span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.story-field-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .story-field { flex: 1 1 160px; }
+}
+
+.story-textarea {
+  width: 100%;
+  resize: vertical;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .55rem .7rem;
+  font-size: 13.5px;
+  font-family: var(--font-body);
+  color: var(--text);
+  outline: none;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .12s;
+
+  &:focus { border-color: var(--accent); }
+  &:read-only { color: var(--muted); cursor: default; }
+}
+
+.idea-note-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+
+.idea-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .65rem .8rem;
+
+  p {
+    font-size: 13.5px;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+}
+
+.idea-note-add {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  align-items: flex-end;
+}
+
+.script-story-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.script-story-header {
+  margin-bottom: .75rem;
+
+  .btn-ghost {
+    font-weight: 600;
+    padding: .4rem .8rem;
+  }
+}

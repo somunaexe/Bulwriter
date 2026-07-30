@@ -4,6 +4,10 @@
     <h1 class="logo">{{ project?.title }}</h1>
   </header>
 
+  <section class="story-bible-link">
+    <button class="btn-ghost" (click)="openStory()">Story bible</button>
+  </section>
+
   <!-- Only editors and owners can create scripts -->
   <section class="new-project" *ngIf="canEdit">
     <input

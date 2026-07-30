@@ -2,6 +2,10 @@
 // .project-card(+title+meta)/.loading-msg/.empty-msg/.error-msg are all
 // shared with DashboardComponent's project list — defined once, globally,
 // in styles.scss instead of duplicated in both components' stylesheets.
+.story-bible-link {
+  margin-bottom: 1.5rem;
+}
+
 .collaborators {
   margin-top: 2.5rem;
   padding-top: 1.5rem;
