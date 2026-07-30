@@ -15,6 +15,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/budget"
 	"github.com/somunaexe/bulwriter/backend/internal/casting"
 	"github.com/somunaexe/bulwriter/backend/internal/clerkapi"
+	"github.com/somunaexe/bulwriter/backend/internal/credits"
 	"github.com/somunaexe/bulwriter/backend/internal/crew"
 	"github.com/somunaexe/bulwriter/backend/internal/distribution"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
@@ -50,6 +51,7 @@ type router struct {
 	presskit     *presskit.Store
 	milestones   *milestone.Store
 	distribution *distribution.Store
+	credits      *credits.Store
 	clerk        *clerkapi.Client
 }
 
@@ -72,6 +74,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		presskit:     presskit.NewStore(db),
 		milestones:   milestone.NewStore(db),
 		distribution: distribution.NewStore(db),
+		credits:      credits.NewStore(db),
 		clerk:        clerkapi.NewClient(),
 	}
 
@@ -248,6 +251,13 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/release-links", r.addReleaseLink).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/release-links/{linkId}", r.updateReleaseLink).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/release-links/{linkId}", r.removeReleaseLink).Methods("DELETE")
+
+	// Credits — Phase 4 (Post-Production), "Titles & Credits": cast and
+	// crew are pulled live (same as the press kit), plus a freeform
+	// block for anything else (music licences, location
+	// acknowledgements, funding/sponsor logos).
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/credits", r.getCredits).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/credits", r.setCredits).Methods("PUT")
 
 	// Crew — the below-the-line production team, distinct from
 	// project_members (crew members aren't Bulwriter accounts).
@@ -2192,4 +2202,86 @@ func (r *router) removeReleaseLink(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type creditsCastRow struct {
+	CharacterName string `json:"characterName"`
+	ActorName     string `json:"actorName"`
+}
+
+type creditsCrewRow struct {
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+type creditsResponse struct {
+	Credits *credits.Credits `json:"credits"`
+	Cast    []creditsCastRow `json:"cast"`
+	Crew    []creditsCrewRow `json:"crew"`
+}
+
+func (r *router) getCredits(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	projectID := vars["projectId"]
+	scriptID := vars["scriptId"]
+
+	c, err := r.credits.Get(scriptID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	candidates, err := r.casting.List(scriptID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	cast := make([]creditsCastRow, 0, len(candidates))
+	for _, cand := range candidates {
+		if !cand.IsCast {
+			continue
+		}
+		cast = append(cast, creditsCastRow{CharacterName: cand.CharacterName, ActorName: cand.ActorName})
+	}
+
+	members, err := r.crew.List(projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	crewRows := make([]creditsCrewRow, 0, len(members))
+	for _, m := range members {
+		crewRows = append(crewRows, creditsCrewRow{Name: m.Name, Role: m.Role})
+	}
+
+	writeJSON(w, http.StatusOK, creditsResponse{Credits: c, Cast: cast, Crew: crewRows})
+}
+
+func (r *router) setCredits(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		AdditionalCredits string `json:"additionalCredits"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+
+	c, err := r.credits.Set(vars["scriptId"], body.AdditionalCredits)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
 }
