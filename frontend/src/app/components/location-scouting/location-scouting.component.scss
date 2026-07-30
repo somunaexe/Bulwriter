@@ -41,12 +41,54 @@
   }
 }
 
-.scouting-photo {
-  width: 72px;
-  height: 72px;
+// Fixed-width column so the photo/file-input/filename stack stays a
+// consistent size beside the fields, whether or not a candidate has a
+// photo yet.
+.scouting-visual {
+  position: relative;
+  width: 96px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+}
+
+.scouting-photo {
+  width: 96px;
+  height: 72px;
   border-radius: var(--radius-sm);
   object-fit: cover;
+}
+
+.scouting-photo-filename {
+  width: 100%;
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scouting-photo-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover { color: var(--delete-fg); border-color: var(--delete-fg); }
 }
 
 .scouting-candidate-fields {
@@ -111,6 +153,16 @@
 }
 
 .scouting-add {
+  @include surface-panel(var(--radius-md));
+  display: flex;
+  gap: .75rem;
+  padding: .75rem;
+  border-color: var(--border);
+}
+
+.scouting-add-fields {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: .4rem;
@@ -120,19 +172,21 @@
 }
 
 .scouting-file-input {
-  flex: 1 1 160px;
-  font-size: 12px;
+  width: 100%;
+  font-size: 11px;
   color: var(--muted);
 
   &::file-selector-button,
   &::-webkit-file-upload-button {
+    display: block;
+    width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: .35rem .7rem;
-    margin-right: .6rem;
+    padding: .35rem .5rem;
+    margin-bottom: .3rem;
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text);
     cursor: pointer;
     transition: border-color .15s, color .15s;
@@ -146,6 +200,7 @@
 }
 
 @media (max-width: 768px) {
-  .scouting-candidate { flex-direction: column; }
+  .scouting-candidate, .scouting-add { flex-direction: column; }
+  .scouting-visual { width: 100%; }
   .scouting-photo { width: 100%; height: 140px; }
 }

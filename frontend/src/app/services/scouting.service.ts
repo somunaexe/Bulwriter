@@ -11,6 +11,7 @@ export interface ScoutCandidate {
   address: string;
   notes: string;
   photo: string;
+  photoFilename: string;
   isSelected: boolean;
   position: number;
   createdAt: string;
@@ -28,17 +29,17 @@ export class ScoutingService {
     );
   }
 
-  add(projectId: string, scriptId: string, locationKey: string, name: string, address: string, notes: string, photo: string): Observable<ScoutCandidate> {
+  add(projectId: string, scriptId: string, locationKey: string, name: string, address: string, notes: string, photo: string, photoFilename: string): Observable<ScoutCandidate> {
     return this.http.post<ScoutCandidate>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/scouting`,
-      { locationKey, name, address, notes, photo }
+      { locationKey, name, address, notes, photo, photoFilename }
     );
   }
 
-  update(projectId: string, scriptId: string, candidateId: string, name: string, address: string, notes: string, photo: string): Observable<ScoutCandidate> {
+  update(projectId: string, scriptId: string, candidateId: string, name: string, address: string, notes: string, photo: string, photoFilename: string): Observable<ScoutCandidate> {
     return this.http.put<ScoutCandidate>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/scouting/${candidateId}`,
-      { name, address, notes, photo }
+      { name, address, notes, photo, photoFilename }
     );
   }
 

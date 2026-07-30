@@ -2,7 +2,7 @@ import { Component, EventEmitter, HostListener, Input, OnChanges, Output, Simple
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SyncService } from '../../services/sync.service';
-import { ShotListService, Shot } from '../../services/shot-list.service';
+import { ShotListService, Shot, ShotFields } from '../../services/shot-list.service';
 import { computeSceneList } from '../../editor/scene-breakdown';
 import { fileToBackgroundDataUri } from '../../editor/background-image';
 
@@ -10,9 +10,31 @@ interface SceneGroup {
   sceneKey: string;
   heading: string;
   shots: Shot[];
-  newShotType: string;
+  newShotSize: string;
+  newCameraAngle: string;
+  newCameraMovement: string;
   newDescription: string;
   newImage: string;
+  newImageFilename: string;
+}
+
+function emptyGroup(sceneKey: string, heading: string, shots: Shot[]): SceneGroup {
+  return {
+    sceneKey, heading, shots,
+    newShotSize: '', newCameraAngle: '', newCameraMovement: '',
+    newDescription: '', newImage: '', newImageFilename: '',
+  };
+}
+
+function fields(shot: Pick<Shot, 'shotSize' | 'cameraAngle' | 'cameraMovement' | 'description' | 'image' | 'imageFilename'>): ShotFields {
+  return {
+    shotSize: shot.shotSize,
+    cameraAngle: shot.cameraAngle,
+    cameraMovement: shot.cameraMovement,
+    description: shot.description,
+    image: shot.image,
+    imageFilename: shot.imageFilename,
+  };
 }
 
 @Component({
@@ -60,31 +82,20 @@ export class ShotListComponent implements OnChanges {
           byKey.get(sh.sceneKey)!.push(sh);
         }
 
-        this.groups = scenes.map(scene => ({
-          sceneKey: scene.sceneKey,
-          heading: scene.heading,
-          shots: byKey.get(scene.sceneKey) ?? [],
-          newShotType: '',
-          newDescription: '',
-          newImage: '',
-        }));
+        this.groups = scenes.map(scene => emptyGroup(scene.sceneKey, scene.heading, byKey.get(scene.sceneKey) ?? []));
 
         // A scene already tagged with shots but no longer in the live
         // script (heading changed/removed) still shows — same reasoning
         // as breakdown/casting: no reason to hide prep work already done.
         const sceneKeys = new Set(scenes.map(s => s.sceneKey));
         for (const [key, list] of byKey) {
-          if (!sceneKeys.has(key)) {
-            this.groups.push({ sceneKey: key, heading: key, shots: list, newShotType: '', newDescription: '', newImage: '' });
-          }
+          if (!sceneKeys.has(key)) this.groups.push(emptyGroup(key, key, list));
         }
 
         this.loading = false;
       },
       error: () => {
-        this.groups = scenes.map(scene => ({
-          sceneKey: scene.sceneKey, heading: scene.heading, shots: [], newShotType: '', newDescription: '', newImage: '',
-        }));
+        this.groups = scenes.map(scene => emptyGroup(scene.sceneKey, scene.heading, []));
         this.loading = false;
       },
     });
@@ -92,7 +103,7 @@ export class ShotListComponent implements OnChanges {
 
   save(shot: Shot): void {
     if (!this.canEdit) return;
-    this.shotListService.update(this.projectId, this.scriptId, shot.id, shot.shotType, shot.description, shot.image).subscribe();
+    this.shotListService.update(this.projectId, this.scriptId, shot.id, fields(shot)).subscribe();
   }
 
   remove(group: SceneGroup, shot: Shot): void {
@@ -101,25 +112,59 @@ export class ShotListComponent implements OnChanges {
     this.shotListService.remove(this.projectId, this.scriptId, shot.id).subscribe();
   }
 
-  async onImageSelected(group: SceneGroup, event: Event): Promise<void> {
+  // Clears a shot's storyboard image without needing a replacement file
+  // ready — persists immediately, same as any other field edit.
+  removeImage(shot: Shot): void {
+    if (!this.canEdit) return;
+    shot.image = '';
+    shot.imageFilename = '';
+    this.save(shot);
+  }
+
+  removeNewImage(group: SceneGroup): void {
+    group.newImage = '';
+    group.newImageFilename = '';
+  }
+
+  async onImageSelected(shot: Shot, event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      shot.image = await fileToBackgroundDataUri(file);
+      shot.imageFilename = file.name;
+      this.save(shot);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not process that image.');
+    }
+  }
+
+  async onNewImageSelected(group: SceneGroup, event: Event): Promise<void> {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     try {
       group.newImage = await fileToBackgroundDataUri(file);
+      group.newImageFilename = file.name;
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Could not process that image.');
     }
   }
 
   addShot(group: SceneGroup): void {
-    this.shotListService.add(
-      this.projectId, this.scriptId, group.sceneKey,
-      group.newShotType.trim(), group.newDescription.trim(), group.newImage,
-    ).subscribe(shot => {
+    this.shotListService.add(this.projectId, this.scriptId, group.sceneKey, {
+      shotSize: group.newShotSize.trim(),
+      cameraAngle: group.newCameraAngle.trim(),
+      cameraMovement: group.newCameraMovement.trim(),
+      description: group.newDescription.trim(),
+      image: group.newImage,
+      imageFilename: group.newImageFilename,
+    }).subscribe(shot => {
       group.shots.push(shot);
-      group.newShotType = '';
+      group.newShotSize = '';
+      group.newCameraAngle = '';
+      group.newCameraMovement = '';
       group.newDescription = '';
       group.newImage = '';
+      group.newImageFilename = '';
     });
   }
 }

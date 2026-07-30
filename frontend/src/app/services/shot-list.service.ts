@@ -7,11 +7,23 @@ export interface Shot {
   id: string;
   scriptId: string;
   sceneKey: string;
-  shotType: string;
+  shotSize: string;
+  cameraAngle: string;
+  cameraMovement: string;
   description: string;
   image: string;
+  imageFilename: string;
   position: number;
   createdAt: string;
+}
+
+export interface ShotFields {
+  shotSize: string;
+  cameraAngle: string;
+  cameraMovement: string;
+  description: string;
+  image: string;
+  imageFilename: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,17 +36,17 @@ export class ShotListService {
     return this.http.get<Shot[]>(`${this.BASE}/projects/${projectId}/scripts/${scriptId}/shots`);
   }
 
-  add(projectId: string, scriptId: string, sceneKey: string, shotType: string, description: string, image: string): Observable<Shot> {
+  add(projectId: string, scriptId: string, sceneKey: string, fields: ShotFields): Observable<Shot> {
     return this.http.post<Shot>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/shots`,
-      { sceneKey, shotType, description, image }
+      { sceneKey, ...fields }
     );
   }
 
-  update(projectId: string, scriptId: string, shotId: string, shotType: string, description: string, image: string): Observable<Shot> {
+  update(projectId: string, scriptId: string, shotId: string, fields: ShotFields): Observable<Shot> {
     return this.http.put<Shot>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/shots/${shotId}`,
-      { shotType, description, image }
+      fields
     );
   }
 

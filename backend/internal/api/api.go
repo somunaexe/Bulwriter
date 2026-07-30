@@ -1143,11 +1143,12 @@ func (r *router) listCrew(w http.ResponseWriter, req *http.Request) {
 }
 
 type scoutCandidateBody struct {
-	LocationKey string `json:"locationKey"`
-	Name        string `json:"name"`
-	Address     string `json:"address"`
-	Notes       string `json:"notes"`
-	Photo       string `json:"photo"`
+	LocationKey   string `json:"locationKey"`
+	Name          string `json:"name"`
+	Address       string `json:"address"`
+	Notes         string `json:"notes"`
+	Photo         string `json:"photo"`
+	PhotoFilename string `json:"photoFilename"`
 }
 
 func (r *router) addScoutCandidate(w http.ResponseWriter, req *http.Request) {
@@ -1170,7 +1171,7 @@ func (r *router) addScoutCandidate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	c, err := r.scouting.Add(vars["scriptId"], body.LocationKey, body.Name, body.Address, body.Notes, body.Photo)
+	c, err := r.scouting.Add(vars["scriptId"], body.LocationKey, body.Name, body.Address, body.Notes, body.Photo, body.PhotoFilename)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1230,7 +1231,7 @@ func (r *router) updateScoutCandidate(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	c, err := r.scouting.Update(vars["scriptId"], vars["candidateId"], body.Name, body.Address, body.Notes, body.Photo)
+	c, err := r.scouting.Update(vars["scriptId"], vars["candidateId"], body.Name, body.Address, body.Notes, body.Photo, body.PhotoFilename)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1324,10 +1325,13 @@ func (r *router) listShots(w http.ResponseWriter, req *http.Request) {
 }
 
 type shotBody struct {
-	SceneKey    string `json:"sceneKey"`
-	ShotType    string `json:"shotType"`
-	Description string `json:"description"`
-	Image       string `json:"image"`
+	SceneKey       string `json:"sceneKey"`
+	ShotSize       string `json:"shotSize"`
+	CameraAngle    string `json:"cameraAngle"`
+	CameraMovement string `json:"cameraMovement"`
+	Description    string `json:"description"`
+	Image          string `json:"image"`
+	ImageFilename  string `json:"imageFilename"`
 }
 
 func (r *router) addShot(w http.ResponseWriter, req *http.Request) {
@@ -1350,7 +1354,7 @@ func (r *router) addShot(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	sh, err := r.shots.Add(vars["scriptId"], body.SceneKey, body.ShotType, body.Description, body.Image)
+	sh, err := r.shots.Add(vars["scriptId"], body.SceneKey, body.ShotSize, body.CameraAngle, body.CameraMovement, body.Description, body.Image, body.ImageFilename)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1378,7 +1382,7 @@ func (r *router) updateShot(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	sh, err := r.shots.Update(vars["scriptId"], vars["shotId"], body.ShotType, body.Description, body.Image)
+	sh, err := r.shots.Update(vars["scriptId"], vars["shotId"], body.ShotSize, body.CameraAngle, body.CameraMovement, body.Description, body.Image, body.ImageFilename)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

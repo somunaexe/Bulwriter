@@ -13,16 +13,17 @@ import (
 // frontend also uses to group the stripboard's shoot days). Several
 // candidates can share a location_key; at most one is IsSelected.
 type Candidate struct {
-	ID          string    `json:"id"`
-	ScriptID    string    `json:"scriptId"`
-	LocationKey string    `json:"locationKey"`
-	Name        string    `json:"name"`
-	Address     string    `json:"address"`
-	Notes       string    `json:"notes"`
-	Photo       string    `json:"photo"`
-	IsSelected  bool      `json:"isSelected"`
-	Position    int       `json:"position"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	ScriptID      string    `json:"scriptId"`
+	LocationKey   string    `json:"locationKey"`
+	Name          string    `json:"name"`
+	Address       string    `json:"address"`
+	Notes         string    `json:"notes"`
+	Photo         string    `json:"photo"`
+	PhotoFilename string    `json:"photoFilename"`
+	IsSelected    bool      `json:"isSelected"`
+	Position      int       `json:"position"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type Store struct {
@@ -35,7 +36,7 @@ func NewStore(db *sql.DB) *Store {
 
 func (s *Store) List(scriptID string) ([]*Candidate, error) {
 	rows, err := s.db.Query(
-		`SELECT id, script_id, location_key, name, address, notes, photo, is_selected, position, created_at
+		`SELECT id, script_id, location_key, name, address, notes, photo, photo_filename, is_selected, position, created_at
 		 FROM scout_candidates WHERE script_id = $1
 		 ORDER BY location_key ASC, position ASC`, scriptID,
 	)
@@ -47,7 +48,7 @@ func (s *Store) List(scriptID string) ([]*Candidate, error) {
 	var out []*Candidate
 	for rows.Next() {
 		c := &Candidate{}
-		if err := rows.Scan(&c.ID, &c.ScriptID, &c.LocationKey, &c.Name, &c.Address, &c.Notes, &c.Photo, &c.IsSelected, &c.Position, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.ScriptID, &c.LocationKey, &c.Name, &c.Address, &c.Notes, &c.Photo, &c.PhotoFilename, &c.IsSelected, &c.Position, &c.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning scout candidate: %w", err)
 		}
 		out = append(out, c)
@@ -55,7 +56,7 @@ func (s *Store) List(scriptID string) ([]*Candidate, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) Add(scriptID, locationKey, name, address, notes, photo string) (*Candidate, error) {
+func (s *Store) Add(scriptID, locationKey, name, address, notes, photo, photoFilename string) (*Candidate, error) {
 	var nextPosition int
 	if err := s.db.QueryRow(
 		`SELECT COALESCE(MAX(position) + 1, 0) FROM scout_candidates WHERE script_id = $1 AND location_key = $2`,
@@ -65,20 +66,21 @@ func (s *Store) Add(scriptID, locationKey, name, address, notes, photo string) (
 	}
 
 	c := &Candidate{
-		ID:          uuid.New().String(),
-		ScriptID:    scriptID,
-		LocationKey: locationKey,
-		Name:        name,
-		Address:     address,
-		Notes:       notes,
-		Photo:       photo,
-		Position:    nextPosition,
-		CreatedAt:   time.Now(),
+		ID:            uuid.New().String(),
+		ScriptID:      scriptID,
+		LocationKey:   locationKey,
+		Name:          name,
+		Address:       address,
+		Notes:         notes,
+		Photo:         photo,
+		PhotoFilename: photoFilename,
+		Position:      nextPosition,
+		CreatedAt:     time.Now(),
 	}
 	_, err := s.db.Exec(
-		`INSERT INTO scout_candidates (id, script_id, location_key, name, address, notes, photo, is_selected, position, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9)`,
-		c.ID, c.ScriptID, c.LocationKey, c.Name, c.Address, c.Notes, c.Photo, c.Position, c.CreatedAt,
+		`INSERT INTO scout_candidates (id, script_id, location_key, name, address, notes, photo, photo_filename, is_selected, position, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10)`,
+		c.ID, c.ScriptID, c.LocationKey, c.Name, c.Address, c.Notes, c.Photo, c.PhotoFilename, c.Position, c.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("inserting scout candidate: %w", err)
@@ -86,16 +88,16 @@ func (s *Store) Add(scriptID, locationKey, name, address, notes, photo string) (
 	return c, nil
 }
 
-func (s *Store) Update(scriptID, id, name, address, notes, photo string) (*Candidate, error) {
+func (s *Store) Update(scriptID, id, name, address, notes, photo, photoFilename string) (*Candidate, error) {
 	_, err := s.db.Exec(
-		`UPDATE scout_candidates SET name = $1, address = $2, notes = $3, photo = $4
-		 WHERE id = $5 AND script_id = $6`,
-		name, address, notes, photo, id, scriptID,
+		`UPDATE scout_candidates SET name = $1, address = $2, notes = $3, photo = $4, photo_filename = $5
+		 WHERE id = $6 AND script_id = $7`,
+		name, address, notes, photo, photoFilename, id, scriptID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("updating scout candidate: %w", err)
 	}
-	return &Candidate{ID: id, ScriptID: scriptID, Name: name, Address: address, Notes: notes, Photo: photo}, nil
+	return &Candidate{ID: id, ScriptID: scriptID, Name: name, Address: address, Notes: notes, Photo: photo, PhotoFilename: photoFilename}, nil
 }
 
 // Select marks one candidate as the chosen location for its location_key,
