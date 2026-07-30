@@ -1,0 +1,41 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Shot list &amp; storyboards</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading shots…</div>
+
+  <div class="shot-body" *ngIf="!loading">
+    <p class="empty-msg" *ngIf="!groups.length">No scene headings yet.</p>
+
+    <div class="shot-scene" *ngFor="let group of groups">
+      <div class="shot-scene-header">
+        <span class="shot-scene-heading">{{ group.heading || 'Untitled scene' }}</span>
+      </div>
+
+      <div class="shot-list" *ngIf="group.shots.length">
+        <div class="shot-item" *ngFor="let shot of group.shots; let i = index">
+          <img *ngIf="shot.image" class="shot-image" [src]="shot.image" [alt]="'Storyboard for shot ' + (i + 1)" />
+          <div class="shot-fields">
+            <div class="shot-row">
+              <span class="shot-number">Shot {{ i + 1 }}</span>
+              <input class="input-sm" placeholder="Shot type (e.g. Wide, CU, OTS)…" [(ngModel)]="shot.shotType" (blur)="save(shot)" [disabled]="!canEdit" />
+              <button *ngIf="canEdit" class="shot-remove-btn" (click)="remove(group, shot)" aria-label="Remove shot">×</button>
+            </div>
+            <textarea class="shot-description" placeholder="Description…" [(ngModel)]="shot.description" (blur)="save(shot)" [readonly]="!canEdit"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="shot-add" *ngIf="canEdit">
+        <input class="input-sm" placeholder="Shot type (e.g. Wide, CU, OTS)…" [(ngModel)]="group.newShotType" (keydown.enter)="addShot(group)" />
+        <textarea class="shot-description" placeholder="Description…" [(ngModel)]="group.newDescription"></textarea>
+        <input type="file" accept="image/*" class="shot-file-input" (change)="onImageSelected(group, $event)" />
+        <button class="btn-ghost" (click)="addShot(group)">+ Add shot</button>
+      </div>
+    </div>
+  </div>
+</div>

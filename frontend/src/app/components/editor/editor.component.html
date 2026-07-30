@@ -131,6 +131,7 @@
             <button (click)="openScouting()">Location scouting</button>
             <button (click)="openCasting()">Casting</button>
             <button (click)="openBudget()">Budget estimate</button>
+            <button (click)="openShotList()">Shot list &amp; storyboards</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Help">
@@ -200,6 +201,16 @@
       [canEdit]="canEdit"
       (close)="showBudget = false">
     </app-budget-estimator>
+
+    <div class="breakdown-backdrop" *ngIf="showShotList" (click)="showShotList = false"></div>
+
+    <app-shot-list
+      *ngIf="showShotList"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showShotList = false">
+    </app-shot-list>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">

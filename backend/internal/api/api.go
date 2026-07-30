@@ -21,6 +21,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/schedule"
 	"github.com/somunaexe/bulwriter/backend/internal/scouting"
 	"github.com/somunaexe/bulwriter/backend/internal/script"
+	"github.com/somunaexe/bulwriter/backend/internal/shotlist"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 	"github.com/somunaexe/bulwriter/backend/internal/story"
 	"github.com/somunaexe/bulwriter/backend/internal/membership"
@@ -40,6 +41,7 @@ type router struct {
 	casting   *casting.Store
 	budget    *budget.Store
 	story     *story.Store
+	shots     *shotlist.Store
 	clerk     *clerkapi.Client
 }
 
@@ -57,6 +59,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		casting:   casting.NewStore(db),
 		budget:    budget.NewStore(db),
 		story:     story.NewStore(db),
+		shots:     shotlist.NewStore(db),
 		clerk:     clerkapi.NewClient(),
 	}
 
@@ -179,6 +182,16 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}", r.updateScoutCandidate).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}/select", r.selectScoutCandidate).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/scouting/{candidateId}", r.removeScoutCandidate).Methods("DELETE")
+
+	// Shot list & storyboards — the director's shots for each scene, one
+	// optional storyboard frame image per shot. Scenes themselves are
+	// derived live from the script text on the frontend, same as
+	// breakdown/casting/scouting.
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots", r.listShots).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots", r.addShot).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots/{shotId}", r.updateShot).Methods("PUT")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/shots/{shotId}", r.removeShot).Methods("DELETE")
+
 	// Crew — the below-the-line production team, distinct from
 	// project_members (crew members aren't Bulwriter accounts).
 	api.HandleFunc("/projects/{projectId}/crew", r.listCrew).Methods("GET")
@@ -1291,6 +1304,102 @@ func (r *router) removeScoutCandidate(w http.ResponseWriter, req *http.Request) 
 	}
 
 	if err := r.scouting.Remove(vars["scriptId"], vars["candidateId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) listShots(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	shots, err := r.shots.List(vars["scriptId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if shots == nil {
+		shots = []*shotlist.Shot{}
+	}
+	writeJSON(w, http.StatusOK, shots)
+}
+
+type shotBody struct {
+	SceneKey    string `json:"sceneKey"`
+	ShotType    string `json:"shotType"`
+	Description string `json:"description"`
+	Image       string `json:"image"`
+}
+
+func (r *router) addShot(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body shotBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.SceneKey == "" {
+		writeErr(w, http.StatusBadRequest, "sceneKey is required, and the payload must fit within the size limit")
+		return
+	}
+
+	sh, err := r.shots.Add(vars["scriptId"], body.SceneKey, body.ShotType, body.Description, body.Image)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, sh)
+}
+
+func (r *router) updateShot(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxBackgroundImageBytes)
+	var body shotBody
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid or too large payload")
+		return
+	}
+
+	sh, err := r.shots.Update(vars["scriptId"], vars["shotId"], body.ShotType, body.Description, body.Image)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, sh)
+}
+
+func (r *router) removeShot(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.shots.Remove(vars["scriptId"], vars["shotId"]); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

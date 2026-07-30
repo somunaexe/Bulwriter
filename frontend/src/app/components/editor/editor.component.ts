@@ -19,6 +19,7 @@ import { LocationScoutingComponent } from '../location-scouting/location-scoutin
 import { CastingBoardComponent } from '../casting-board/casting-board.component';
 import { StripboardComponent } from '../stripboard/stripboard.component';
 import { BudgetEstimatorComponent } from '../budget-estimator/budget-estimator.component';
+import { ShotListComponent } from '../shot-list/shot-list.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -56,7 +57,7 @@ import { importPdfToText } from '../../editor/pdf-import';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -761,6 +762,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   showScouting = false;
   showCasting = false;
   showBudget = false;
+  showShotList = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -777,9 +779,13 @@ export class EditorComponent implements OnInit, OnDestroy {
   openCasting(): void {
     this.showCasting = true;
   }
-  
+
   openBudget(): void {
     this.showBudget = true;
+  }
+
+  openShotList(): void {
+    this.showShotList = true;
   }
 
   // ── Revisions menu ───────────────────────────────────────────────
