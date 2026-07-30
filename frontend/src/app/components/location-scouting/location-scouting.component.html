@@ -16,7 +16,17 @@
 
       <div class="scouting-candidates">
         <div class="scouting-candidate" *ngFor="let c of group.candidates" [class.selected]="c.isSelected">
-          <img *ngIf="c.photo" class="scouting-photo" [src]="c.photo" [alt]="c.name" />
+          <div class="scouting-visual">
+            <ng-container *ngIf="c.photo; else candidateNoPhoto">
+              <img class="scouting-photo" [src]="c.photo" [alt]="c.name" />
+              <span class="scouting-photo-filename" *ngIf="c.photoFilename" [title]="c.photoFilename">{{ c.photoFilename }}</span>
+              <button *ngIf="canEdit" class="scouting-photo-remove" (click)="removePhoto(c)" aria-label="Remove photo">×</button>
+            </ng-container>
+            <ng-template #candidateNoPhoto>
+              <input *ngIf="canEdit" type="file" accept="image/*" class="scouting-file-input" (change)="onPhotoSelected(c, $event)" />
+            </ng-template>
+          </div>
+
           <div class="scouting-candidate-fields">
             <div class="scouting-candidate-row">
               <input class="input-sm" placeholder="Name…" [(ngModel)]="c.name" (blur)="save(c)" [disabled]="!canEdit" />
@@ -31,10 +41,22 @@
       </div>
 
       <div class="scouting-add" *ngIf="canEdit">
-        <input class="input-sm" placeholder="Candidate name…" [(ngModel)]="group.newName" (keydown.enter)="addCandidate(group)" />
-        <input class="input-sm" placeholder="Address…" [(ngModel)]="group.newAddress" (keydown.enter)="addCandidate(group)" />
-        <input type="file" accept="image/*" class="scouting-file-input" (change)="onPhotoSelected(group, $event)" />
-        <button class="btn-ghost" (click)="addCandidate(group)" [disabled]="!group.newName.trim()">+ Add candidate</button>
+        <div class="scouting-visual">
+          <ng-container *ngIf="group.newPhoto; else addNoPhoto">
+            <img class="scouting-photo" [src]="group.newPhoto" alt="New candidate photo preview" />
+            <span class="scouting-photo-filename" *ngIf="group.newPhotoFilename" [title]="group.newPhotoFilename">{{ group.newPhotoFilename }}</span>
+            <button class="scouting-photo-remove" (click)="removeNewPhoto(group)" aria-label="Remove photo">×</button>
+          </ng-container>
+          <ng-template #addNoPhoto>
+            <input type="file" accept="image/*" class="scouting-file-input" (change)="onNewPhotoSelected(group, $event)" />
+          </ng-template>
+        </div>
+
+        <div class="scouting-add-fields">
+          <input class="input-sm" placeholder="Candidate name…" [(ngModel)]="group.newName" (keydown.enter)="addCandidate(group)" />
+          <input class="input-sm" placeholder="Address…" [(ngModel)]="group.newAddress" (keydown.enter)="addCandidate(group)" />
+          <button class="btn-ghost" (click)="addCandidate(group)" [disabled]="!group.newName.trim()">+ Add candidate</button>
+        </div>
       </div>
     </div>
   </div>

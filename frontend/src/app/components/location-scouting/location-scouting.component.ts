@@ -13,6 +13,7 @@ interface LocationGroup {
   newName: string;
   newAddress: string;
   newPhoto: string;
+  newPhotoFilename: string;
 }
 
 @Component({
@@ -77,11 +78,14 @@ export class LocationScoutingComponent implements OnChanges {
           newName: '',
           newAddress: '',
           newPhoto: '',
+          newPhotoFilename: '',
         }));
         this.loading = false;
       },
       error: () => {
-        this.groups = locationKeys.map(key => ({ locationKey: key, candidates: [], newName: '', newAddress: '', newPhoto: '' }));
+        this.groups = locationKeys.map(key => ({
+          locationKey: key, candidates: [], newName: '', newAddress: '', newPhoto: '', newPhotoFilename: '',
+        }));
         this.loading = false;
       },
     });
@@ -91,7 +95,7 @@ export class LocationScoutingComponent implements OnChanges {
     if (!this.canEdit) return;
     this.scoutingService.update(
       this.projectId, this.scriptId, candidate.id,
-      candidate.name, candidate.address, candidate.notes, candidate.photo,
+      candidate.name, candidate.address, candidate.notes, candidate.photo, candidate.photoFilename,
     ).subscribe();
   }
 
@@ -107,11 +111,38 @@ export class LocationScoutingComponent implements OnChanges {
     this.scoutingService.remove(this.projectId, this.scriptId, candidate.id).subscribe();
   }
 
-  async onPhotoSelected(group: LocationGroup, event: Event): Promise<void> {
+  // Clears a candidate's photo without needing a replacement file ready
+  // — persists immediately, same as any other field edit.
+  removePhoto(candidate: ScoutCandidate): void {
+    if (!this.canEdit) return;
+    candidate.photo = '';
+    candidate.photoFilename = '';
+    this.save(candidate);
+  }
+
+  removeNewPhoto(group: LocationGroup): void {
+    group.newPhoto = '';
+    group.newPhotoFilename = '';
+  }
+
+  async onPhotoSelected(candidate: ScoutCandidate, event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      candidate.photo = await fileToBackgroundDataUri(file);
+      candidate.photoFilename = file.name;
+      this.save(candidate);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not process that image.');
+    }
+  }
+
+  async onNewPhotoSelected(group: LocationGroup, event: Event): Promise<void> {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     try {
       group.newPhoto = await fileToBackgroundDataUri(file);
+      group.newPhotoFilename = file.name;
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Could not process that image.');
     }
@@ -123,12 +154,13 @@ export class LocationScoutingComponent implements OnChanges {
 
     this.scoutingService.add(
       this.projectId, this.scriptId, group.locationKey,
-      name, group.newAddress.trim(), '', group.newPhoto,
+      name, group.newAddress.trim(), '', group.newPhoto, group.newPhotoFilename,
     ).subscribe(candidate => {
       group.candidates.push(candidate);
       group.newName = '';
       group.newAddress = '';
       group.newPhoto = '';
+      group.newPhotoFilename = '';
     });
   }
 }

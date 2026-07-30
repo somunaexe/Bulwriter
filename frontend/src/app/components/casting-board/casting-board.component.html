@@ -2,7 +2,7 @@
   <header class="breakdown-header">
     <span>Casting</span>
     <div class="breakdown-header-actions">
-      <button class="btn-ghost" (click)="exportCsv()" [disabled]="!rows.length">Export CSV</button>
+      <button class="btn-ghost" (click)="exportCsv()" [disabled]="!groups.length">Export CSV</button>
       <button class="btn-icon" (click)="close.emit()">✕</button>
     </div>
   </header>
@@ -10,33 +10,38 @@
   <div *ngIf="loading" class="loading">Loading casting…</div>
 
   <div class="casting-body" *ngIf="!loading">
-    <p class="empty-msg" *ngIf="!rows.length">No characters with dialogue yet.</p>
+    <p class="empty-msg" *ngIf="!groups.length">No characters with dialogue yet.</p>
 
-    <div class="casting-role" *ngFor="let row of rows">
+    <div class="casting-role" *ngFor="let group of groups">
       <div class="casting-role-header">
-        <span class="casting-role-name">{{ row.characterName }}</span>
-        <span class="casting-role-scenes">{{ row.sceneCount }} scene{{ row.sceneCount === 1 ? '' : 's' }}</span>
-        <select class="casting-status input-sm" [class]="'casting-status-' + row.status"
-                [(ngModel)]="row.status" (change)="save(row)" [disabled]="!canEdit">
-          <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
-        </select>
+        <span class="casting-role-name">{{ group.characterName }}</span>
+        <span class="casting-role-scenes">{{ group.sceneCount }} scene{{ group.sceneCount === 1 ? '' : 's' }}</span>
       </div>
 
-      <div class="casting-role-fields">
-        <label class="casting-field">
-          <span class="casting-field-label">Actor</span>
-          <input class="input-sm" placeholder="Actor name…" [(ngModel)]="row.actorName" (blur)="save(row)" [disabled]="!canEdit" />
-        </label>
-        <label class="casting-field">
-          <span class="casting-field-label">Contact</span>
-          <input class="input-sm" placeholder="Email or phone…" [(ngModel)]="row.contact" (blur)="save(row)" [disabled]="!canEdit" />
-        </label>
+      <div class="casting-candidates">
+        <div class="casting-candidate" *ngFor="let c of group.candidates" [class.cast]="c.isCast">
+          <div class="casting-candidate-fields">
+            <div class="casting-candidate-row">
+              <input class="input-sm" placeholder="Actor name…" [(ngModel)]="c.actorName" (blur)="save(c)" [disabled]="!canEdit" />
+              <select class="casting-status input-sm" [class]="'casting-status-' + c.status"
+                      [(ngModel)]="c.status" (change)="save(c)" [disabled]="!canEdit">
+                <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+              </select>
+              <span class="casting-cast-badge" *ngIf="c.isCast">Cast</span>
+              <button *ngIf="canEdit && !c.isCast" class="btn-ghost casting-cast-btn" (click)="cast(group, c)">Cast</button>
+              <button *ngIf="canEdit" class="casting-remove-btn" (click)="remove(group, c)" aria-label="Remove candidate">×</button>
+            </div>
+            <input class="input-sm" placeholder="Contact (email or phone)…" [(ngModel)]="c.contact" (blur)="save(c)" [disabled]="!canEdit" />
+            <textarea class="casting-notes" placeholder="Audition notes, availability…" [(ngModel)]="c.notes" (blur)="save(c)" [readonly]="!canEdit"></textarea>
+          </div>
+        </div>
       </div>
 
-      <label class="casting-field">
-        <span class="casting-field-label">Notes</span>
-        <textarea class="casting-notes" placeholder="Audition notes, availability…" [(ngModel)]="row.notes" (blur)="save(row)" [readonly]="!canEdit"></textarea>
-      </label>
+      <div class="casting-add" *ngIf="canEdit">
+        <input class="input-sm" placeholder="Actor name…" [(ngModel)]="group.newActorName" (keydown.enter)="addCandidate(group)" />
+        <input class="input-sm" placeholder="Contact…" [(ngModel)]="group.newContact" (keydown.enter)="addCandidate(group)" />
+        <button class="btn-ghost" (click)="addCandidate(group)" [disabled]="!group.newActorName.trim()">+ Add candidate</button>
+      </div>
     </div>
   </div>
 </div>

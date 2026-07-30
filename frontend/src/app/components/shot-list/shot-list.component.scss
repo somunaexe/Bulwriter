@@ -35,7 +35,8 @@
   margin-bottom: .6rem;
 }
 
-.shot-item {
+.shot-item,
+.shot-add {
   @include surface-panel(var(--radius-md));
   display: flex;
   gap: .75rem;
@@ -43,12 +44,54 @@
   border-color: var(--border);
 }
 
-.shot-image {
-  width: 96px;
-  height: 72px;
+// Fixed-width column so the image/file-input/filename stack stays a
+// consistent size beside the fields, whether or not a shot has an
+// image yet.
+.shot-visual {
+  position: relative;
+  width: 110px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+}
+
+.shot-image {
+  width: 110px;
+  height: 78px;
   border-radius: var(--radius-sm);
   object-fit: cover;
+}
+
+.shot-image-filename {
+  width: 100%;
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shot-image-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover { color: var(--delete-fg); border-color: var(--delete-fg); }
 }
 
 .shot-fields {
@@ -62,9 +105,7 @@
 .shot-row {
   display: flex;
   align-items: center;
-  gap: .4rem;
-
-  .input-sm { flex: 1; min-width: 0; }
+  justify-content: space-between;
 }
 
 .shot-number {
@@ -89,6 +130,14 @@
   &:hover { color: var(--delete-fg); }
 }
 
+.shot-type-fields {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+
+  .input-sm { flex: 1 1 140px; min-width: 0; }
+}
+
 .shot-description {
   width: 100%;
   min-height: 40px;
@@ -106,30 +155,26 @@
   &:read-only { color: var(--muted); cursor: default; }
 }
 
-.shot-add {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  flex-wrap: wrap;
-
-  .input-sm { flex: 1 1 140px; min-width: 0; }
-  .shot-description { flex: 1 1 140px; min-height: unset; }
+.shot-add-btn {
+  align-self: flex-end;
 }
 
 .shot-file-input {
-  flex: 1 1 160px;
-  font-size: 12px;
+  width: 100%;
+  font-size: 11px;
   color: var(--muted);
 
   &::file-selector-button,
   &::-webkit-file-upload-button {
+    display: block;
+    width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: .35rem .7rem;
-    margin-right: .6rem;
+    padding: .35rem .5rem;
+    margin-bottom: .3rem;
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text);
     cursor: pointer;
     transition: border-color .15s, color .15s;
@@ -143,6 +188,7 @@
 }
 
 @media (max-width: 768px) {
-  .shot-item { flex-direction: column; }
+  .shot-item, .shot-add { flex-direction: column; }
+  .shot-visual { width: 100%; }
   .shot-image { width: 100%; height: 140px; }
 }

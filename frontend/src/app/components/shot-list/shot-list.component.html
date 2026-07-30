@@ -18,12 +18,26 @@
 
       <div class="shot-list" *ngIf="group.shots.length">
         <div class="shot-item" *ngFor="let shot of group.shots; let i = index">
-          <img *ngIf="shot.image" class="shot-image" [src]="shot.image" [alt]="'Storyboard for shot ' + (i + 1)" />
+          <div class="shot-visual">
+            <ng-container *ngIf="shot.image; else shotNoImage">
+              <img class="shot-image" [src]="shot.image" [alt]="'Storyboard for shot ' + (i + 1)" />
+              <span class="shot-image-filename" *ngIf="shot.imageFilename" [title]="shot.imageFilename">{{ shot.imageFilename }}</span>
+              <button *ngIf="canEdit" class="shot-image-remove" (click)="removeImage(shot)" aria-label="Remove storyboard image">×</button>
+            </ng-container>
+            <ng-template #shotNoImage>
+              <input *ngIf="canEdit" type="file" accept="image/*" class="shot-file-input" (change)="onImageSelected(shot, $event)" />
+            </ng-template>
+          </div>
+
           <div class="shot-fields">
             <div class="shot-row">
               <span class="shot-number">Shot {{ i + 1 }}</span>
-              <input class="input-sm" placeholder="Shot type (e.g. Wide, CU, OTS)…" [(ngModel)]="shot.shotType" (blur)="save(shot)" [disabled]="!canEdit" />
               <button *ngIf="canEdit" class="shot-remove-btn" (click)="remove(group, shot)" aria-label="Remove shot">×</button>
+            </div>
+            <div class="shot-type-fields">
+              <input class="input-sm" placeholder="Shot size (e.g. Wide, Close-up)…" [(ngModel)]="shot.shotSize" (blur)="save(shot)" [disabled]="!canEdit" />
+              <input class="input-sm" placeholder="Camera angle (e.g. High, Low, Eye level)…" [(ngModel)]="shot.cameraAngle" (blur)="save(shot)" [disabled]="!canEdit" />
+              <input class="input-sm" placeholder="Camera movement (e.g. Pan, Dolly, Static)…" [(ngModel)]="shot.cameraMovement" (blur)="save(shot)" [disabled]="!canEdit" />
             </div>
             <textarea class="shot-description" placeholder="Description…" [(ngModel)]="shot.description" (blur)="save(shot)" [readonly]="!canEdit"></textarea>
           </div>
@@ -31,10 +45,26 @@
       </div>
 
       <div class="shot-add" *ngIf="canEdit">
-        <input class="input-sm" placeholder="Shot type (e.g. Wide, CU, OTS)…" [(ngModel)]="group.newShotType" (keydown.enter)="addShot(group)" />
-        <textarea class="shot-description" placeholder="Description…" [(ngModel)]="group.newDescription"></textarea>
-        <input type="file" accept="image/*" class="shot-file-input" (change)="onImageSelected(group, $event)" />
-        <button class="btn-ghost" (click)="addShot(group)">+ Add shot</button>
+        <div class="shot-visual">
+          <ng-container *ngIf="group.newImage; else addNoImage">
+            <img class="shot-image" [src]="group.newImage" alt="New storyboard preview" />
+            <span class="shot-image-filename" *ngIf="group.newImageFilename" [title]="group.newImageFilename">{{ group.newImageFilename }}</span>
+            <button class="shot-image-remove" (click)="removeNewImage(group)" aria-label="Remove storyboard image">×</button>
+          </ng-container>
+          <ng-template #addNoImage>
+            <input type="file" accept="image/*" class="shot-file-input" (change)="onNewImageSelected(group, $event)" />
+          </ng-template>
+        </div>
+
+        <div class="shot-fields">
+          <div class="shot-type-fields">
+            <input class="input-sm" placeholder="Shot size (e.g. Wide, Close-up)…" [(ngModel)]="group.newShotSize" (keydown.enter)="addShot(group)" />
+            <input class="input-sm" placeholder="Camera angle (e.g. High, Low, Eye level)…" [(ngModel)]="group.newCameraAngle" (keydown.enter)="addShot(group)" />
+            <input class="input-sm" placeholder="Camera movement (e.g. Pan, Dolly, Static)…" [(ngModel)]="group.newCameraMovement" (keydown.enter)="addShot(group)" />
+          </div>
+          <textarea class="shot-description" placeholder="Description…" [(ngModel)]="group.newDescription"></textarea>
+          <button class="btn-ghost shot-add-btn" (click)="addShot(group)">+ Add shot</button>
+        </div>
       </div>
     </div>
   </div>
