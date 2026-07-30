@@ -14,6 +14,7 @@
     <div class="shot-scene" *ngFor="let group of groups">
       <div class="shot-scene-header">
         <span class="shot-scene-heading">{{ group.heading || 'Untitled scene' }}</span>
+        <button *ngIf="canEdit" class="shot-scene-add-btn" (click)="toggleAdd(group)" [class.open]="group.showAdd" aria-label="Add a shot">+</button>
       </div>
 
       <div class="shot-list" *ngIf="group.shots.length">
@@ -44,7 +45,7 @@
         </div>
       </div>
 
-      <div class="shot-add" *ngIf="canEdit">
+      <div class="shot-add" *ngIf="canEdit && group.showAdd">
         <div class="shot-visual">
           <ng-container *ngIf="group.newImage; else addNoImage">
             <img class="shot-image" [src]="group.newImage" alt="New storyboard preview" />
@@ -63,7 +64,7 @@
             <input class="input-sm" placeholder="Movement…" title="Camera movement (e.g. Pan, Dolly, Static)" [(ngModel)]="group.newCameraMovement" (keydown.enter)="addShot(group)" />
           </div>
           <textarea class="shot-description" placeholder="Description…" [(ngModel)]="group.newDescription"></textarea>
-          <button class="btn-ghost shot-add-btn" (click)="addShot(group)">+ Add shot</button>
+          <button class="btn-save shot-add-btn" (click)="addShot(group)">Add shot</button>
         </div>
       </div>
     </div>
