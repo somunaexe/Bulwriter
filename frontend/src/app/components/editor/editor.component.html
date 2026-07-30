@@ -141,6 +141,7 @@
 
           <app-menu-dropdown label="Distribution">
             <button (click)="openPressKit()">Press kit</button>
+            <button (click)="openFestivalTracker()">Festival &amp; release tracker</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Help">
@@ -251,6 +252,16 @@
       [canEdit]="canEdit"
       (close)="showMilestones = false">
     </app-milestone-tracker>
+
+    <div class="breakdown-backdrop" *ngIf="showFestivalTracker" (click)="showFestivalTracker = false"></div>
+
+    <app-festival-tracker
+      *ngIf="showFestivalTracker"
+      [projectId]="projectId"
+      [scriptId]="scriptId"
+      [canEdit]="canEdit"
+      (close)="showFestivalTracker = false">
+    </app-festival-tracker>
 
     <app-modal *ngIf="showShortcuts" title="Keyboard shortcuts" (closed)="showShortcuts = false">
       <ul class="shortcut-list">
