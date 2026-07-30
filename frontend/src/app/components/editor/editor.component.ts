@@ -25,6 +25,8 @@ import { PressKitComponent } from '../press-kit/press-kit.component';
 import { MilestoneTrackerComponent } from '../milestone-tracker/milestone-tracker.component';
 import { FestivalTrackerComponent } from '../festival-tracker/festival-tracker.component';
 import { CreditsComponent } from '../credits/credits.component';
+import { RehearsalTrackerComponent } from '../rehearsal-tracker/rehearsal-tracker.component';
+import { ContinuityNotesComponent } from '../continuity-notes/continuity-notes.component';
 import {
   screenplaySchema,
   ScreenplayElement,
@@ -62,7 +64,7 @@ import { importPdfToText } from '../../editor/pdf-import';
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent, MilestoneTrackerComponent, FestivalTrackerComponent, CreditsComponent],
+  imports: [CommonModule, FormsModule, BranchPanelComponent, DiffViewerComponent, MenuDropdownComponent, CollaboratorStackComponent, ModalComponent, BreakdownDrawerComponent, StripboardComponent, LocationScoutingComponent, CastingBoardComponent, BudgetEstimatorComponent, ShotListComponent, MusicVfxComponent, PressKitComponent, MilestoneTrackerComponent, FestivalTrackerComponent, CreditsComponent, RehearsalTrackerComponent, ContinuityNotesComponent],
   templateUrl: './editor.component.html',
   styleUrls: ['./editor.component.scss'],
 })
@@ -773,6 +775,8 @@ export class EditorComponent implements OnInit, OnDestroy {
   showMilestones = false;
   showFestivalTracker = false;
   showCredits = false;
+  showRehearsals = false;
+  showContinuity = false;
 
   openBreakdown(): void {
     this.showBreakdown = true;
@@ -800,6 +804,14 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openMusicVfx(): void {
     this.showMusicVfx = true;
+  }
+
+  openRehearsals(): void {
+    this.showRehearsals = true;
+  }
+
+  openContinuity(): void {
+    this.showContinuity = true;
   }
 
   openPressKit(): void {

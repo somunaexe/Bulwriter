@@ -10,6 +10,11 @@ interface LocationSummary { name: string; sceneCount: number; }
 interface CastSummary { name: string; sceneCount: number; }
 interface PropSummary { name: string; sceneCount: number; }
 
+// A tagged list field on BreakdownRow — props, costumes, or set
+// dressing all get the same chip-editor UI, just pointed at a
+// different property and a different draft input.
+type TagField = 'props' | 'costumes' | 'setDressing';
+
 @Component({
   selector: 'app-breakdown-drawer',
   standalone: true,
@@ -28,14 +33,18 @@ export class BreakdownDrawerComponent implements OnChanges {
   view: 'scenes' | 'summary' = 'scenes';
   rows: BreakdownRow[] = [];
 
-  // The prop-input text currently being typed for a given row, keyed by
+  // The tag-input text currently being typed for a given row, keyed by
   // sceneKey — not part of BreakdownRow itself since that's shared with
   // the CSV export/summary aggregation logic.
   propDraft: Record<string, string> = {};
+  costumeDraft: Record<string, string> = {};
+  dressingDraft: Record<string, string> = {};
 
   locations: LocationSummary[] = [];
   cast: CastSummary[] = [];
   props: PropSummary[] = [];
+  costumes: PropSummary[] = [];
+  setDressing: PropSummary[] = [];
 
   constructor(
     private sync: SyncService,
@@ -64,6 +73,8 @@ export class BreakdownDrawerComponent implements OnChanges {
         this.rows = scenes.map(scene => ({
           ...scene,
           props: byKey.get(scene.sceneKey)?.props ?? [],
+          costumes: byKey.get(scene.sceneKey)?.costumes ?? [],
+          setDressing: byKey.get(scene.sceneKey)?.setDressing ?? [],
           notes: byKey.get(scene.sceneKey)?.notes ?? '',
         }));
         this.buildSummary();
@@ -73,7 +84,7 @@ export class BreakdownDrawerComponent implements OnChanges {
         // Still show the derived scene/cast list even if persisted tags
         // failed to load — it's read straight from the live document,
         // no network round-trip required for that part.
-        this.rows = scenes.map(scene => ({ ...scene, props: [], notes: '' }));
+        this.rows = scenes.map(scene => ({ ...scene, props: [], costumes: [], setDressing: [], notes: '' }));
         this.buildSummary();
         this.loading = false;
       },
@@ -84,11 +95,15 @@ export class BreakdownDrawerComponent implements OnChanges {
     const locCounts = new Map<string, number>();
     const castCounts = new Map<string, number>();
     const propCounts = new Map<string, number>();
+    const costumeCounts = new Map<string, number>();
+    const dressingCounts = new Map<string, number>();
 
     for (const row of this.rows) {
       locCounts.set(row.heading, (locCounts.get(row.heading) ?? 0) + 1);
       for (const name of row.cast) castCounts.set(name, (castCounts.get(name) ?? 0) + 1);
       for (const prop of row.props) propCounts.set(prop, (propCounts.get(prop) ?? 0) + 1);
+      for (const item of row.costumes) costumeCounts.set(item, (costumeCounts.get(item) ?? 0) + 1);
+      for (const item of row.setDressing) dressingCounts.set(item, (dressingCounts.get(item) ?? 0) + 1);
     }
 
     this.locations = [...locCounts.entries()].map(([name, sceneCount]) => ({ name, sceneCount }));
@@ -98,25 +113,36 @@ export class BreakdownDrawerComponent implements OnChanges {
     this.props = [...propCounts.entries()]
       .map(([name, sceneCount]) => ({ name, sceneCount }))
       .sort((a, b) => a.name.localeCompare(b.name));
+    this.costumes = [...costumeCounts.entries()]
+      .map(([name, sceneCount]) => ({ name, sceneCount }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    this.setDressing = [...dressingCounts.entries()]
+      .map(([name, sceneCount]) => ({ name, sceneCount }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   private saveRow(row: BreakdownRow): void {
     if (!this.canEdit) return;
-    this.breakdown.upsert(this.projectId, this.scriptId, row.sceneKey, row.props, row.notes).subscribe();
+    this.breakdown.upsert(this.projectId, this.scriptId, row.sceneKey, row.props, row.costumes, row.setDressing, row.notes).subscribe();
   }
 
-  addProp(row: BreakdownRow): void {
-    const value = (this.propDraft[row.sceneKey] || '').trim();
-    if (!value || row.props.includes(value)) return;
-    row.props.push(value);
-    this.propDraft[row.sceneKey] = '';
+  private draftFor(field: TagField): Record<string, string> {
+    return field === 'props' ? this.propDraft : field === 'costumes' ? this.costumeDraft : this.dressingDraft;
+  }
+
+  addTag(row: BreakdownRow, field: TagField): void {
+    const draft = this.draftFor(field);
+    const value = (draft[row.sceneKey] || '').trim();
+    if (!value || row[field].includes(value)) return;
+    row[field].push(value);
+    draft[row.sceneKey] = '';
     this.buildSummary();
     this.saveRow(row);
   }
 
-  removeProp(row: BreakdownRow, prop: string): void {
+  removeTag(row: BreakdownRow, field: TagField, value: string): void {
     if (!this.canEdit) return;
-    row.props = row.props.filter(p => p !== prop);
+    row[field] = row[field].filter(v => v !== value);
     this.buildSummary();
     this.saveRow(row);
   }

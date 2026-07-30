@@ -1,0 +1,47 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Continuity notes</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading continuity notes…</div>
+
+  <div class="cn-body" *ngIf="!loading">
+    <p class="empty-msg" *ngIf="!groups.length">No scene headings yet.</p>
+
+    <div class="cn-scene" *ngFor="let group of groups">
+      <div class="cn-scene-header">
+        <span class="cn-scene-heading">{{ group.heading || 'Untitled scene' }}</span>
+        <button *ngIf="canEdit" class="cn-add-btn" [class.open]="group.showAdd" (click)="toggleAdd(group)" aria-label="Add a continuity note">+</button>
+      </div>
+
+      <div class="cn-note-list" *ngIf="group.notes.length">
+        <div class="cn-note" [class.flagged]="note.flagged" *ngFor="let note of group.notes">
+          <div class="cn-note-row">
+            <input class="input-sm cn-take" placeholder="Take…" [(ngModel)]="note.take" (blur)="save(note)" [disabled]="!canEdit" />
+            <label class="cn-flag">
+              <input type="checkbox" [(ngModel)]="note.flagged" (change)="save(note)" [disabled]="!canEdit" />
+              <span>Flag for editor</span>
+            </label>
+            <button *ngIf="canEdit" class="cn-remove-btn" (click)="remove(group, note)" aria-label="Remove continuity note">×</button>
+          </div>
+          <textarea class="cn-notes" placeholder="Props, costume, eyelines…" [(ngModel)]="note.note" (blur)="save(note)" [readonly]="!canEdit"></textarea>
+        </div>
+      </div>
+
+      <div class="cn-add" *ngIf="canEdit && group.showAdd">
+        <div class="cn-note-row">
+          <input class="input-sm cn-take" placeholder="Take…" [(ngModel)]="group.newTake" />
+          <label class="cn-flag">
+            <input type="checkbox" [(ngModel)]="group.newFlagged" />
+            <span>Flag for editor</span>
+          </label>
+        </div>
+        <textarea class="cn-notes" placeholder="Props, costume, eyelines…" [(ngModel)]="group.newNote" (keydown.enter)="addNote(group)"></textarea>
+        <button class="btn-save cn-add-note-btn" (click)="addNote(group)" [disabled]="!group.newNote.trim()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>

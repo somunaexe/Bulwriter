@@ -1,0 +1,41 @@
+<div class="breakdown-drawer">
+  <header class="breakdown-header">
+    <span>Rehearsals</span>
+    <div class="breakdown-header-actions">
+      <button class="btn-icon" (click)="close.emit()">✕</button>
+    </div>
+  </header>
+
+  <div *ngIf="loading" class="loading">Loading rehearsals…</div>
+
+  <div class="rh-body" *ngIf="!loading">
+    <div class="rh-section-header">
+      <h3 class="section-label">Rehearsals ({{ rehearsals.length }})</h3>
+      <button *ngIf="canEdit" class="rh-add-btn" [class.open]="showAdd" (click)="toggleAdd()" aria-label="Add a rehearsal">+</button>
+    </div>
+
+    <p class="empty-msg" *ngIf="!rehearsals.length">No rehearsals scheduled yet.</p>
+
+    <div class="rh-list" *ngIf="rehearsals.length">
+      <div class="rh-item" *ngFor="let r of rehearsals">
+        <div class="rh-row">
+          <input class="input-sm" type="date" [(ngModel)]="r.date" (blur)="save(r)" [disabled]="!canEdit" />
+          <input class="input-sm" type="time" [(ngModel)]="r.time" (blur)="save(r)" [disabled]="!canEdit" />
+          <button *ngIf="canEdit" class="rh-remove-btn" (click)="remove(r)" aria-label="Remove rehearsal">×</button>
+        </div>
+        <input class="input-sm" placeholder="What's being rehearsed — scenes, characters…" [(ngModel)]="r.focus" (blur)="save(r)" [disabled]="!canEdit" />
+        <textarea class="rh-notes" placeholder="Notes…" [(ngModel)]="r.notes" (blur)="save(r)" [readonly]="!canEdit"></textarea>
+      </div>
+    </div>
+
+    <div class="rh-add" *ngIf="canEdit && showAdd">
+      <div class="rh-row">
+        <input class="input-sm" type="date" [(ngModel)]="newDate" />
+        <input class="input-sm" type="time" [(ngModel)]="newTime" />
+      </div>
+      <input class="input-sm" placeholder="What's being rehearsed — scenes, characters…" [(ngModel)]="newFocus" (keydown.enter)="addRehearsal()" />
+      <textarea class="rh-notes" placeholder="Notes…" [(ngModel)]="newNotes"></textarea>
+      <button class="btn-save" (click)="addRehearsal()" [disabled]="!newDate && !newFocus.trim()">Add rehearsal</button>
+    </div>
+  </div>
+</div>
