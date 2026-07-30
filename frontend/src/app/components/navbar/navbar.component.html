@@ -11,11 +11,31 @@
   <!-- Right: account -->
   <div class="auth">
     <button
+      *ngIf="theme.theme$ | async as current"
+      type="button"
       class="theme-toggle"
-      (click)="theme.toggle()"
-      [attr.aria-label]="(theme.theme$ | async) === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
-      [title]="(theme.theme$ | async) === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
-      {{ (theme.theme$ | async) === 'dark' ? 'Light' : 'Dark' }}
+      role="switch"
+      [class.dark]="current === 'dark'"
+      [attr.aria-checked]="current === 'dark'"
+      [attr.aria-label]="current === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+      [title]="current === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+      (click)="theme.toggle()">
+      <span class="theme-toggle-thumb">
+        <svg *ngIf="current === 'light'" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <line x1="12" y1="1.5" x2="12" y2="3.5"></line>
+          <line x1="12" y1="20.5" x2="12" y2="22.5"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1.5" y1="12" x2="3.5" y2="12"></line>
+          <line x1="20.5" y1="12" x2="22.5" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg *ngIf="current === 'dark'" class="theme-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </span>
     </button>
 
     <ng-container *ngIf="signedIn$ | async; else signedOut">

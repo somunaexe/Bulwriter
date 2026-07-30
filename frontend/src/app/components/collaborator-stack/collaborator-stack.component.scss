@@ -183,3 +183,13 @@
 
   &.accepted { color: var(--insert-fg); }
 }
+
+.detail-remove {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--delete-fg);
+
+  &:hover { color: var(--delete-fg); text-decoration: underline; }
+}

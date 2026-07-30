@@ -12,19 +12,21 @@
     <span *ngIf="!c.imageUrl">{{ initials(c.name) }}</span>
   </button>
 
-  <!-- Only owners can invite/remove people — everyone else just sees
-       who's here. Reuses the existing "Manage collaborators" page
-       rather than duplicating that UI in a popover here. -->
+  <!-- Only an owner can invite/remove collaborators, or an owner/editor
+       add/remove crew — everyone else just sees who's here. For
+       collaborators, reuses the existing "Manage collaborators" page
+       rather than duplicating that UI in a popover here; crew always
+       uses the inline popover since there's no separate manage page. -->
   <button
     *ngIf="canManage"
     type="button"
     class="collab-avatar collab-manage"
-    aria-label="View, add, and remove collaborators"
-    title="View, add, and remove collaborators"
+    [attr.aria-label]="mode === 'crew' ? 'Add or remove crew' : 'View, add, and remove collaborators'"
+    [title]="mode === 'crew' ? 'Add or remove crew' : 'View, add, and remove collaborators'"
     (click)="onManageClick()"
   >+</button>
 
-  <div class="collab-invite-popover" *ngIf="showInvitePopover">
+  <div class="collab-invite-popover" *ngIf="showInvitePopover && mode === 'collaborators'">
     <p class="invite-popover-title">Invite collaborator</p>
     <input
       class="input-sm"
@@ -41,6 +43,20 @@
     </div>
   </div>
 
+  <div class="collab-invite-popover" *ngIf="showInvitePopover && mode === 'crew'">
+    <p class="invite-popover-title">Add crew member</p>
+    <input class="input-sm" placeholder="Role (e.g. DP)…" [(ngModel)]="newCrewRole" (keydown.enter)="addCrewMember()" autofocus />
+    <input class="input-sm" placeholder="Name…" [(ngModel)]="newCrewName" (keydown.enter)="addCrewMember()" />
+    <input class="input-sm" placeholder="Contact…" [(ngModel)]="newCrewContact" (keydown.enter)="addCrewMember()" />
+    <p class="invite-popover-error" *ngIf="inviteError">{{ inviteError }}</p>
+    <div class="invite-popover-actions">
+      <button class="btn-ghost" (click)="showInvitePopover = false">Cancel</button>
+      <button class="btn-save" (click)="addCrewMember()" [disabled]="!newCrewName.trim() || inviteSending">
+        {{ inviteSending ? 'Adding…' : 'Add' }}
+      </button>
+    </div>
+  </div>
+
   <div class="collab-popover" *ngIf="openKey">
     <ng-container *ngFor="let c of collaborators">
       <div class="collab-detail" *ngIf="c.key === openKey">
@@ -48,11 +64,13 @@
         <span *ngIf="!c.imageUrl" class="detail-avatar detail-avatar-fallback">{{ initials(c.name) }}</span>
         <div class="detail-info">
           <span class="detail-name">{{ c.name }}</span>
-          <span class="detail-email" *ngIf="c.email">{{ c.email }}</span>
+          <span class="detail-email" *ngIf="c.contact">{{ c.contact }}</span>
           <span class="detail-role">{{ c.role }}</span>
-          <span class="detail-status" [class.accepted]="c.accepted">
+          <span class="detail-email" *ngIf="c.notes">{{ c.notes }}</span>
+          <span class="detail-status" *ngIf="mode === 'collaborators'" [class.accepted]="c.accepted">
             {{ c.accepted ? 'Accepted' : 'Invite pending' }}
           </span>
+          <button *ngIf="mode === 'crew' && canManage" class="btn-icon detail-remove" (click)="removeCrewMember(c.key)">Remove</button>
         </div>
       </div>
     </ng-container>

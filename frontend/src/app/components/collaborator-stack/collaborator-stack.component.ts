@@ -2,22 +2,27 @@ import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, On
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MembershipService } from '../../services/membership.service';
+import { CrewService } from '../../services/crew.service';
 
 interface Collaborator {
   key: string;
   name: string;
-  email: string;
+  contact: string;
   role: string;
+  notes: string;
   imageUrl: string | null;
   accepted: boolean;
 }
 
 /**
- * Overlapping avatar stack for the editor sidebar — one circle per
- * project member (photo if Clerk has one, initials otherwise) plus one
- * per still-pending invite (dashed outline, no photo, since they have no
- * Clerk account yet). Tapping an avatar opens a small popover with the
- * full detail: image, name, email, role, and accepted/pending status.
+ * Overlapping avatar stack — one circle per entry, tapping one opens a
+ * small detail popover. Originally built for project collaborators
+ * (photo if Clerk has one, initials otherwise; a dashed outline for a
+ * still-pending invite, since it has no Clerk account yet) and reused
+ * as-is for the production crew list (`mode="crew"`) — same stack/
+ * popover UI, backed by CrewService instead of MembershipService, with
+ * a role/name/contact add form and a remove action in place of the
+ * email invite flow.
  */
 @Component({
   selector: 'app-collaborator-stack',
@@ -28,14 +33,17 @@ interface Collaborator {
 })
 export class CollaboratorStackComponent implements OnInit, OnChanges {
   @Input() projectId = '';
-  // Only an owner can invite/remove people — the manage circle only
-  // shows up for them, everyone else just sees who's on the project.
+  @Input() mode: 'collaborators' | 'crew' = 'collaborators';
+  // Only an owner can invite/remove collaborators, or an owner/editor
+  // add/remove crew — the manage circle only shows up when true,
+  // everyone else just sees who's on the list.
   @Input() canManage = false;
-  // When true, clicking the manage ("+") avatar opens a small invite form
+  // When true, clicking the manage ("+") avatar opens a small add form
   // right here (anchored below the stack) instead of emitting `manage` —
-  // used on the editor page, where there's nowhere further to navigate to.
-  // The project page (the manage page itself) leaves this off and handles
-  // `manage` itself.
+  // used on the editor page, where there's nowhere further to navigate
+  // to, and always for crew (there's no separate "manage crew" page).
+  // Collaborators on the project page (the manage page itself) leave
+  // this off and handle `manage` themselves.
   @Input() invitePopover = false;
   @Output() manage = new EventEmitter<void>();
 
@@ -47,10 +55,18 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
   inviteError = '';
   inviteSending = false;
 
+  newCrewRole = '';
+  newCrewName = '';
+  newCrewContact = '';
+
   private memberCollabs: Collaborator[] = [];
   private pendingCollabs: Collaborator[] = [];
 
-  constructor(private membership: MembershipService, private host: ElementRef<HTMLElement>) {}
+  constructor(
+    private membership: MembershipService,
+    private crew: CrewService,
+    private host: ElementRef<HTMLElement>,
+  ) {}
 
   ngOnInit(): void {
     this.load();
@@ -70,12 +86,30 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
   private load(): void {
     if (!this.projectId) return;
 
+    if (this.mode === 'crew') {
+      this.crew.list(this.projectId).subscribe(members => {
+        this.memberCollabs = (members ?? []).map(m => ({
+          key: 'crew:' + m.id,
+          name: m.name,
+          contact: m.contact,
+          role: m.role || 'Crew',
+          notes: m.notes,
+          imageUrl: null,
+          accepted: true,
+        }));
+        this.pendingCollabs = [];
+        this.combine();
+      });
+      return;
+    }
+
     this.membership.listMembers(this.projectId).subscribe(members => {
       this.memberCollabs = (members ?? []).map(m => ({
         key: 'member:' + m.userId,
         name: m.name || m.email || 'Collaborator',
-        email: m.email || '',
+        contact: m.email || '',
         role: m.role,
+        notes: '',
         imageUrl: m.imageUrl || null,
         accepted: true,
       }));
@@ -88,8 +122,9 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
         .map(i => ({
           key: 'invite:' + i.id,
           name: i.email,
-          email: i.email,
+          contact: i.email,
           role: i.role,
+          notes: '',
           imageUrl: null,
           accepted: false,
         }));
@@ -122,6 +157,9 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
       this.openKey = null;
       this.inviteEmail = '';
       this.inviteError = '';
+      this.newCrewRole = '';
+      this.newCrewName = '';
+      this.newCrewContact = '';
       this.showInvitePopover = !this.showInvitePopover;
     } else {
       this.manage.emit();
@@ -145,6 +183,34 @@ export class CollaboratorStackComponent implements OnInit, OnChanges {
         this.inviteError = err?.error?.error || 'Could not send invite.';
       },
     });
+  }
+
+  addCrewMember(): void {
+    const name = this.newCrewName.trim();
+    if (!name) return;
+
+    this.inviteSending = true;
+    this.crew.add(this.projectId, this.newCrewRole.trim(), name, this.newCrewContact.trim(), '').subscribe({
+      next: () => {
+        this.inviteSending = false;
+        this.showInvitePopover = false;
+        this.newCrewRole = '';
+        this.newCrewName = '';
+        this.newCrewContact = '';
+        this.load();
+      },
+      error: () => {
+        this.inviteSending = false;
+        this.inviteError = 'Could not add crew member.';
+      },
+    });
+  }
+
+  removeCrewMember(key: string): void {
+    if (this.mode !== 'crew') return;
+    const id = key.slice('crew:'.length);
+    this.openKey = null;
+    this.crew.remove(this.projectId, id).subscribe(() => this.load());
   }
 
   @HostListener('document:click', ['$event'])
