@@ -799,6 +799,8 @@ export class EditorComponent implements OnInit, OnDestroy {
   shortcutList: { keys: string; label: string }[] = [
     // { keys: 'Tab',   label: 'Cycle element type' },
     { keys: 'Enter', label: 'New line (smart element)' },
+    { keys: '⌘Z',    label: 'Undo' },
+    { keys: '⌘Y',    label: 'Redo' },
     { keys: '⌘1',    label: 'Scene' },
     { keys: '⌘2',    label: 'Action' },
     { keys: '⌘3',    label: 'Character' },

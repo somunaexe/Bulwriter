@@ -1,0 +1,29 @@
+diff --git a/node_modules/y-prosemirror/src/plugins/sync-plugin.js b/node_modules/y-prosemirror/src/plugins/sync-plugin.js
+index dccfb76..8acb05a 100644
+--- a/node_modules/y-prosemirror/src/plugins/sync-plugin.js
++++ b/node_modules/y-prosemirror/src/plugins/sync-plugin.js
+@@ -108,6 +108,7 @@ export const ySyncPlugin = (yXmlFragment, {
+   mapping
+ } = {}) => {
+   let initialContentChanged = false
++  let previousSyncedDoc = null
+   const binding = new ProsemirrorBinding(yXmlFragment, mapping)
+   const plugin = new Plugin({
+     props: {
+@@ -196,6 +197,16 @@ export const ySyncPlugin = (yXmlFragment, {
+       onFirstRender()
+       return {
+         update: () => {
++          if (view.state.doc === previousSyncedDoc) {
++            // Nothing about the document changed since the last update —
++            // this call was triggered by a metadata-only transaction
++            // (e.g. yCursorPlugin's deferred awareness-driven setMeta).
++            // Resyncing anyway would still fire a real Y transaction with
++            // the tracked ySyncPluginKey origin below, which clears
++            // yUndoPlugin's redo stack even though nothing changed.
++            return
++          }
++          previousSyncedDoc = view.state.doc
+           const pluginState = plugin.getState(view.state)
+           if (
+             pluginState.snapshot == null && pluginState.prevSnapshot == null
