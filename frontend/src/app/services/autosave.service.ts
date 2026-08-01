@@ -8,6 +8,10 @@ export interface AutoSaveState {
   intervalMinutes: AutoSaveInterval;
   lastSaved: Date | null;
   saving: boolean;
+  // Whether the document has changed since the last successful save —
+  // drives the "you have unsaved changes" warning on tab close/navigation
+  // (see EditorComponent's beforeunload handler and unsaved-changes.guard).
+  dirty: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -18,6 +22,7 @@ export class AutoSaveService implements OnDestroy {
     intervalMinutes: 2,
     lastSaved: null,
     saving: false,
+    dirty: false,
   });
 
   private timer: any = null;
@@ -58,6 +63,7 @@ export class AutoSaveService implements OnDestroy {
         ...this.state$.getValue(),
         saving: false,
         lastSaved: new Date(),
+        dirty: false,
       });
     } catch (err) {
       this.state$.next({ ...this.state$.getValue(), saving: false });
@@ -69,7 +75,14 @@ export class AutoSaveService implements OnDestroy {
   // snapshot) — lets the sidebar's "Saved HH:mm" indicator reflect any
   // manual save, not just automatic ticks.
   markSaved(): void {
-    this.state$.next({ ...this.state$.getValue(), saving: false, lastSaved: new Date() });
+    this.state$.next({ ...this.state$.getValue(), saving: false, lastSaved: new Date(), dirty: false });
+  }
+
+  // Called whenever the document actually changes (see SyncService's
+  // contentChanged$) — flips the flag the unsaved-changes warning checks.
+  markDirty(): void {
+    if (this.state$.getValue().dirty) return; // already flagged, skip the redundant emit
+    this.state$.next({ ...this.state$.getValue(), dirty: true });
   }
 
   setEnabled(enabled: boolean): void {

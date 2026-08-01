@@ -5,11 +5,12 @@ import { Router } from '@angular/router';
 import { ProjectService, Project } from '../../services/project.service';
 import { MembershipService, MyInvite } from '../../services/membership.service';
 import { ClerkService } from '../../services/clerk.service';
+import { ModalComponent } from '../modal/modal.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ModalComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
@@ -128,5 +129,37 @@ export class DashboardComponent implements OnInit {
 
   openTrash(): void {
     this.router.navigate(['/trash']);
+  }
+
+  // ── Rename ───────────────────────────────────────────────────────
+  // The backend allows any editor-or-above to rename, but the dashboard
+  // only knows ownerId (not each project's role) without an extra call
+  // per card — same simplification the delete button already makes.
+
+  renamingProject: Project | null = null;
+  renameTitle = '';
+  renameError = '';
+
+  openRenameProject(event: Event, p: Project): void {
+    event.stopPropagation();
+    this.renamingProject = p;
+    this.renameTitle = p.title;
+    this.renameError = '';
+  }
+
+  confirmRename(): void {
+    const p = this.renamingProject;
+    const title = this.renameTitle.trim();
+    if (!p || !title) return;
+
+    this.projectService.rename(p.id, title).subscribe({
+      next: () => {
+        p.title = title;
+        this.renamingProject = null;
+      },
+      error: () => {
+        this.renameError = 'Could not rename project.';
+      },
+    });
   }
 }

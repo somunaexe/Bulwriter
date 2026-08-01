@@ -27,6 +27,9 @@
         <button class="btn-ghost" (click)="restoreProject(p)" [disabled]="restoring[p.id]">
           Restore
         </button>
+        <button class="btn-ghost delete-forever-trigger" (click)="openConfirmDeleteProject(p)">
+          Delete forever
+        </button>
       </div>
     </ng-container>
 
@@ -43,8 +46,38 @@
         <button class="btn-ghost" (click)="restoreScript(s)" [disabled]="restoring[s.id]">
           Restore
         </button>
+        <button class="btn-ghost delete-forever-trigger" (click)="openConfirmDeleteScript(s)">
+          Delete forever
+        </button>
       </div>
     </ng-container>
 
   </section>
+
+  <app-modal *ngIf="confirmingDelete" title="Delete forever" (closed)="confirmingDelete = null">
+    <div class="find-replace-form">
+      <p class="delete-forever-warning">
+        This permanently deletes “{{ confirmingDelete.title }}” right now — skipping the rest of its
+        30-day trash window. There's no more trash to restore it from after this; it's gone for good.
+      </p>
+      <p class="delete-forever-instruction">
+        Type <strong>{{ confirmingDelete.title }}</strong> to confirm.
+      </p>
+      <input
+        class="input-sm"
+        [(ngModel)]="confirmDeleteText"
+        (keydown.enter)="confirmPermanentDelete()"
+        autofocus />
+      <p class="error-msg" *ngIf="confirmDeleteError">{{ confirmDeleteError }}</p>
+      <div class="find-replace-actions">
+        <button class="btn-ghost" (click)="confirmingDelete = null">Cancel</button>
+        <button
+          class="btn-save delete-forever-btn"
+          (click)="confirmPermanentDelete()"
+          [disabled]="!confirmDeleteMatches">
+          Delete forever
+        </button>
+      </div>
+    </div>
+  </app-modal>
 </div>

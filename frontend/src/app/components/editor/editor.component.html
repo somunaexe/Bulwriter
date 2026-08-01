@@ -12,6 +12,7 @@
 
   <!-- Authorized -->
   <div *ngIf="roleLoaded && roles.includes(myRole)"
+       #editorLayout
        class="editor-layout"
        [class.sidebar-open]="sidebarOpen">
     <div class="sidebar-backdrop" *ngIf="sidebarOpen" (click)="sidebarOpen = false"></div>
@@ -50,7 +51,7 @@
         <span class="branch-pill empty" *ngIf="!activeBranch">no branch</span>
       </header>
 
-      <div class="element-toolbar">
+      <div class="element-toolbar" *ngIf="viewMode === 'page'">
         <div class="el-btns">
           <button *ngFor="let el of elements"
                 class="el-btn"
@@ -81,6 +82,14 @@
             <div class="menu-divider"></div>
             <button (click)="openImportModal()" [disabled]="!canEdit">Import…</button>
             <button (click)="openExportModal()">Export…</button>
+            <div class="menu-divider"></div>
+            <button (click)="openRenameProjectModal()" [disabled]="!canEdit">Rename project…</button>
+            <button (click)="openRenameScriptModal()" [disabled]="!canEdit">Rename script…</button>
+            <div class="menu-divider"></div>
+            <button (click)="openOpenProjectModal()">Open project…</button>
+            <button (click)="openNewProjectModal()">New project…</button>
+            <button (click)="openOpenScriptModal()">Open script…</button>
+            <button (click)="openNewScriptModal()" [disabled]="!canEdit">New script…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Edit">
@@ -88,15 +97,24 @@
             <button (click)="redo()">Redo</button>
             <div class="menu-divider"></div>
             <button (click)="openFindReplace()">Find &amp; Replace…</button>
+            <button (click)="openRenameCharacter()" [disabled]="!canEdit">Rename character…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="Format">
+            <button (click)="openLinkModal()" [disabled]="!canEdit">Insert link…</button>
+            <button (click)="removeLinkAtCursor()" [disabled]="!canEdit">Remove link</button>
+            <div class="menu-divider"></div>
+            <button (click)="insertImagePrompt()" [disabled]="!canEdit">Insert image…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="View">
             <!-- <button (click)="toggleToolbar()">
               {{ showToolbar ? 'Hide' : 'Show' }} format toolbar
             </button> -->
+            <button (click)="setViewMode('page')" [class.active]="viewMode === 'page'">Page view</button>
+            <button (click)="setViewMode('card')" [class.active]="viewMode === 'card'">Card view</button>
+            <div class="menu-divider"></div>
+            <button (click)="toggleFullscreen()">{{ isFullscreen ? 'Exit' : 'Enter' }} full screen</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown *ngIf="!isOwner" label="Share">
@@ -141,8 +159,28 @@
         </nav>
       </div> <!-- page-chrome-->
 
-      <div #prosemirrorMount class="pm-mount">
+      <div #prosemirrorMount class="pm-mount" [class.view-hidden]="viewMode === 'card'">
         <span class="page-number" *ngFor="let p of pageNumbers" [style.top.px]="p.top">{{ p.n }}.</span>
+      </div>
+
+      <!-- Read-only overview of the script as one card per scene — click
+           a card to jump back to Page View scrolled to that scene.
+           #prosemirrorMount above stays mounted (just hidden) rather than
+           being torn down, since it's the one live collaborative session;
+           this is a plain re-render off computeSceneCards()'s snapshot of
+           it, not a second editing surface. -->
+      <div class="card-view" *ngIf="viewMode === 'card'">
+        <p class="empty-msg" *ngIf="!sceneCards.length">No scenes yet.</p>
+        <div class="scene-card" *ngFor="let card of sceneCards" (click)="jumpToScene(card)">
+          <div class="scene-card-header">
+            <span class="scene-card-number">{{ card.number }}</span>
+            <span class="scene-card-heading">{{ card.heading }}</span>
+          </div>
+          <div class="scene-card-body">
+            <p class="scene-card-line" *ngFor="let b of card.blocks" [attr.data-element]="b.element">{{ b.text }}</p>
+            <p class="scene-card-empty" *ngIf="!card.blocks.length">No content yet.</p>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -318,6 +356,95 @@
           <button class="btn-ghost" (click)="replaceAllOccurrences()" [disabled]="!canEdit">Replace all</button>
         </div>
       </div>
+    </app-modal>
+
+    <app-modal *ngIf="showLinkModal" title="Insert link" (closed)="showLinkModal = false">
+      <div class="find-replace-form">
+        <input class="input-sm" placeholder="https://…" [(ngModel)]="linkUrl" (keydown.enter)="confirmInsertLink()" autofocus />
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="showLinkModal = false">Cancel</button>
+          <button class="btn-save" (click)="confirmInsertLink()" [disabled]="!linkUrl.trim()">Insert</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showRenameCharacter" title="Rename character" (closed)="showRenameCharacter = false">
+      <div class="find-replace-form">
+        <select class="input-sm" [(ngModel)]="renameCharacterOld" *ngIf="renameCharacterNames.length">
+          <option *ngFor="let name of renameCharacterNames" [value]="name">{{ name }}</option>
+        </select>
+        <p class="empty-msg" *ngIf="!renameCharacterNames.length">No characters found yet.</p>
+        <input class="input-sm" placeholder="New name…" [(ngModel)]="renameCharacterNew" (keydown.enter)="confirmRenameCharacter()" />
+        <p class="error-msg" *ngIf="renameCharacterError">{{ renameCharacterError }}</p>
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="showRenameCharacter = false">Cancel</button>
+          <button class="btn-save" (click)="confirmRenameCharacter()" [disabled]="!renameCharacterOld || !renameCharacterNew.trim()">Rename</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showRenameProjectModal" title="Rename project" (closed)="showRenameProjectModal = false">
+      <div class="find-replace-form">
+        <input class="input-sm" [(ngModel)]="renameProjectTitle" (keydown.enter)="confirmRenameProject()" autofocus />
+        <p class="error-msg" *ngIf="renameProjectError">{{ renameProjectError }}</p>
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="showRenameProjectModal = false">Cancel</button>
+          <button class="btn-save" (click)="confirmRenameProject()" [disabled]="!renameProjectTitle.trim()">Save</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showRenameScriptModal" title="Rename script" (closed)="showRenameScriptModal = false">
+      <div class="find-replace-form">
+        <input class="input-sm" [(ngModel)]="renameScriptTitle" (keydown.enter)="confirmRenameScript()" autofocus />
+        <p class="error-msg" *ngIf="renameScriptError">{{ renameScriptError }}</p>
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="showRenameScriptModal = false">Cancel</button>
+          <button class="btn-save" (click)="confirmRenameScript()" [disabled]="!renameScriptTitle.trim()">Save</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showNewProjectModal" title="New project" (closed)="showNewProjectModal = false">
+      <div class="find-replace-form">
+        <input class="input-sm" placeholder="Project title…" [(ngModel)]="newProjectTitle" (keydown.enter)="confirmNewProject()" autofocus />
+        <p class="error-msg" *ngIf="newProjectError">{{ newProjectError }}</p>
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="showNewProjectModal = false">Cancel</button>
+          <button class="btn-save" (click)="confirmNewProject()" [disabled]="!newProjectTitle.trim()">Create</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showOpenProjectModal" title="Open project" (closed)="showOpenProjectModal = false">
+      <p class="loading-msg" *ngIf="openProjectsLoading">Loading…</p>
+      <p class="empty-msg" *ngIf="!openProjectsLoading && openProjectsList.length === 0">No projects.</p>
+      <ul class="stats-list open-picker-list" *ngIf="!openProjectsLoading && openProjectsList.length">
+        <li *ngFor="let p of openProjectsList" (click)="goToProject(p)" class="open-picker-item">
+          {{ p.title }}
+        </li>
+      </ul>
+    </app-modal>
+
+    <app-modal *ngIf="showNewScriptModal" title="New script" (closed)="showNewScriptModal = false">
+      <div class="find-replace-form">
+        <input class="input-sm" placeholder="Script title…" [(ngModel)]="newScriptTitle" (keydown.enter)="confirmNewScript()" autofocus />
+        <p class="error-msg" *ngIf="newScriptError">{{ newScriptError }}</p>
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="showNewScriptModal = false">Cancel</button>
+          <button class="btn-save" (click)="confirmNewScript()" [disabled]="!newScriptTitle.trim()">Create</button>
+        </div>
+      </div>
+    </app-modal>
+
+    <app-modal *ngIf="showOpenScriptModal" title="Open script" (closed)="showOpenScriptModal = false">
+      <p class="loading-msg" *ngIf="openScriptsLoading">Loading…</p>
+      <p class="empty-msg" *ngIf="!openScriptsLoading && openScriptsList.length === 0">No other scripts in this project.</p>
+      <ul class="stats-list open-picker-list" *ngIf="!openScriptsLoading && openScriptsList.length">
+        <li *ngFor="let s of openScriptsList" (click)="goToScript(s)" class="open-picker-item">
+          {{ s.title }}
+        </li>
+      </ul>
     </app-modal>
 
     <app-modal *ngIf="showImportModal" title="Import" (closed)="showImportModal = false">

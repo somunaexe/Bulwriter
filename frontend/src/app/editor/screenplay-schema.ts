@@ -144,6 +144,27 @@ const screenplayNodes: Record<string, NodeSpec> = {
     parseDOM: [{ tag: 'br' }],
     toDOM: () => ['br'],
   },
+
+  // An inline image — deliberately NOT a screenplay element/line type
+  // (no `element` attr, not in the ScreenplayElement union or the
+  // element-toolbar's ELEMENTS list): it lives inside whichever block's
+  // inline* content the cursor was in when inserted, the same as a run of
+  // formatted text would, rather than occupying a line of its own.
+  image: {
+    inline: true,
+    group: 'inline',
+    atom: true,
+    draggable: true,
+    attrs: { src: {}, alt: { default: '' } },
+    parseDOM: [{
+      tag: 'img[src]',
+      getAttrs: (dom) => ({
+        src: (dom as HTMLElement).getAttribute('src'),
+        alt: (dom as HTMLElement).getAttribute('alt') || '',
+      }),
+    }],
+    toDOM: (node) => ['img', { src: node.attrs['src'], alt: node.attrs['alt'], class: 'pm-image' }],
+  },
 };
 
 const screenplayMarks: Record<string, MarkSpec> = {
@@ -159,6 +180,18 @@ const screenplayMarks: Record<string, MarkSpec> = {
   underline: {
     parseDOM: [{ tag: 'u' }],
     toDOM: () => ['u', 0],
+  },
+
+  // A hyperlink — also deliberately not a line type, just a mark on a run
+  // of inline text like strong/em/underline above.
+  link: {
+    attrs: { href: {} },
+    inclusive: false,
+    parseDOM: [{
+      tag: 'a[href]',
+      getAttrs: (dom) => ({ href: (dom as HTMLElement).getAttribute('href') }),
+    }],
+    toDOM: (mark) => ['a', { href: mark.attrs['href'], target: '_blank', rel: 'noopener noreferrer', class: 'pm-link' }, 0],
   },
 };
 

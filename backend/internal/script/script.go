@@ -80,6 +80,39 @@ func (s *Store) Get(id string) (*Script, error) {
 	return sc, nil
 }
 
+// Rename updates a script's title.
+func (s *Store) Rename(id, title string) error {
+	res, err := s.db.Exec(
+		`UPDATE scripts SET title = $1 WHERE id = $2 AND deleted_at IS NULL`, title, id,
+	)
+	if err != nil {
+		return fmt.Errorf("renaming script: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("script not found")
+	}
+	return nil
+}
+
+// IsTrashed reports whether a script is currently soft-deleted — used to
+// guard permanent deletion (PurgeScriptNow in internal/trash) so a live
+// script can never be purged by mistake.
+func (s *Store) IsTrashed(id string) (bool, error) {
+	var deletedAt sql.NullTime
+	err := s.db.QueryRow(`SELECT deleted_at FROM scripts WHERE id = $1`, id).Scan(&deletedAt)
+	if err == sql.ErrNoRows {
+		return false, errors.New("script not found")
+	}
+	if err != nil {
+		return false, fmt.Errorf("checking script trash state: %w", err)
+	}
+	return deletedAt.Valid, nil
+}
+
 // SoftDelete moves a script to the trash — see project.Store.SoftDelete
 // for the equivalent at the project level.
 func (s *Store) SoftDelete(id string) error {

@@ -1,7 +1,19 @@
 <div class="dashboard">
 
   <header class="dash-header">
-    <h1 class="logo">{{ project?.title }}</h1>
+    <span class="dash-header-title">
+      <h1 class="logo">{{ project?.title }}</h1>
+      <button
+        class="btn-icon card-action-btn"
+        *ngIf="canEdit"
+        title="Rename project"
+        (click)="openRenameProjectModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+        </svg>
+      </button>
+    </span>
   </header>
 
   <section class="story-bible-link">
@@ -38,10 +50,28 @@
         <div class="project-card-meta">{{ s.createdAt | date:'mediumDate' }}</div>
       </div>
       <button
+        class="btn-icon card-action-btn"
+        *ngIf="canEdit"
+        title="Rename"
+        (click)="openRenameScript($event, s)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+        </svg>
+      </button>
+      <button
         class="btn-icon card-delete-btn"
         *ngIf="canEdit"
         title="Move to trash"
-        (click)="deleteScript($event, s)">🗑</button>
+        (click)="deleteScript($event, s)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+        </svg>
+      </button>
     </div>
 
   </section>
@@ -82,6 +112,36 @@
         <button class="btn-save" (click)="sendInvite()" [disabled]="!inviteEmail.trim()">
           Send invite
         </button>
+      </div>
+    </div>
+  </app-modal>
+
+  <app-modal *ngIf="showRenameProjectModal" title="Rename project" (closed)="showRenameProjectModal = false">
+    <div class="find-replace-form">
+      <input
+        class="input-sm"
+        [(ngModel)]="renameProjectTitle"
+        (keydown.enter)="confirmRenameProject()"
+        autofocus />
+      <p class="error-msg" *ngIf="renameProjectError">{{ renameProjectError }}</p>
+      <div class="find-replace-actions">
+        <button class="btn-ghost" (click)="showRenameProjectModal = false">Cancel</button>
+        <button class="btn-save" (click)="confirmRenameProject()" [disabled]="!renameProjectTitle.trim()">Save</button>
+      </div>
+    </div>
+  </app-modal>
+
+  <app-modal *ngIf="renamingScript" title="Rename script" (closed)="renamingScript = null">
+    <div class="find-replace-form">
+      <input
+        class="input-sm"
+        [(ngModel)]="renameScriptTitle"
+        (keydown.enter)="confirmRenameScript()"
+        autofocus />
+      <p class="error-msg" *ngIf="renameScriptError">{{ renameScriptError }}</p>
+      <div class="find-replace-actions">
+        <button class="btn-ghost" (click)="renamingScript = null">Cancel</button>
+        <button class="btn-save" (click)="confirmRenameScript()" [disabled]="!renameScriptTitle.trim()">Save</button>
       </div>
     </div>
   </app-modal>

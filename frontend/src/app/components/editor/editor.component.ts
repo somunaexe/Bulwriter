@@ -1,6 +1,6 @@
 import { OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import * as Y from 'yjs';
 import {
   Component, OnDestroy,
@@ -60,6 +60,11 @@ import { importScreenplayHtml } from '../../editor/html-import';
 import { exportScreenplayDocx } from '../../editor/docx-export';
 import { importDocxToText } from '../../editor/docx-import';
 import { importPdfToText } from '../../editor/pdf-import';
+import { applyLink, removeLink, insertImage } from '../../editor/link-image';
+import { fileToBackgroundDataUri } from '../../editor/background-image';
+import { renameCharacter, listCharacterNames } from '../../editor/rename-character';
+import { computeSceneCards, SceneCard } from '../../editor/card-view';
+import { TextSelection } from 'prosemirror-state';
 
 @Component({
   selector: 'app-editor',
@@ -83,6 +88,9 @@ export class EditorComponent implements OnInit, OnDestroy {
   private pageUnitPx = 0;
   private pmTopOffset = 0;
   private pageResizeObserver?: ResizeObserver;
+  private contentChangedSub?: Subscription;
+
+  @ViewChild('editorLayout') editorLayoutRef?: ElementRef<HTMLElement>;
 
   @ViewChild('prosemirrorMount')
   set mountRef(el: ElementRef<HTMLDivElement>) {
@@ -99,6 +107,14 @@ export class EditorComponent implements OnInit, OnDestroy {
         (element) => { this.activeElement = element; },
       );
       this.setupPageNumbers(el.nativeElement);
+      // Flags the "unsaved changes" warning (beforeunload below, plus the
+      // canDeactivate guard on this route) whenever the doc actually
+      // changes — cleared again by AutoSaveService on its next successful
+      // save. Gated on canEdit so a viewer's session (which only ever
+      // mirrors remote changes) never trips it.
+      this.contentChangedSub = this.sync.contentChanged$.subscribe(() => {
+        if (this.canEdit) this.autoSave.markDirty();
+      });
       // Apply read-only if role already loaded by this point
       if (this.myRole === 'viewer') this.makeEditorReadOnly();
       if (this.myRole !== 'viewer') {
@@ -222,6 +238,23 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.sync.endSession();
     this.autoSave.stop()
     this.pageResizeObserver?.disconnect();
+    this.contentChangedSub?.unsubscribe();
+  }
+
+  // Warns on an actual tab close/refresh — in-app navigation (clicking
+  // another link, the router "Open project…" etc.) is instead covered by
+  // unsavedChangesGuard on this route, which calls hasUnsavedChanges()
+  // below directly rather than going through the browser's native prompt.
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+      event.returnValue = ''; // Chrome requires the value to be set, not just preventDefault()
+    }
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.canEdit && this.autoSave.state$.getValue().dirty;
   }
 
   // --page-h/--page-gap are physical CSS units ("11in", ".6in"), not
@@ -452,6 +485,164 @@ export class EditorComponent implements OnInit, OnDestroy {
     return scriptExportFilename(this.script?.title, this.scriptId);
   }
 
+  // ── Project / Script menu (rename, open, new) ───────────────────────
+
+  showRenameProjectModal = false;
+  renameProjectTitle = '';
+  renameProjectError = '';
+
+  openRenameProjectModal(): void {
+    if (!this.project) return;
+    this.renameProjectTitle = this.project.title;
+    this.renameProjectError = '';
+    this.showRenameProjectModal = true;
+  }
+
+  confirmRenameProject(): void {
+    const title = this.renameProjectTitle.trim();
+    if (!title || !this.project) return;
+    this.projectService.rename(this.projectId, title).subscribe({
+      next: () => {
+        this.project!.title = title;
+        this.showRenameProjectModal = false;
+      },
+      error: () => {
+        this.renameProjectError = 'Could not rename project.';
+      },
+    });
+  }
+
+  showRenameScriptModal = false;
+  renameScriptTitle = '';
+  renameScriptError = '';
+
+  openRenameScriptModal(): void {
+    if (!this.script) return;
+    this.renameScriptTitle = this.script.title;
+    this.renameScriptError = '';
+    this.showRenameScriptModal = true;
+  }
+
+  confirmRenameScript(): void {
+    const title = this.renameScriptTitle.trim();
+    if (!title || !this.script) return;
+    this.scriptService.rename(this.projectId, this.scriptId, title).subscribe({
+      next: () => {
+        this.script!.title = title;
+        this.showRenameScriptModal = false;
+      },
+      error: () => {
+        this.renameScriptError = 'Could not rename script.';
+      },
+    });
+  }
+
+  showNewProjectModal = false;
+  newProjectTitle = '';
+  newProjectError = '';
+
+  openNewProjectModal(): void {
+    this.newProjectTitle = '';
+    this.newProjectError = '';
+    this.showNewProjectModal = true;
+  }
+
+  confirmNewProject(): void {
+    const title = this.newProjectTitle.trim();
+    if (!title) return;
+    this.projectService.create(title).subscribe({
+      next: p => {
+        this.showNewProjectModal = false;
+        this.router.navigate(['/projects', p.id]);
+      },
+      error: () => {
+        this.newProjectError = 'Could not create project.';
+      },
+    });
+  }
+
+  showOpenProjectModal = false;
+  openProjectsList: Project[] = [];
+  openProjectsLoading = false;
+
+  openOpenProjectModal(): void {
+    this.showOpenProjectModal = true;
+    this.openProjectsLoading = true;
+    this.projectService.list().subscribe({
+      next: projects => {
+        this.openProjectsList = projects ?? [];
+        this.openProjectsLoading = false;
+      },
+      error: () => {
+        this.openProjectsLoading = false;
+      },
+    });
+  }
+
+  goToProject(p: Project): void {
+    this.showOpenProjectModal = false;
+    this.router.navigate(['/projects', p.id]);
+  }
+
+  // New scripts are always created in the project currently open in the
+  // editor — there's no project picker, per the ask ("scripts created in
+  // the editor are automatically assigned to the project being worked in").
+  showNewScriptModal = false;
+  newScriptTitle = '';
+  newScriptError = '';
+
+  openNewScriptModal(): void {
+    this.newScriptTitle = '';
+    this.newScriptError = '';
+    this.showNewScriptModal = true;
+  }
+
+  confirmNewScript(): void {
+    const title = this.newScriptTitle.trim();
+    if (!title) return;
+    this.scriptService.create(this.projectId, title).subscribe({
+      next: s => {
+        this.showNewScriptModal = false;
+        // A full navigation, not router.navigate — this route reuses the
+        // same EditorComponent instance for a same-pattern URL change
+        // (only :scriptId differs), which would leave the OLD script's
+        // ProseMirror/Yjs session mounted instead of starting a fresh one
+        // for the new script. See goToScript below for the same reasoning.
+        window.location.href = `/projects/${this.projectId}/scripts/${s.id}`;
+      },
+      error: () => {
+        this.newScriptError = 'Could not create script.';
+      },
+    });
+  }
+
+  showOpenScriptModal = false;
+  openScriptsList: Script[] = [];
+  openScriptsLoading = false;
+
+  openOpenScriptModal(): void {
+    this.showOpenScriptModal = true;
+    this.openScriptsLoading = true;
+    this.scriptService.list(this.projectId).subscribe({
+      next: scripts => {
+        this.openScriptsList = scripts ?? [];
+        this.openScriptsLoading = false;
+      },
+      error: () => {
+        this.openScriptsLoading = false;
+      },
+    });
+  }
+
+  goToScript(s: Script): void {
+    this.showOpenScriptModal = false;
+    // Full navigation rather than router.navigate — see confirmNewScript
+    // above for why: this route reuses the same EditorComponent instance
+    // for a same-pattern URL change, so the router alone wouldn't actually
+    // load the new script's content.
+    window.location.href = `/projects/${this.projectId}/scripts/${s.id}`;
+  }
+
   showImportModal = false;
   showExportModal = false;
 
@@ -671,10 +862,140 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.findMatchIndex = -1;
   }
 
+  showRenameCharacter = false;
+  renameCharacterNames: string[] = [];
+  renameCharacterOld = '';
+  renameCharacterNew = '';
+  renameCharacterError = '';
+
+  openRenameCharacter(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+
+    this.renameCharacterNames = listCharacterNames(view.state.doc);
+    // Pre-select whichever character (if any) the cursor is currently
+    // inside — a nice default, not required, since the dropdown lists
+    // every character either way.
+    const el = view.state.selection.$from.parent.attrs['element'];
+    const cursorText = (el === 'character' || el === 'dual_dialogue')
+      ? view.state.selection.$from.parent.textContent.replace(/\(.*?\)/g, '').trim()
+      : '';
+    this.renameCharacterOld = this.renameCharacterNames.includes(cursorText)
+      ? cursorText
+      : (this.renameCharacterNames[0] ?? '');
+    this.renameCharacterNew = '';
+    this.renameCharacterError = '';
+    this.showRenameCharacter = true;
+  }
+
+  confirmRenameCharacter(): void {
+    const view = (this.sync as any).session?.view;
+    const newName = this.renameCharacterNew.trim();
+    if (!view || !this.renameCharacterOld || !newName) return;
+
+    const count = renameCharacter(view, this.renameCharacterOld, newName);
+    if (count === 0) {
+      this.renameCharacterError = 'No lines found for that character.';
+      return;
+    }
+    view.focus();
+    this.showRenameCharacter = false;
+  }
+
+  // ── Format menu ──────────────────────────────────────────────────
+
+  showLinkModal = false;
+  linkUrl = '';
+
+  openLinkModal(): void {
+    this.linkUrl = '';
+    this.showLinkModal = true;
+  }
+
+  confirmInsertLink(): void {
+    const view = (this.sync as any).session?.view;
+    const url = this.linkUrl.trim();
+    if (!view || !url) return;
+    applyLink(view, url);
+    this.showLinkModal = false;
+  }
+
+  removeLinkAtCursor(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    removeLink(view);
+  }
+
+  async insertImagePrompt(): Promise<void> {
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    const file = await this.pickFile('image/*');
+    if (!file) return;
+    try {
+      const dataUri = await fileToBackgroundDataUri(file);
+      insertImage(view, dataUri, file.name);
+      view.focus();
+    } catch (err) {
+      console.error('Image insert failed:', err);
+      alert(err instanceof Error ? err.message : 'Could not insert that image.');
+    }
+  }
+
   // ── View menu ────────────────────────────────────────────────────
 
   toggleToolbar(): void {
     this.showToolbar = !this.showToolbar;
+  }
+
+  // "Page view" is the existing continuous manuscript editor; "Card
+  // view" is a read-only overview (see card-view.ts) — #prosemirrorMount
+  // stays mounted underneath either way (see the pm-mount [class.view-
+  // hidden] binding in the template), just hidden, since it's the one
+  // live collaborative session and re-mounting it would restart sync.
+  viewMode: 'page' | 'card' = 'page';
+  sceneCards: SceneCard[] = [];
+
+  setViewMode(mode: 'page' | 'card'): void {
+    this.viewMode = mode;
+    if (mode === 'card') {
+      const view = (this.sync as any).session?.view;
+      if (view) this.sceneCards = computeSceneCards(view.state.doc);
+    }
+  }
+
+  // Switches back to Page View and scrolls/positions the cursor at the
+  // clicked scene, so "editing from card view" is one click away even
+  // though the cards themselves aren't editable.
+  jumpToScene(card: SceneCard): void {
+    this.viewMode = 'page';
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    // The mount was just unhidden by the viewMode flip above — give
+    // Angular a tick to apply it before scrollIntoView() measures layout.
+    setTimeout(() => {
+      const pos = Math.min(card.pos + 1, view.state.doc.content.size);
+      const tr = view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(pos)));
+      view.dispatch(tr.scrollIntoView());
+      view.focus();
+    }, 0);
+  }
+
+  isFullscreen = false;
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    // Also fires when the user exits via Esc or browser chrome directly
+    // (not just our own toggle button), so this is the source of truth
+    // rather than flipping isFullscreen ourselves in toggleFullscreen().
+    this.isFullscreen = !!document.fullscreenElement;
+  }
+
+  toggleFullscreen(): void {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      this.editorLayoutRef?.nativeElement.requestFullscreen();
+    }
   }
 
   // ── Share menu ───────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { ProjectComponent } from './components/project/project.component';
 import { StoryComponent } from './components/story/story.component';
 import { TrashComponent } from './components/trash/trash.component';
 import { authGuard } from './guard/auth.guard';
+import { unsavedChangesGuard } from './guard/unsaved-changes.guard';
 import { SignInComponent } from './components/sign-in/sign-in.component';
 
 export const routes: Routes = [
@@ -41,6 +42,7 @@ export const routes: Routes = [
     path: 'projects/:projectId/scripts/:scriptId',
     component: EditorComponent,
     canActivate: [authGuard],
+    canDeactivate: [unsavedChangesGuard],
   },
   {
     // Redirect anything unknown back to the dashboard

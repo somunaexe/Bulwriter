@@ -81,6 +81,39 @@ func (s *Store) Get(id string) (*Project, error) {
 	return p, nil
 }
 
+// Rename updates a project's title.
+func (s *Store) Rename(id, title string) error {
+	res, err := s.db.Exec(
+		`UPDATE projects SET title = $1 WHERE id = $2 AND deleted_at IS NULL`, title, id,
+	)
+	if err != nil {
+		return fmt.Errorf("renaming project: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("project not found")
+	}
+	return nil
+}
+
+// IsTrashed reports whether a project is currently soft-deleted — used to
+// guard permanent deletion (PurgeProjectNow in internal/trash) so a live
+// project can never be purged by mistake.
+func (s *Store) IsTrashed(id string) (bool, error) {
+	var deletedAt sql.NullTime
+	err := s.db.QueryRow(`SELECT deleted_at FROM projects WHERE id = $1`, id).Scan(&deletedAt)
+	if err == sql.ErrNoRows {
+		return false, errors.New("project not found")
+	}
+	if err != nil {
+		return false, fmt.Errorf("checking project trash state: %w", err)
+	}
+	return deletedAt.Valid, nil
+}
+
 // SoftDelete moves a project to the trash — it stops showing up in normal
 // listings but stays fully intact and restorable until the periodic purge
 // job (see internal/trash) permanently removes it.

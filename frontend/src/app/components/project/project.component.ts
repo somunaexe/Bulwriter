@@ -132,4 +132,59 @@ export class ProjectComponent implements OnInit {
       },
     });
   }
+
+  // ── Rename ───────────────────────────────────────────────────────
+
+  showRenameProjectModal = false;
+  renameProjectTitle = '';
+  renameProjectError = '';
+
+  openRenameProjectModal(): void {
+    if (!this.project) return;
+    this.renameProjectTitle = this.project.title;
+    this.renameProjectError = '';
+    this.showRenameProjectModal = true;
+  }
+
+  confirmRenameProject(): void {
+    const title = this.renameProjectTitle.trim();
+    if (!title || !this.project) return;
+
+    this.projectService.rename(this.projectId, title).subscribe({
+      next: () => {
+        this.project!.title = title;
+        this.showRenameProjectModal = false;
+      },
+      error: () => {
+        this.renameProjectError = 'Could not rename project.';
+      },
+    });
+  }
+
+  renamingScript: Script | null = null;
+  renameScriptTitle = '';
+  renameScriptError = '';
+
+  openRenameScript(event: Event, s: Script): void {
+    event.stopPropagation();
+    this.renamingScript = s;
+    this.renameScriptTitle = s.title;
+    this.renameScriptError = '';
+  }
+
+  confirmRenameScript(): void {
+    const s = this.renamingScript;
+    const title = this.renameScriptTitle.trim();
+    if (!s || !title) return;
+
+    this.scriptService.rename(this.projectId, s.id, title).subscribe({
+      next: () => {
+        s.title = title;
+        this.renamingScript = null;
+      },
+      error: () => {
+        this.renameScriptError = 'Could not rename script.';
+      },
+    });
+  }
 }
