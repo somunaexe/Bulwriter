@@ -36,3 +36,8 @@ frontend/.angular
 SP*
 *.patch
 *.diff
+
+# ...except patch-package's patches — these are applied automatically on
+# every `npm install` (see frontend/package.json's postinstall script) and
+# must be committed for that to work anywhere but this checkout.
+!frontend/patches/*.patch
