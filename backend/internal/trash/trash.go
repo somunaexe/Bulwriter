@@ -8,6 +8,7 @@ package trash
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -76,6 +77,33 @@ func (s *Store) PurgeExpired() error {
 		}
 	}
 	return nil
+}
+
+// PurgeProjectNow immediately, permanently deletes a project — used by the
+// "Delete forever" trash action to skip the retention window. Refuses to
+// touch a project that isn't currently in the trash, so a live project can
+// never be purged by mistake.
+func (s *Store) PurgeProjectNow(id string) error {
+	trashed, err := s.projects.IsTrashed(id)
+	if err != nil {
+		return err
+	}
+	if !trashed {
+		return errors.New("project is not in the trash")
+	}
+	return s.purgeProject(id)
+}
+
+// PurgeScriptNow is PurgeProjectNow's script-level equivalent.
+func (s *Store) PurgeScriptNow(id string) error {
+	trashed, err := s.scripts.IsTrashed(id)
+	if err != nil {
+		return err
+	}
+	if !trashed {
+		return errors.New("script is not in the trash")
+	}
+	return s.purgeScript(id)
 }
 
 // purgeScript permanently deletes a script and every row of production

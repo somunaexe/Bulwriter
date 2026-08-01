@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService, Project } from '../../services/project.service';
 import { ScriptService, Script } from '../../services/script.service';
+import { ModalComponent } from '../modal/modal.component';
 
 const RETENTION_DAYS = 30;
 
@@ -13,7 +15,7 @@ const RETENTION_DAYS = 30;
 @Component({
   selector: 'app-trash',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, ModalComponent],
   templateUrl: './trash.component.html',
   styleUrl: './trash.component.scss',
 })
@@ -107,5 +109,52 @@ export class TrashComponent implements OnInit {
     } else {
       this.router.navigate(['/']);
     }
+  }
+
+  // ── Delete forever ───────────────────────────────────────────────
+  // Skips the rest of the 30-day retention window — irreversible, so it
+  // requires typing the exact title before it's allowed through.
+
+  confirmingDelete: { kind: 'project' | 'script'; id: string; title: string } | null = null;
+  confirmDeleteText = '';
+  confirmDeleteError = '';
+
+  openConfirmDeleteProject(p: Project): void {
+    this.confirmingDelete = { kind: 'project', id: p.id, title: p.title };
+    this.confirmDeleteText = '';
+    this.confirmDeleteError = '';
+  }
+
+  openConfirmDeleteScript(s: Script): void {
+    this.confirmingDelete = { kind: 'script', id: s.id, title: s.title };
+    this.confirmDeleteText = '';
+    this.confirmDeleteError = '';
+  }
+
+  get confirmDeleteMatches(): boolean {
+    return !!this.confirmingDelete && this.confirmDeleteText === this.confirmingDelete.title;
+  }
+
+  confirmPermanentDelete(): void {
+    const target = this.confirmingDelete;
+    if (!target || !this.confirmDeleteMatches) return;
+
+    const request = target.kind === 'project'
+      ? this.projectService.purgeNow(target.id)
+      : this.scriptService.purgeNow(this.projectId!, target.id);
+
+    request.subscribe({
+      next: () => {
+        if (target.kind === 'project') {
+          this.projects = this.projects.filter(x => x.id !== target.id);
+        } else {
+          this.scripts = this.scripts.filter(x => x.id !== target.id);
+        }
+        this.confirmingDelete = null;
+      },
+      error: () => {
+        this.confirmDeleteError = 'Could not delete permanently.';
+      },
+    });
   }
 }

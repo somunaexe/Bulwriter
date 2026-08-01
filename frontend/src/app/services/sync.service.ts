@@ -1,10 +1,11 @@
 declare const require: any;
 
 import { Injectable, OnDestroy } from '@angular/core';
+import { Subject } from 'rxjs';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { ySyncPlugin, yUndoPlugin, yCursorPlugin, undoCommand, redoCommand } from 'y-prosemirror';
-import { EditorState } from 'prosemirror-state';
+import { EditorState, Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { Node as PMNode } from 'prosemirror-model';
 import { keymap } from 'prosemirror-keymap';
@@ -29,6 +30,13 @@ export class SyncService implements OnDestroy {
   private WS_URL = environment.wsUrl;
   private session: CollabSession | null = null;
 
+  // Fires whenever the document's actual content changes (not on
+  // selection-only updates) — regardless of whether the change originated
+  // locally or from a remote collaborator. EditorComponent uses this to
+  // flag unsaved changes; a remote-triggered false positive is a harmless,
+  // conservative default (autosave will still clear it on its next tick).
+  contentChanged$ = new Subject<void>();
+
   startSession(
     scriptId: string,
     mountEl: HTMLElement,
@@ -45,6 +53,13 @@ export class SyncService implements OnDestroy {
       ySyncPlugin(yXmlFragment),
       yCursorPlugin(provider.awareness),
       yUndoPlugin(),
+      new Plugin({
+        view: () => ({
+          update: (view, prevState) => {
+            if (!view.state.doc.eq(prevState.doc)) this.contentChanged$.next();
+          },
+        }),
+      }),
       // Yjs's UndoManager (wired up by yUndoPlugin above) tracks the
       // history — prosemirror-history isn't used at all here, since it
       // doesn't cooperate with a collaboratively-edited Yjs doc. Mod-Z/

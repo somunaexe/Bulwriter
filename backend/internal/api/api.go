@@ -33,6 +33,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/shotlist"
 	"github.com/somunaexe/bulwriter/backend/internal/snapshot"
 	"github.com/somunaexe/bulwriter/backend/internal/story"
+	"github.com/somunaexe/bulwriter/backend/internal/trash"
 )
 
 type router struct {
@@ -40,6 +41,7 @@ type router struct {
 	store        *snapshot.Store
 	projects     *project.Store
 	scripts      *script.Store
+	trash        *trash.Store
 	members      *membership.Store // ← add this
 	breakdown    *breakdown.Store
 	schedule     *schedule.Store
@@ -65,6 +67,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		store:        snapshot.NewStore(db),
 		projects:     project.NewStore(db),
 		scripts:      script.NewStore((db)),
+		trash:        trash.NewStore(db),
 		members:      membership.NewStore(db),
 		breakdown:    breakdown.NewStore(db),
 		schedule:     schedule.NewStore(db),
@@ -122,22 +125,26 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects", r.listProjects).Methods("GET")
 	api.HandleFunc("/projects", r.createProject).Methods("POST")
 	api.HandleFunc("/projects/{projectId}", r.getProject).Methods("GET")
+	api.HandleFunc("/projects/{projectId}", r.renameProject).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}", r.deleteProject).Methods("DELETE")
 
 	// Scripts
 	api.HandleFunc("/projects/{projectId}/scripts", r.listScripts).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts", r.createScript).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}", r.getScript).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}", r.renameScript).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}", r.deleteScript).Methods("DELETE")
 
 	// Trash — deleting a project or script moves it here instead of
 	// removing it outright. Recoverable via restore for 30 days, after
 	// which the periodic purge job (see internal/trash) discards it for
-	// good.
+	// good — or a DELETE here skips the wait and purges it immediately.
 	api.HandleFunc("/trash/projects", r.listTrashedProjects).Methods("GET")
 	api.HandleFunc("/trash/projects/{projectId}/restore", r.restoreProject).Methods("POST")
+	api.HandleFunc("/trash/projects/{projectId}", r.purgeProjectNow).Methods("DELETE")
 	api.HandleFunc("/projects/{projectId}/trash/scripts", r.listTrashedScripts).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/trash/scripts/{scriptId}/restore", r.restoreScript).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/trash/scripts/{scriptId}", r.purgeScriptNow).Methods("DELETE")
 
 	// Branches
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches", r.listBranches).Methods("GET")
@@ -433,6 +440,66 @@ func (r *router) getScript(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, sc)
 }
 
+// renameProject updates a project's title — same editor-or-above bar as
+// creating a script, since it's a much less drastic action than deleting
+// or restoring the project itself.
+func (r *router) renameProject(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Title == "" {
+		writeErr(w, http.StatusBadRequest, "title is required")
+		return
+	}
+
+	if err := r.projects.Rename(vars["projectId"], body.Title); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// renameScript is renameProject's script-level equivalent.
+func (r *router) renameScript(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Title == "" {
+		writeErr(w, http.StatusBadRequest, "title is required")
+		return
+	}
+
+	if err := r.scripts.Rename(vars["scriptId"], body.Title); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // deleteProject moves a project to the trash — permanently deleting a
 // whole project (and everything under it) is a big enough action that
 // only the owner can do it, unlike scripts which any editor can delete.
@@ -493,6 +560,29 @@ func (r *router) restoreProject(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// purgeProjectNow permanently deletes an already-trashed project
+// immediately, skipping the rest of its 30-day retention window — the
+// trash view's "Delete forever" action.
+func (r *router) purgeProjectNow(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleOwner) {
+		return
+	}
+
+	if err := r.trash.PurgeProjectNow(vars["projectId"]); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // deleteScript moves a script to the trash — same editor-or-above bar as
 // creating one.
 func (r *router) deleteScript(w http.ResponseWriter, req *http.Request) {
@@ -543,6 +633,27 @@ func (r *router) restoreScript(w http.ResponseWriter, req *http.Request) {
 
 	if err := r.scripts.Restore(vars["scriptId"]); err != nil {
 		writeErr(w, http.StatusNotFound, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// purgeScriptNow is purgeProjectNow's script-level equivalent.
+func (r *router) purgeScriptNow(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.trash.PurgeScriptNow(vars["scriptId"]); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

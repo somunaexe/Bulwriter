@@ -29,6 +29,10 @@ export class ProjectService {
     return this.http.post<Project>(`${this.BASE}/projects`, { title });
   }
 
+  rename(id: string, title: string): Observable<void> {
+    return this.http.put<void>(`${this.BASE}/projects/${id}`, { title });
+  }
+
   // Moves a project to the trash — recoverable via restore() for 30 days.
   remove(id: string): Observable<void> {
     return this.http.delete<void>(`${this.BASE}/projects/${id}`);
@@ -40,5 +44,11 @@ export class ProjectService {
 
   restore(id: string): Observable<void> {
     return this.http.post<void>(`${this.BASE}/trash/projects/${id}/restore`, {});
+  }
+
+  // Immediately, permanently deletes an already-trashed project, skipping
+  // the rest of its 30-day retention window.
+  purgeNow(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.BASE}/trash/projects/${id}`);
   }
 }

@@ -408,6 +408,15 @@ html, body {
   letter-spacing: -.02em;
 }
 
+// Wraps a page's .logo title together with its inline rename button
+// (ProjectComponent's header, EditorComponent's title bar) so the button
+// sits right next to the centered title instead of on its own line.
+.dash-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+}
+
 .tagline {
   color: var(--muted);
   font-size: 14px;
@@ -453,6 +462,12 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  // .project-card-main is flex:1 and fills all remaining width itself, so
+  // without an explicit gap here a trailing action button (Restore, or
+  // any button that isn't .card-delete-btn/.card-action-btn — those two
+  // compensate with their own margin-left) sits flush against
+  // .project-card-main's right edge, right up against its meta text.
+  gap: .75rem;
 }
 
 .project-card-title {
@@ -478,7 +493,7 @@ html, body {
   gap: 1rem;
 }
 
-.card-delete-btn {
+.card-delete-btn, .card-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -487,14 +502,18 @@ html, body {
   padding: 0;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-left: .5rem;
 
   svg { width: 18px; height: 18px; }
+}
 
-  &:hover {
-    color: color-mix(in srgb, var(--delete-fg) 82%, black);
-    background: color-mix(in srgb, var(--delete-fg) 14%, transparent);
-  }
+.card-delete-btn:hover {
+  color: color-mix(in srgb, var(--delete-fg) 82%, black);
+  background: color-mix(in srgb, var(--delete-fg) 14%, transparent);
+}
+
+.card-action-btn:hover {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), .12);
 }
 
 .loading-msg,
@@ -617,6 +636,24 @@ ol.stats-list {
   font-size: 12.5px;
   color: var(--muted);
   font-style: italic;
+}
+
+// "Open project…"/"Open script…" pickers (File menu, editor) — a plain
+// clickable list, reusing .stats-list's layout with a hover affordance
+// added since these rows (unlike .stats-list's read-only counts) navigate
+// somewhere when clicked.
+.open-picker-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.open-picker-item {
+  cursor: pointer;
+  padding: .5rem .6rem;
+  border-radius: 6px;
+  transition: background .12s;
+
+  &:hover { background: rgba(var(--accent-rgb), .1); color: var(--accent); }
 }
 
 /* ── ProseMirror mount ──
@@ -827,6 +864,23 @@ ol.stats-list {
   margin-top: 3in;
   font-size: 0.85em;
   color: var(--muted);
+}
+
+/* Hyperlinks and inline images — deliberately not screenplay line types
+   (see screenplaySchema's `link` mark / `image` node), so these have no
+   [data-element] of their own; they can appear inside any block's text
+   the same way bold/italic/underline can. */
+.pm-mount .ProseMirror .pm-link {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.pm-mount .ProseMirror .pm-image {
+  display: inline-block;
+  max-width: 100%;
+  max-height: 4in;
+  vertical-align: middle;
+  border-radius: 4px;
 }
 
 /* Cursor colours for collaborators */
@@ -1061,6 +1115,12 @@ ol.stats-list {
 .menu-panel button:disabled:hover {
   background: transparent;
   border-left-color: transparent;
+}
+.menu-panel button.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .menu-divider {

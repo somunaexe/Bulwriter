@@ -1,5 +1,5 @@
-// Trash rows aren't clickable (only the Restore button is actionable),
-// so drop .project-card's hover-lift affordance.
+// Trash rows aren't clickable (only their buttons are actionable), so
+// drop .project-card's hover-lift affordance.
 .trash-card {
   cursor: default;
 
@@ -7,5 +7,38 @@
     transform: none;
     box-shadow: var(--shadow-sm);
     border-color: var(--border);
+  }
+}
+
+.delete-forever-trigger {
+  color: var(--delete-fg);
+  border-color: color-mix(in srgb, var(--delete-fg) 35%, transparent);
+
+  &:hover:not(:disabled) {
+    border-color: var(--delete-fg);
+    color: var(--delete-fg);
+    background: color-mix(in srgb, var(--delete-fg) 8%, transparent);
+  }
+}
+
+.delete-forever-warning {
+  color: var(--delete-fg);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.delete-forever-instruction {
+  font-size: 13px;
+}
+
+.delete-forever-btn {
+  background: var(--delete-fg);
+  color: #fff;
+  box-shadow: none;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--delete-fg) 85%, black);
+    box-shadow: none;
+    transform: none;
   }
 }
