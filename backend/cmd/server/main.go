@@ -4,10 +4,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/somunaexe/bulwriter/backend/internal/api"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
+	"github.com/somunaexe/bulwriter/backend/internal/trash"
 	"github.com/somunaexe/bulwriter/backend/db"
 )
 
@@ -32,6 +34,10 @@ func main() {
 
 	syncHub := hub.NewHub()
 	go syncHub.Run()
+
+	// Permanently discards trashed projects/scripts past their 30-day
+	// retention window — runs once immediately, then hourly.
+	go trash.RunPeriodicPurge(trash.NewStore(database), time.Hour)
 
 	// Pass the database down into the router so handlers can use it
 	router := api.NewRouter(syncHub, database)

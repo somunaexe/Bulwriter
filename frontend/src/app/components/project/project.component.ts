@@ -115,4 +115,21 @@ export class ProjectComponent implements OnInit {
   openStory(): void {
     this.router.navigate(['/projects', this.projectId, 'story']);
   }
+
+  openTrash(): void {
+    this.router.navigate(['/projects', this.projectId, 'trash']);
+  }
+
+  // Only editors and owners can delete scripts — same bar as creating one.
+  deleteScript(event: Event, s: Script): void {
+    event.stopPropagation();
+    this.scriptService.remove(this.projectId, s.id).subscribe({
+      next: () => {
+        this.scripts = this.scripts.filter(x => x.id !== s.id);
+      },
+      error: () => {
+        this.error = 'Could not delete script.';
+      },
+    });
+  }
 }

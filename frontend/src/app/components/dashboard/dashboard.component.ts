@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ProjectService, Project } from '../../services/project.service';
 import { MembershipService, MyInvite } from '../../services/membership.service';
+import { ClerkService } from '../../services/clerk.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -24,13 +25,18 @@ export class DashboardComponent implements OnInit {
   invitesLoading = true;
   invitePending: Record<string, boolean> = {};
 
+  currentUserId: string | null = null;
+
   constructor(
     private projectService: ProjectService,
     private membershipService: MembershipService,
+    private clerk: ClerkService,
     private router: Router,
   ) {}
 
   ngOnInit(): void {
+    this.clerk.userId$.subscribe(id => this.currentUserId = id);
+
     this.projectService.list().subscribe({
       next: projects => {
         this.projects = projects ?? [];
@@ -100,5 +106,27 @@ export class DashboardComponent implements OnInit {
 
   openProject(id: string): void {
     this.router.navigate(['/projects', id]);
+  }
+
+  isOwnerOf(p: Project): boolean {
+    return !!this.currentUserId && p.ownerId === this.currentUserId;
+  }
+
+  // Only the owner can delete a project — the backend enforces this too,
+  // this just keeps the button from showing where it'd just 403.
+  deleteProject(event: Event, p: Project): void {
+    event.stopPropagation();
+    this.projectService.remove(p.id).subscribe({
+      next: () => {
+        this.projects = this.projects.filter(x => x.id !== p.id);
+      },
+      error: () => {
+        this.error = 'Could not delete project.';
+      },
+    });
+  }
+
+  openTrash(): void {
+    this.router.navigate(['/trash']);
   }
 }

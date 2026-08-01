@@ -1,11 +1,8 @@
-// .dashboard/.dash-header/.logo/.new-project/.input-lg/.project-list/
-// .project-card(+title+meta)/.loading-msg/.empty-msg/.error-msg are all
-// shared with DashboardComponent's project list — defined once, globally,
-// in styles.scss instead of duplicated in both components' stylesheets.
-.story-bible-link {
-  margin-bottom: 1.5rem;
-}
-
+// .dashboard/.dash-header/.logo/.tagline/.new-project/.input-lg/
+// .project-list/.project-card(+title+meta)/.loading-msg/.empty-msg/
+// .error-msg/.story-bible-link are all shared with DashboardComponent's
+// project list (and TrashComponent) — defined once, globally, in
+// styles.scss instead of duplicated across components' stylesheets.
 .collaborators {
   margin-top: 2.5rem;
   padding-top: 1.5rem;

@@ -5,6 +5,10 @@
     <p class="tagline">Your screenwriting workspace</p>
   </header>
 
+  <section class="story-bible-link">
+    <button class="btn-ghost" (click)="openTrash()">Trash</button>
+  </section>
+
   <section class="invites" *ngIf="!invitesLoading && invites.length > 0">
     <h2 class="section-label">Your invites</h2>
     <ul class="invite-inbox-list">
@@ -44,8 +48,15 @@
     <div class="project-card"
          *ngFor="let p of projects"
          (click)="openProject(p.id)">
-      <div class="project-card-title">{{ p.title }}</div>
-      <div class="project-card-meta">{{ p.createdAt | date:'mediumDate' }}</div>
+      <div class="project-card-main">
+        <div class="project-card-title">{{ p.title }}</div>
+        <div class="project-card-meta">{{ p.createdAt | date:'mediumDate' }}</div>
+      </div>
+      <button
+        class="btn-icon card-delete-btn"
+        *ngIf="isOwnerOf(p)"
+        title="Move to trash"
+        (click)="deleteProject($event, p)">🗑</button>
     </div>
 
   </section>

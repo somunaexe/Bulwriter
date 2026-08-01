@@ -122,11 +122,22 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects", r.listProjects).Methods("GET")
 	api.HandleFunc("/projects", r.createProject).Methods("POST")
 	api.HandleFunc("/projects/{projectId}", r.getProject).Methods("GET")
+	api.HandleFunc("/projects/{projectId}", r.deleteProject).Methods("DELETE")
 
 	// Scripts
 	api.HandleFunc("/projects/{projectId}/scripts", r.listScripts).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/scripts", r.createScript).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}", r.getScript).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}", r.deleteScript).Methods("DELETE")
+
+	// Trash — deleting a project or script moves it here instead of
+	// removing it outright. Recoverable via restore for 30 days, after
+	// which the periodic purge job (see internal/trash) discards it for
+	// good.
+	api.HandleFunc("/trash/projects", r.listTrashedProjects).Methods("GET")
+	api.HandleFunc("/trash/projects/{projectId}/restore", r.restoreProject).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/trash/scripts", r.listTrashedScripts).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/trash/scripts/{scriptId}/restore", r.restoreScript).Methods("POST")
 
 	// Branches
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/branches", r.listBranches).Methods("GET")
@@ -420,6 +431,121 @@ func (r *router) getScript(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, sc)
+}
+
+// deleteProject moves a project to the trash — permanently deleting a
+// whole project (and everything under it) is a big enough action that
+// only the owner can do it, unlike scripts which any editor can delete.
+func (r *router) deleteProject(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleOwner) {
+		return
+	}
+
+	if err := r.projects.SoftDelete(vars["projectId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) listTrashedProjects(w http.ResponseWriter, req *http.Request) {
+	userID := middleware.UserIDFromContext(req)
+
+	ids, err := r.members.ProjectIDsForUser(userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	projects, err := r.projects.ListTrashByIDs(ids)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, projects)
+}
+
+func (r *router) restoreProject(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleOwner) {
+		return
+	}
+
+	if err := r.projects.Restore(vars["projectId"]); err != nil {
+		writeErr(w, http.StatusNotFound, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// deleteScript moves a script to the trash — same editor-or-above bar as
+// creating one.
+func (r *router) deleteScript(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.scripts.SoftDelete(vars["scriptId"]); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *router) listTrashedScripts(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	scripts, err := r.scripts.ListTrash(vars["projectId"])
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if scripts == nil {
+		scripts = []*script.Script{}
+	}
+	writeJSON(w, http.StatusOK, scripts)
+}
+
+func (r *router) restoreScript(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	if err := r.scripts.Restore(vars["scriptId"]); err != nil {
+		writeErr(w, http.StatusNotFound, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (r *router) listBranches(w http.ResponseWriter, req *http.Request) {

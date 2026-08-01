@@ -8,6 +8,7 @@ export interface Project {
   title: string;
   ownerId: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -26,5 +27,18 @@ export class ProjectService {
 
   create(title: string): Observable<Project> {
     return this.http.post<Project>(`${this.BASE}/projects`, { title });
+  }
+
+  // Moves a project to the trash — recoverable via restore() for 30 days.
+  remove(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.BASE}/projects/${id}`);
+  }
+
+  listTrash(): Observable<Project[]> {
+    return this.http.get<Project[]>(`${this.BASE}/trash/projects`);
+  }
+
+  restore(id: string): Observable<void> {
+    return this.http.post<void>(`${this.BASE}/trash/projects/${id}/restore`, {});
   }
 }
