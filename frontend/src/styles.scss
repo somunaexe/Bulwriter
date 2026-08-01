@@ -479,10 +479,22 @@ html, body {
 }
 
 .card-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
   flex-shrink: 0;
   margin-left: .5rem;
 
-  &:hover { color: var(--delete-fg); }
+  svg { width: 18px; height: 18px; }
+
+  &:hover {
+    color: color-mix(in srgb, var(--delete-fg) 82%, black);
+    background: color-mix(in srgb, var(--delete-fg) 14%, transparent);
+  }
 }
 
 .loading-msg,
