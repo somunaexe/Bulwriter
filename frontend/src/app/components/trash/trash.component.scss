@@ -1,0 +1,11 @@
+// Trash rows aren't clickable (only the Restore button is actionable),
+// so drop .project-card's hover-lift affordance.
+.trash-card {
+  cursor: default;
+
+  &:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border);
+  }
+}

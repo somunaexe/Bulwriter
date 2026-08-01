@@ -6,6 +6,7 @@
 
   <section class="story-bible-link">
     <button class="btn-ghost" (click)="openStory()">Story bible</button>
+    <button class="btn-ghost" (click)="openTrash()">Trash</button>
   </section>
 
   <!-- Only editors and owners can create scripts -->
@@ -32,8 +33,15 @@
     <div class="project-card"
          *ngFor="let s of scripts"
          (click)="openScript(s.id)">
-      <div class="project-card-title">{{ s.title }}</div>
-      <div class="project-card-meta">{{ s.createdAt | date:'mediumDate' }}</div>
+      <div class="project-card-main">
+        <div class="project-card-title">{{ s.title }}</div>
+        <div class="project-card-meta">{{ s.createdAt | date:'mediumDate' }}</div>
+      </div>
+      <button
+        class="btn-icon card-delete-btn"
+        *ngIf="canEdit"
+        title="Move to trash"
+        (click)="deleteScript($event, s)">🗑</button>
     </div>
 
   </section>

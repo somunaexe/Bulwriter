@@ -1,13 +1,8 @@
-// .dashboard/.dash-header/.logo/.new-project/.input-lg/.project-list/
-// .project-card(+title+meta)/.loading-msg/.empty-msg/.error-msg are all
-// shared with ProjectComponent's script list — defined once, globally, in
-// styles.scss instead of duplicated in both components' stylesheets.
-.tagline {
-  color: var(--muted);
-  font-size: 14px;
-  margin-top: .35rem;
-}
-
+// .dashboard/.dash-header/.logo/.tagline/.new-project/.input-lg/
+// .project-list/.project-card(+title+meta)/.loading-msg/.empty-msg/
+// .error-msg are all shared with ProjectComponent's script list (and now
+// TrashComponent) — defined once, globally, in styles.scss instead of
+// duplicated across components' stylesheets.
 .invites {
   margin-bottom: 2.5rem;
 }

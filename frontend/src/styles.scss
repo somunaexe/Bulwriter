@@ -408,6 +408,18 @@ html, body {
   letter-spacing: -.02em;
 }
 
+.tagline {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: .35rem;
+}
+
+.story-bible-link {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1.5rem;
+}
+
 .new-project {
   display: flex;
   gap: .75rem;
@@ -452,6 +464,25 @@ html, body {
 .project-card-meta {
   font-size: 12px;
   color: var(--muted);
+}
+
+// Wraps title+meta so a .card-delete-btn (or the trash page's Restore
+// button) can sit alongside them as a second flex child of .project-card
+// without disrupting the title/meta space-between spacing.
+.project-card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.card-delete-btn {
+  flex-shrink: 0;
+  margin-left: .5rem;
+
+  &:hover { color: var(--delete-fg); }
 }
 
 .loading-msg,
