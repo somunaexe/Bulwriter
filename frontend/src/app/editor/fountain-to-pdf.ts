@@ -1,5 +1,9 @@
 import { Node as PMNode } from 'prosemirror-model';
 import { ScreenplayElement } from './screenplay-schema';
+import {
+  PAGE_W, PAGE_H, MARGIN_TOP, MARGIN_BOTTOM, CHAR_W, LINE_H, FONT_SIZE,
+  CONTENT_LEFT, CONTENT_RIGHT, wrapByChars,
+} from './page-layout';
 
 export interface PdfExportOptions {
   filename: string;
@@ -8,49 +12,14 @@ export interface PdfExportOptions {
   password?: string;
 }
 
-// Traditional screenplay typesetting: 12pt Courier at 10 characters per
-// inch / 6 lines per inch — the same convention --script-width and the
-// on-screen ch-based indents (styles.scss) are already built around, just
-// at true print spacing instead of the app's looser on-screen line-height.
-const PAGE_W = 8.5;
-const PAGE_H = 11;
-const MARGIN_TOP = 1;
-const MARGIN_BOTTOM = 1;
-const MARGIN_RIGHT = 1;
-const MARGIN_LEFT = 1.5;
-const CHAR_W = 1 / 10;
-const LINE_H = 1 / 6;
-const FONT_SIZE = 12;
-
-const CONTENT_LEFT = MARGIN_LEFT;
-const CONTENT_RIGHT = PAGE_W - MARGIN_RIGHT;
-
-/** Courier is monospace, so wrapping by character count matches the
- *  on-screen ch-based max-widths exactly — no need for jsPDF's slower,
- *  pixel-measuring splitTextToSize. */
-function wrapByChars(text: string, maxChars: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let line = '';
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (candidate.length > maxChars && line) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-  }
-  lines.push(line);
-  return lines;
-}
-
 /** Renders a ProseMirror screenplay document as an industry-formatted
  *  PDF and triggers a browser download. Title page fields (if any) get
  *  their own unnumbered page; body pages are numbered from the second
- *  one on — this is the one place real, accurate page breaks actually
- *  get computed; the in-editor view is a single continuous sheet with
- *  no attempt to mirror them (see .pm-mount .ProseMirror in styles.scss).
+ *  one on. The page-break layout constants (page-layout.ts) are shared
+ *  with pagination.ts, which computes the same breaks for the live
+ *  editor's own page-break decorations — this is still the one place
+ *  that actually renders full pages (fonts, margins, the title page),
+ *  but the two agree on *where* a page breaks.
  *
  *  jsPDF pulls in html2canvas/canvg (needed for its .html() renderer,
  *  which nothing here uses, but the package doesn't tree-shake them

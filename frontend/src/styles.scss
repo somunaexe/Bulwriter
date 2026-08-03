@@ -705,18 +705,39 @@ ol.stats-list {
   white-space: pre-wrap;
   overflow-wrap: break-word; /* a long run of characters with no spaces must wrap, not force the page wider */
 
-  /* A single continuous manuscript sheet — no fake per-page seams. An
-     earlier version painted a repeating "page break" pattern onto the
-     background every --page-h, but the document is one continuous
-     ProseMirror node with no actual per-page layout, so those seams (and
-     the page-number labels that went with them) landed at arbitrary
-     points in the running text with no regard for line breaks — a crease
-     or a "2." could end up sitting directly on top of a word. Real,
-     accurate page breaks already exist where they actually matter — PDF
-     export (fountain-to-pdf.ts) lays the script out page-by-page for real
-     — so the editor itself is free to just be a clean, uninterrupted
-     writing surface. */
+  /* A single continuous manuscript sheet — page breaks (below) are real
+     ProseMirror decorations inserted between blocks wherever
+     pagination.ts computes one, not a background pattern layered
+     underneath running text. An earlier version painted a repeating
+     "page break" seam onto the background at a fixed height regardless
+     of where lines actually fell, which could land a crease or a page
+     number directly on top of a word — structurally impossible now,
+     since the break only ever sits in the gap between two blocks. */
   background-color: var(--page-bg);
+}
+
+/* One real DOM element per page break (EditorComponent's ProseMirror
+   session, via pagination-plugin.ts), inserted between the two blocks it
+   falls between — never floating at an arbitrary Y position independent
+   of the actual text, unlike the background-pattern approach this
+   replaced. */
+.pm-mount .ProseMirror .page-break {
+  position: relative;
+  height: 2.75rem;
+  margin: .5rem 0;
+  border-top: 1px solid rgba(0, 0, 0, .18);
+  box-shadow: 0 8px 10px -8px rgba(0, 0, 0, .3) inset;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pm-mount .ProseMirror .page-break-number {
+  position: absolute;
+  right: 0;
+  bottom: .35rem;
+  font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
+  font-size: 12pt;
+  color: var(--page-text);
 }
 
 /* Screenplay element colours */
