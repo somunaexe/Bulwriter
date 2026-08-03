@@ -5,9 +5,14 @@
     <h1 class="logo">Story bible</h1>
   </header>
 
-  <section class="story-bible-link" *ngIf="canEdit">
+  <!-- "Generate from document…" is disabled for now — it calls Claude's
+       API server-side (see internal/anthropic), which costs money per
+       request, and that isn't turned on yet. Everything behind this
+       button (backend endpoint, review modal, apply flow) is intact;
+       uncomment to bring it back once billing is set up. -->
+  <!-- <section class="story-bible-link" *ngIf="canEdit">
     <button class="btn-ghost" (click)="importDocument()">Generate from document…</button>
-  </section>
+  </section> -->
 
   <p class="loading-msg" *ngIf="loading">Loading…</p>
 
