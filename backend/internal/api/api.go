@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/somunaexe/bulwriter/backend/internal/anthropic"
 	"github.com/somunaexe/bulwriter/backend/internal/breakdown"
 	"github.com/somunaexe/bulwriter/backend/internal/budget"
 	"github.com/somunaexe/bulwriter/backend/internal/casting"
@@ -59,6 +60,7 @@ type router struct {
 	rehearsals   *rehearsal.Store
 	continuity   *continuity.Store
 	clerk        *clerkapi.Client
+	anthropic    *anthropic.Client
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
@@ -85,6 +87,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		rehearsals:   rehearsal.NewStore(db),
 		continuity:   continuity.NewStore(db),
 		clerk:        clerkapi.NewClient(),
+		anthropic:    anthropic.NewClient(),
 	}
 
 	mx := mux.NewRouter()
@@ -197,6 +200,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/story", r.setStoryBible).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/story/notes", r.addStoryIdeaNote).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/story/notes/{noteId}", r.removeStoryIdeaNote).Methods("DELETE")
+	api.HandleFunc("/projects/{projectId}/story/generate", r.generateStoryBible).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/story", r.setScriptStory).Methods("PUT")
 
 	// Members & Invites
@@ -1159,6 +1163,46 @@ func (r *router) getStory(w http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, storyResponse{Bible: bible, IdeaNotes: notes, Scripts: rows})
+}
+
+// generateStoryBible sends an uploaded document's already-extracted text
+// to Claude and returns a draft set of story bible fields — genre, tone,
+// theme, core question, logline, synopsis. It never writes to the
+// database itself; the frontend shows the draft for the writer to review
+// and edit, then saves it through the normal setStoryBible/setScriptStory
+// endpoints like any other edit.
+func (r *router) generateStoryBible(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	// A document's extracted text is JSON-encoded prose, not an image, but
+	// the same size guard applies for the same reason — bound how much a
+	// single request can make the server (and, here, the Claude API call)
+	// buffer before it's even decoded.
+	req.Body = http.MaxBytesReader(w, req.Body, maxImageUploadBytes)
+	var body struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || strings.TrimSpace(body.Text) == "" {
+		writeErr(w, http.StatusBadRequest, "text is required, and the payload must fit within the size limit")
+		return
+	}
+
+	draft, err := r.anthropic.GenerateStoryBible(body.Text)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, draft)
 }
 
 func (r *router) setStoryBible(w http.ResponseWriter, req *http.Request) {

@@ -77,6 +77,19 @@ export class BranchPanelComponent implements OnInit {
     localStorage.setItem(this.storageKey(), branch.id);
   }
 
+  // Called by EditorComponent right after a commit succeeds — history is
+  // ordered newest-first (see the backend's recursive CTE, `ORDER BY
+  // created_at DESC`), so the new snapshot goes at the front. Without
+  // this, a fresh commit only appeared in the list after a full page
+  // reload (whatever re-ran loadBranches/selectBranch), since nothing
+  // told this already-loaded component's `history` array to update.
+  addSnapshot(snap: Snapshot): void {
+    this.history.unshift(snap);
+    if (this.activeBranch && this.activeBranch.id === snap.branchId) {
+      this.activeBranch.tipId = snap.id;
+    }
+  }
+
   private storageKey(): string {
     return `bulwriter:lastBranch:${this.scriptId}`;
   }

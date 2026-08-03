@@ -65,6 +65,7 @@ import { fileToBackgroundDataUri } from '../../editor/background-image';
 import { renameCharacter, listCharacterNames } from '../../editor/rename-character';
 import { computeSceneCards, SceneCard } from '../../editor/card-view';
 import { TextSelection } from 'prosemirror-state';
+import { pickFile } from '../../editor/pick-file';
 
 @Component({
   selector: 'app-editor',
@@ -80,17 +81,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   private _mountRef!: ElementRef<HTMLDivElement>;
 
-  // Page numbers for the fake-pagination illusion (see .pm-mount
-  // .ProseMirror in styles.scss) — {n, top} pairs rendered as absolutely
-  // positioned siblings of the ProseMirror mount, one per virtual page,
-  // recomputed whenever the document's height changes.
-  pageNumbers: { n: number; top: number }[] = [];
-  private pageUnitPx = 0;
-  private pmTopOffset = 0;
-  private pageResizeObserver?: ResizeObserver;
   private contentChangedSub?: Subscription;
 
   @ViewChild('editorLayout') editorLayoutRef?: ElementRef<HTMLElement>;
+  @ViewChild('branchPanel') branchPanelRef?: BranchPanelComponent;
 
   @ViewChild('prosemirrorMount')
   set mountRef(el: ElementRef<HTMLDivElement>) {
@@ -106,7 +100,6 @@ export class EditorComponent implements OnInit, OnDestroy {
         null,
         (element) => { this.activeElement = element; },
       );
-      this.setupPageNumbers(el.nativeElement);
       // Flags the "unsaved changes" warning (beforeunload below, plus the
       // canDeactivate guard on this route) whenever the doc actually
       // changes — cleared again by AutoSaveService on its next successful
@@ -161,9 +154,9 @@ export class EditorComponent implements OnInit, OnDestroy {
   // These fire on every keystroke anywhere in the window, not just
   // Ctrl/Cmd — Angular runs change detection across the whole component
   // tree after every zone-patched event handler, and on a long script
-  // that's real work (one binding per virtual page in pageNumbers, the
-  // full history list, the autosave pipe...). Reassigning modHeld to a
-  // value it's already at still triggers that whole sweep, and a held
+  // that's real work (the full history list, the autosave pipe...).
+  // Reassigning modHeld to a value it's already at still triggers that
+  // whole sweep, and a held
   // modifier key can fire repeated keydown events on some browser/OS
   // combinations — so without this guard, holding Ctrl on a long
   // document could re-run a full CD pass on every repeat tick for as
@@ -237,7 +230,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sync.endSession();
     this.autoSave.stop()
-    this.pageResizeObserver?.disconnect();
     this.contentChangedSub?.unsubscribe();
   }
 
@@ -255,37 +247,6 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   hasUnsavedChanges(): boolean {
     return this.canEdit && this.autoSave.state$.getValue().dirty;
-  }
-
-  // --page-h/--page-gap are physical CSS units ("11in", ".6in"), not
-  // usable directly in JS math — a throwaway probe element converts them
-  // to px the same way the browser does, instead of duplicating the
-  // numbers here where they could drift out of sync with styles.scss.
-  private setupPageNumbers(mountEl: HTMLElement): void {
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:absolute; visibility:hidden; height:calc(var(--page-h) + var(--page-gap));';
-    document.body.appendChild(probe);
-    this.pageUnitPx = probe.getBoundingClientRect().height;
-    document.body.removeChild(probe);
-
-    const update = () => {
-      const pmEl = mountEl.querySelector('.ProseMirror') as HTMLElement | null;
-      if (!pmEl || !this.pageUnitPx) return;
-      this.pmTopOffset = pmEl.offsetTop;
-      const count = Math.max(1, Math.round(pmEl.scrollHeight / this.pageUnitPx + .5));
-      // Page 1 is conventionally left unnumbered in screenplay format
-      // (like a title page), so numbering starts at the second page.
-      this.pageNumbers = Array.from({ length: count - 1 }, (_, i) => ({
-        n: i + 2,
-        // Land just inside the top margin of each virtual page, matching
-        // where the CSS seam itself falls ((n-1) * pageUnit).
-        top: this.pmTopOffset + (i + 1) * this.pageUnitPx + 24,
-      }));
-    };
-
-    this.pageResizeObserver = new ResizeObserver(update);
-    this.pageResizeObserver.observe(mountEl);
-    update();
   }
 
   applySnapshotContent(branch: Branch): void {
@@ -336,23 +297,6 @@ export class EditorComponent implements OnInit, OnDestroy {
       const { tr } = view.state;
       tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
       view.dispatch(tr);
-    });
-  }
-
-  // Hidden <input type=file>, clicked programmatically — the standard
-  // browser pattern for a file picker without a visible form control.
-  // Shared by every import format below instead of each rebuilding it.
-  private pickFile(accept: string): Promise<File | null> {
-    return new Promise(resolve => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = accept;
-      input.onchange = (event: Event) => {
-        resolve((event.target as HTMLInputElement).files?.[0] ?? null);
-      };
-      document.body.appendChild(input);
-      input.click();
-      document.body.removeChild(input);
     });
   }
 
@@ -440,9 +384,13 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.vc
       .commit(this.projectId, this.scriptId, this.activeBranch.id, content, this.commitMessage)
       .subscribe(snap => {
-        console.log('Snapshot saved:', snap.id);
         this.commitMessage = '';
         this.autoSave.markSaved();
+        // Without this, the new snapshot only showed up in the sidebar's
+        // history list after a full page reload — BranchPanelComponent
+        // fetched its `history` array once on init and had no way to
+        // know a commit had just happened elsewhere.
+        this.branchPanelRef?.addSnapshot(snap);
       });
   }
 
@@ -704,7 +652,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importFountain(): Promise<void> {
-    const file = await this.pickFile('.fountain,.txt');
+    const file = await pickFile('.fountain,.txt');
     if (!file) return;
     this.replaceEditorContent(await file.text());
     (this.sync as any).session?.view?.focus();
@@ -717,7 +665,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importJson(): Promise<void> {
-    const file = await this.pickFile('.json');
+    const file = await pickFile('.json');
     if (!file) return;
     try {
       this.replaceEditorContentWithDoc(importScreenplayJson(await file.text()));
@@ -734,7 +682,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importHtml(): Promise<void> {
-    const file = await this.pickFile('.html,.htm');
+    const file = await pickFile('.html,.htm');
     if (!file) return;
     try {
       this.replaceEditorContentWithDoc(await importScreenplayHtml(file));
@@ -755,7 +703,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importDocx(): Promise<void> {
-    const file = await this.pickFile('.docx');
+    const file = await pickFile('.docx');
     if (!file) return;
     try {
       this.replaceEditorContent(await importDocxToText(file));
@@ -766,7 +714,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importPdf(): Promise<void> {
-    const file = await this.pickFile('.pdf');
+    const file = await pickFile('.pdf');
     if (!file) return;
     try {
       this.replaceEditorContent(await importPdfToText(file));
@@ -929,7 +877,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   async insertImagePrompt(): Promise<void> {
     const view = (this.sync as any).session?.view;
     if (!view) return;
-    const file = await this.pickFile('image/*');
+    const file = await pickFile('image/*');
     if (!file) return;
     try {
       const dataUri = await fileToBackgroundDataUri(file);

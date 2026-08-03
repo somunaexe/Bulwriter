@@ -61,6 +61,26 @@ function insertElement(
   return true;
 }
 
+/** Splits the current block at the cursor, same as an ordinary text
+ *  editor's Enter key — both halves keep the current element type (a
+ *  real split preserves the node's own type/attrs by default), unlike
+ *  insertElement above, which creates a brand new empty block of a
+ *  DIFFERENT (the "next logical") type. This is what mid-sentence Enter
+ *  should do; insertElement's smart jump is reserved for Enter at the
+ *  true end of the line — see handleEnter. */
+function splitCurrentBlock(
+  state: EditorState,
+  dispatch: ((tr: Transaction) => void) | undefined,
+): boolean {
+  let tr = state.tr;
+  // A non-collapsed selection: delete it first, then split at that spot —
+  // same as typing over a selection and then pressing Enter.
+  if (!state.selection.empty) tr = tr.deleteSelection();
+  const pos = tr.mapping.map(state.selection.from);
+  dispatch?.(tr.split(pos).scrollIntoView());
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Tab — cycle element type
 // ---------------------------------------------------------------------------
@@ -111,8 +131,14 @@ function handleEnter(
   const el = currentElement(state);
   if (!el) return false;
 
-  const { $from } = state.selection;
+  const { $from, $to } = state.selection;
   const isEmpty = $from.parent.content.size === 0;
+  // Whether there's nothing left after the cursor in this block — the
+  // ordinary case ("I'm done with this line, start the next logical
+  // one"). If there IS trailing text, this is a mid-sentence Enter and
+  // should just split the line like any other editor, not discard the
+  // remainder into an empty new block of a different type.
+  const atEnd = $to.parentOffset === $to.parent.content.size;
 
   // Empty character line → convert to action (writer changed their mind)
   if (el === 'character' && isEmpty) {
@@ -122,6 +148,10 @@ function handleEnter(
   // Empty dialogue line → convert to action
   if (el === 'dialogue' && isEmpty) {
     return setElement(state, dispatch, 'action');
+  }
+
+  if (!atEnd) {
+    return splitCurrentBlock(state, dispatch);
   }
 
   const next = ENTER_CREATES[el];
