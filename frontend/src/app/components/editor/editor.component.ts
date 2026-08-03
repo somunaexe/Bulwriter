@@ -65,6 +65,7 @@ import { fileToBackgroundDataUri } from '../../editor/background-image';
 import { renameCharacter, listCharacterNames } from '../../editor/rename-character';
 import { computeSceneCards, SceneCard } from '../../editor/card-view';
 import { TextSelection } from 'prosemirror-state';
+import { pickFile } from '../../editor/pick-file';
 
 @Component({
   selector: 'app-editor',
@@ -296,23 +297,6 @@ export class EditorComponent implements OnInit, OnDestroy {
       const { tr } = view.state;
       tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
       view.dispatch(tr);
-    });
-  }
-
-  // Hidden <input type=file>, clicked programmatically — the standard
-  // browser pattern for a file picker without a visible form control.
-  // Shared by every import format below instead of each rebuilding it.
-  private pickFile(accept: string): Promise<File | null> {
-    return new Promise(resolve => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = accept;
-      input.onchange = (event: Event) => {
-        resolve((event.target as HTMLInputElement).files?.[0] ?? null);
-      };
-      document.body.appendChild(input);
-      input.click();
-      document.body.removeChild(input);
     });
   }
 
@@ -668,7 +652,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importFountain(): Promise<void> {
-    const file = await this.pickFile('.fountain,.txt');
+    const file = await pickFile('.fountain,.txt');
     if (!file) return;
     this.replaceEditorContent(await file.text());
     (this.sync as any).session?.view?.focus();
@@ -681,7 +665,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importJson(): Promise<void> {
-    const file = await this.pickFile('.json');
+    const file = await pickFile('.json');
     if (!file) return;
     try {
       this.replaceEditorContentWithDoc(importScreenplayJson(await file.text()));
@@ -698,7 +682,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importHtml(): Promise<void> {
-    const file = await this.pickFile('.html,.htm');
+    const file = await pickFile('.html,.htm');
     if (!file) return;
     try {
       this.replaceEditorContentWithDoc(await importScreenplayHtml(file));
@@ -719,7 +703,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importDocx(): Promise<void> {
-    const file = await this.pickFile('.docx');
+    const file = await pickFile('.docx');
     if (!file) return;
     try {
       this.replaceEditorContent(await importDocxToText(file));
@@ -730,7 +714,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async importPdf(): Promise<void> {
-    const file = await this.pickFile('.pdf');
+    const file = await pickFile('.pdf');
     if (!file) return;
     try {
       this.replaceEditorContent(await importPdfToText(file));
@@ -893,7 +877,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   async insertImagePrompt(): Promise<void> {
     const view = (this.sync as any).session?.view;
     if (!view) return;
-    const file = await this.pickFile('image/*');
+    const file = await pickFile('image/*');
     if (!file) return;
     try {
       const dataUri = await fileToBackgroundDataUri(file);

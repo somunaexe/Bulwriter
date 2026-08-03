@@ -5,6 +5,10 @@
     <h1 class="logo">Story bible</h1>
   </header>
 
+  <section class="story-bible-link" *ngIf="canEdit">
+    <button class="btn-ghost" (click)="importDocument()">Generate from document…</button>
+  </section>
+
   <p class="loading-msg" *ngIf="loading">Loading…</p>
 
   <ng-container *ngIf="!loading">
@@ -92,4 +96,58 @@
       </div>
     </section>
   </ng-container>
+
+  <app-modal *ngIf="showGenerateModal" title="Generate from document" (closed)="closeGenerateModal()">
+    <div class="find-replace-form">
+      <p class="loading-msg" *ngIf="generating">Reading the document and drafting a story bible…</p>
+      <p class="error-msg" *ngIf="generateError">{{ generateError }}</p>
+
+      <ng-container *ngIf="draft as d">
+        <p class="story-hint">
+          Drafted from the document — review and edit before saving. Nothing is
+          changed until you click Apply.
+        </p>
+
+        <label class="story-field">
+          <span>Core question / emotion</span>
+          <textarea class="story-textarea" rows="2" [(ngModel)]="d.coreQuestion"></textarea>
+        </label>
+        <div class="story-field-row">
+          <label class="story-field">
+            <span>Genre</span>
+            <input class="input-sm" [(ngModel)]="d.genre" />
+          </label>
+          <label class="story-field">
+            <span>Tone</span>
+            <input class="input-sm" [(ngModel)]="d.tone" />
+          </label>
+          <label class="story-field">
+            <span>Theme</span>
+            <input class="input-sm" [(ngModel)]="d.theme" />
+          </label>
+        </div>
+
+        <label class="story-field" *ngIf="scripts.length">
+          <span>Apply logline/synopsis to</span>
+          <select class="input-sm" [(ngModel)]="applyToScriptId">
+            <option value="">(Don't apply to a script)</option>
+            <option *ngFor="let row of scripts" [value]="row.scriptId">{{ row.title }}</option>
+          </select>
+        </label>
+        <label class="story-field">
+          <span>Logline</span>
+          <textarea class="story-textarea" rows="2" [(ngModel)]="d.logline"></textarea>
+        </label>
+        <label class="story-field">
+          <span>Synopsis</span>
+          <textarea class="story-textarea" rows="4" [(ngModel)]="d.synopsis"></textarea>
+        </label>
+
+        <div class="find-replace-actions">
+          <button class="btn-ghost" (click)="closeGenerateModal()">Discard</button>
+          <button class="btn-save" (click)="confirmApplyDraft()">Apply</button>
+        </div>
+      </ng-container>
+    </div>
+  </app-modal>
 </div>
