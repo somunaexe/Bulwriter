@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"database/sql"
 	"github.com/gorilla/mux"
@@ -38,29 +39,30 @@ import (
 )
 
 type router struct {
-	hub          *hub.Hub
-	store        *snapshot.Store
-	projects     *project.Store
-	scripts      *script.Store
-	trash        *trash.Store
-	members      *membership.Store // ← add this
-	breakdown    *breakdown.Store
-	schedule     *schedule.Store
-	scouting     *scouting.Store
-	crew         *crew.Store
-	casting      *casting.Store
-	budget       *budget.Store
-	story        *story.Store
-	shots        *shotlist.Store
-	musicvfx     *musicvfx.Store
-	presskit     *presskit.Store
-	milestones   *milestone.Store
-	distribution *distribution.Store
-	credits      *credits.Store
-	rehearsals   *rehearsal.Store
-	continuity   *continuity.Store
-	clerk        *clerkapi.Client
-	anthropic    *anthropic.Client
+	hub             *hub.Hub
+	store           *snapshot.Store
+	projects        *project.Store
+	scripts         *script.Store
+	trash           *trash.Store
+	members         *membership.Store // ← add this
+	breakdown       *breakdown.Store
+	schedule        *schedule.Store
+	scouting        *scouting.Store
+	crew            *crew.Store
+	casting         *casting.Store
+	budget          *budget.Store
+	story           *story.Store
+	shots           *shotlist.Store
+	musicvfx        *musicvfx.Store
+	presskit        *presskit.Store
+	milestones      *milestone.Store
+	distribution    *distribution.Store
+	credits         *credits.Store
+	rehearsals      *rehearsal.Store
+	continuity      *continuity.Store
+	clerk           *clerkapi.Client
+	anthropic       *anthropic.Client
+	storyGenLimiter *middleware.RateLimiter
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
@@ -88,7 +90,19 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		continuity:   continuity.NewStore(db),
 		clerk:        clerkapi.NewClient(),
 		anthropic:    anthropic.NewClient(),
+		// Each call costs real money (Anthropic API) — kept much tighter
+		// than the general API limiter below.
+		storyGenLimiter: middleware.NewRateLimiter(5, time.Hour),
 	}
+	go r.storyGenLimiter.StartCleanup(30 * time.Minute)
+
+	// General per-user request limiter, applied to the whole /api
+	// subrouter below — generous enough for normal editing/autosave
+	// traffic, tight enough to blunt scripted abuse. In-memory, so it
+	// only limits per backend instance (see RateLimiter's own doc
+	// comment) — fine for a single Railway service today.
+	apiLimiter := middleware.NewRateLimiter(120, time.Minute)
+	go apiLimiter.StartCleanup(10 * time.Minute)
 
 	mx := mux.NewRouter()
 
@@ -123,6 +137,10 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	// })
 
 	api.Use(middleware.RequireAuth)
+	// Runs after RequireAuth, so UserIDFromContext is already populated —
+	// the rate-limit key is per-user, not per-IP (IPs behind a shared
+	// NAT/proxy would otherwise share a budget).
+	api.Use(apiLimiter.Middleware(middleware.UserIDFromContext))
 	// ── Version control ─────────────────────────────────────────────
 	// Projects
 	api.HandleFunc("/projects", r.listProjects).Methods("GET")
@@ -200,7 +218,12 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/story", r.setStoryBible).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/story/notes", r.addStoryIdeaNote).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/story/notes/{noteId}", r.removeStoryIdeaNote).Methods("DELETE")
-	api.HandleFunc("/projects/{projectId}/story/generate", r.generateStoryBible).Methods("POST")
+	// Extra-tight limiter on top of the general one above — each call
+	// costs real money (the Anthropic API), unlike everything else here.
+	api.Handle(
+		"/projects/{projectId}/story/generate",
+		r.storyGenLimiter.Middleware(middleware.UserIDFromContext)(http.HandlerFunc(r.generateStoryBible)),
+	).Methods("POST")
 	api.HandleFunc("/projects/{projectId}/scripts/{scriptId}/story", r.setScriptStory).Methods("PUT")
 
 	// Members & Invites
