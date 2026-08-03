@@ -48,12 +48,6 @@
      at 96 CSS px/in, i.e. the literal US-Letter page width. */
   --script-width: 816px;
 
-  /* Fake multi-page illusion (see .pm-mount .ProseMirror below) — the
-     manuscript is still one continuous document, not real pagination,
-     so these just control where the repeating "page seam" bands land. */
-  --page-h:   11in;
-  --page-gap: .6in;
-
   --navbar-h: 56px;
 }
 
@@ -664,10 +658,6 @@ ol.stats-list {
 .pm-mount {
   flex: 1;
   overflow-y: auto;
-  /* Containing block for .page-number's absolute positioning, and for
-     .ProseMirror's offsetTop (EditorComponent.setupPageNumbers) to be
-     measured in the same coordinate space those labels are placed in. */
-  position: relative;
   /* .pm-mount scrolls (the page is usually taller than the viewport)
      but .page-chrome doesn't (overflow: hidden) — without this, the
      scrollbar eats space from only the right side of .pm-mount's
@@ -715,50 +705,18 @@ ol.stats-list {
   white-space: pre-wrap;
   overflow-wrap: break-word; /* a long run of characters with no spaces must wrap, not force the page wider */
 
-  /* Google-Docs-style fake pagination: the document is still one
-     continuous ProseMirror node, not real paginated content — this just
-     paints a repeating seam onto the page background every --page-h so
-     it *looks* like a stack of separate 11in sheets. Text that happens
-     to fall on a seam will visually run through it — there's no layout
-     engine here reflowing content around the bands — so the seam is
-     just two hairline creases (bottom-of-page shadow, top-of-next-page
-     highlight) with plain --page-bg in between, NOT a tinted band: an
-     earlier version filled the whole gap with a visibly different
-     colour, which made any line of dialogue landing there look like it
-     was highlighted/selected instead of just being ordinary page text
-     with a crease running through it. */
+  /* A single continuous manuscript sheet — no fake per-page seams. An
+     earlier version painted a repeating "page break" pattern onto the
+     background every --page-h, but the document is one continuous
+     ProseMirror node with no actual per-page layout, so those seams (and
+     the page-number labels that went with them) landed at arbitrary
+     points in the running text with no regard for line breaks — a crease
+     or a "2." could end up sitting directly on top of a word. Real,
+     accurate page breaks already exist where they actually matter — PDF
+     export (fountain-to-pdf.ts) lays the script out page-by-page for real
+     — so the editor itself is free to just be a clean, uninterrupted
+     writing surface. */
   background-color: var(--page-bg);
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(var(--page-h) - 2px),
-    rgba(0, 0, 0, .3) calc(var(--page-h) - 2px),
-    rgba(0, 0, 0, .3) var(--page-h),
-    transparent var(--page-h),
-    transparent calc(var(--page-h) + var(--page-gap) - 2px),
-    rgba(255, 255, 255, .6) calc(var(--page-h) + var(--page-gap) - 2px),
-    rgba(255, 255, 255, .6) calc(var(--page-h) + var(--page-gap))
-  );
-  background-repeat: repeat-y;
-  background-size: 100% calc(var(--page-h) + var(--page-gap));
-}
-
-/* One per virtual page (EditorComponent.setupPageNumbers), positioned
-   in the same top-inset-from-the-seam spot every industry screenplay
-   tool uses — top-right of the page, inside its 1in margin. Page 1 is
-   conventionally left unnumbered, so these start at "2." */
-.page-number {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: var(--script-width);
-  max-width: 100%;
-  text-align: right;
-  padding-right: .75in;
-  font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
-  font-size: 12pt;
-  color: var(--page-text);
-  pointer-events: none;
 }
 
 /* Screenplay element colours */

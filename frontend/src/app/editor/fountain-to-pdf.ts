@@ -48,8 +48,9 @@ function wrapByChars(text: string, maxChars: number): string[] {
 /** Renders a ProseMirror screenplay document as an industry-formatted
  *  PDF and triggers a browser download. Title page fields (if any) get
  *  their own unnumbered page; body pages are numbered from the second
- *  one on, matching the same convention the on-screen page-number
- *  overlay already follows (EditorComponent.setupPageNumbers).
+ *  one on — this is the one place real, accurate page breaks actually
+ *  get computed; the in-editor view is a single continuous sheet with
+ *  no attempt to mirror them (see .pm-mount .ProseMirror in styles.scss).
  *
  *  jsPDF pulls in html2canvas/canvg (needed for its .html() renderer,
  *  which nothing here uses, but the package doesn't tree-shake them

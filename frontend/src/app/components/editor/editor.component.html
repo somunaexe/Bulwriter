@@ -25,6 +25,7 @@
       ></app-collaborator-stack>
 
       <app-branch-panel
+        #branchPanel
         [projectId]="projectId"
         [scriptId]="scriptId"
         [canEdit]="canEdit"
@@ -159,9 +160,7 @@
         </nav>
       </div> <!-- page-chrome-->
 
-      <div #prosemirrorMount class="pm-mount" [class.view-hidden]="viewMode === 'card'">
-        <span class="page-number" *ngFor="let p of pageNumbers" [style.top.px]="p.top">{{ p.n }}.</span>
-      </div>
+      <div #prosemirrorMount class="pm-mount" [class.view-hidden]="viewMode === 'card'"></div>
 
       <!-- Read-only overview of the script as one card per scene — click
            a card to jump back to Page View scrolled to that scene.

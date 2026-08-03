@@ -80,17 +80,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   private _mountRef!: ElementRef<HTMLDivElement>;
 
-  // Page numbers for the fake-pagination illusion (see .pm-mount
-  // .ProseMirror in styles.scss) — {n, top} pairs rendered as absolutely
-  // positioned siblings of the ProseMirror mount, one per virtual page,
-  // recomputed whenever the document's height changes.
-  pageNumbers: { n: number; top: number }[] = [];
-  private pageUnitPx = 0;
-  private pmTopOffset = 0;
-  private pageResizeObserver?: ResizeObserver;
   private contentChangedSub?: Subscription;
 
   @ViewChild('editorLayout') editorLayoutRef?: ElementRef<HTMLElement>;
+  @ViewChild('branchPanel') branchPanelRef?: BranchPanelComponent;
 
   @ViewChild('prosemirrorMount')
   set mountRef(el: ElementRef<HTMLDivElement>) {
@@ -106,7 +99,6 @@ export class EditorComponent implements OnInit, OnDestroy {
         null,
         (element) => { this.activeElement = element; },
       );
-      this.setupPageNumbers(el.nativeElement);
       // Flags the "unsaved changes" warning (beforeunload below, plus the
       // canDeactivate guard on this route) whenever the doc actually
       // changes — cleared again by AutoSaveService on its next successful
@@ -161,9 +153,9 @@ export class EditorComponent implements OnInit, OnDestroy {
   // These fire on every keystroke anywhere in the window, not just
   // Ctrl/Cmd — Angular runs change detection across the whole component
   // tree after every zone-patched event handler, and on a long script
-  // that's real work (one binding per virtual page in pageNumbers, the
-  // full history list, the autosave pipe...). Reassigning modHeld to a
-  // value it's already at still triggers that whole sweep, and a held
+  // that's real work (the full history list, the autosave pipe...).
+  // Reassigning modHeld to a value it's already at still triggers that
+  // whole sweep, and a held
   // modifier key can fire repeated keydown events on some browser/OS
   // combinations — so without this guard, holding Ctrl on a long
   // document could re-run a full CD pass on every repeat tick for as
@@ -237,7 +229,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sync.endSession();
     this.autoSave.stop()
-    this.pageResizeObserver?.disconnect();
     this.contentChangedSub?.unsubscribe();
   }
 
@@ -255,37 +246,6 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   hasUnsavedChanges(): boolean {
     return this.canEdit && this.autoSave.state$.getValue().dirty;
-  }
-
-  // --page-h/--page-gap are physical CSS units ("11in", ".6in"), not
-  // usable directly in JS math — a throwaway probe element converts them
-  // to px the same way the browser does, instead of duplicating the
-  // numbers here where they could drift out of sync with styles.scss.
-  private setupPageNumbers(mountEl: HTMLElement): void {
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:absolute; visibility:hidden; height:calc(var(--page-h) + var(--page-gap));';
-    document.body.appendChild(probe);
-    this.pageUnitPx = probe.getBoundingClientRect().height;
-    document.body.removeChild(probe);
-
-    const update = () => {
-      const pmEl = mountEl.querySelector('.ProseMirror') as HTMLElement | null;
-      if (!pmEl || !this.pageUnitPx) return;
-      this.pmTopOffset = pmEl.offsetTop;
-      const count = Math.max(1, Math.round(pmEl.scrollHeight / this.pageUnitPx + .5));
-      // Page 1 is conventionally left unnumbered in screenplay format
-      // (like a title page), so numbering starts at the second page.
-      this.pageNumbers = Array.from({ length: count - 1 }, (_, i) => ({
-        n: i + 2,
-        // Land just inside the top margin of each virtual page, matching
-        // where the CSS seam itself falls ((n-1) * pageUnit).
-        top: this.pmTopOffset + (i + 1) * this.pageUnitPx + 24,
-      }));
-    };
-
-    this.pageResizeObserver = new ResizeObserver(update);
-    this.pageResizeObserver.observe(mountEl);
-    update();
   }
 
   applySnapshotContent(branch: Branch): void {
@@ -440,9 +400,13 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.vc
       .commit(this.projectId, this.scriptId, this.activeBranch.id, content, this.commitMessage)
       .subscribe(snap => {
-        console.log('Snapshot saved:', snap.id);
         this.commitMessage = '';
         this.autoSave.markSaved();
+        // Without this, the new snapshot only showed up in the sidebar's
+        // history list after a full page reload — BranchPanelComponent
+        // fetched its `history` array once on init and had no way to
+        // know a commit had just happened elsewhere.
+        this.branchPanelRef?.addSnapshot(snap);
       });
   }
 
