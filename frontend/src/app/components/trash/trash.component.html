@@ -1,58 +1,77 @@
 <div class="dashboard">
 
-  <header class="dash-header">
-    <h1 class="logo">Trash</h1>
-    <p class="tagline">Items are kept for 30 days, then permanently discarded.</p>
-  </header>
+  <p class="loading-msg" *ngIf="loading">Loading…</p>
 
-  <section class="story-bible-link">
-    <button class="btn-ghost" (click)="back()">← Back</button>
-  </section>
-
-  <section class="project-list">
-
-    <p class="loading-msg" *ngIf="loading">Loading…</p>
-    <p class="error-msg" *ngIf="error">{{ error }}</p>
-
-    <ng-container *ngIf="!isProjectTrash">
-      <p class="empty-msg" *ngIf="!loading && !error && projects.length === 0">
-        No deleted projects.
-      </p>
-
-      <div class="project-card trash-card" *ngFor="let p of projects">
-        <div class="project-card-main">
-          <div class="project-card-title">{{ p.title }}</div>
-          <div class="project-card-meta">{{ daysLeft(p.deletedAt) }} days left</div>
-        </div>
-        <button class="btn-ghost" (click)="restoreProject(p)" [disabled]="restoring[p.id]">
-          Restore
-        </button>
-        <button class="btn-ghost delete-forever-trigger" (click)="openConfirmDeleteProject(p)">
-          Delete forever
-        </button>
+  <div class="state-message" *ngIf="!loading && projectNotFound">
+    <div class="state-message-card">
+      <div class="state-message-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <path d="M14 2v6h6"></path>
+          <path d="M12 17v.01"></path>
+          <path d="M10.5 13.5a1.5 1.5 0 1 1 2 1.3c-.5.4-1 .8-1 1.4"></path>
+        </svg>
       </div>
-    </ng-container>
+      <h2>Project not found</h2>
+      <p>This project doesn't exist, or may have been deleted.</p>
+      <button class="btn-save" (click)="goHome()">Go to dashboard</button>
+    </div>
+  </div>
 
-    <ng-container *ngIf="isProjectTrash">
-      <p class="empty-msg" *ngIf="!loading && !error && scripts.length === 0">
-        No deleted scripts.
-      </p>
+  <ng-container *ngIf="!loading && !projectNotFound">
+    <header class="dash-header">
+      <h1 class="logo">Trash</h1>
+      <p class="tagline">Items are kept for 30 days, then permanently discarded.</p>
+    </header>
 
-      <div class="project-card trash-card" *ngFor="let s of scripts">
-        <div class="project-card-main">
-          <div class="project-card-title">{{ s.title }}</div>
-          <div class="project-card-meta">{{ daysLeft(s.deletedAt) }} days left</div>
+    <section class="story-bible-link">
+      <button class="btn-ghost" (click)="back()">← Back</button>
+    </section>
+
+    <section class="project-list">
+
+      <p class="error-msg" *ngIf="error">{{ error }}</p>
+
+      <ng-container *ngIf="!isProjectTrash">
+        <p class="empty-msg" *ngIf="!error && projects.length === 0">
+          No deleted projects.
+        </p>
+
+        <div class="project-card trash-card" *ngFor="let p of projects">
+          <div class="project-card-main">
+            <div class="project-card-title">{{ p.title }}</div>
+            <div class="project-card-meta">{{ daysLeft(p.deletedAt) }} days left</div>
+          </div>
+          <button class="btn-ghost" (click)="restoreProject(p)" [disabled]="restoring[p.id]">
+            Restore
+          </button>
+          <button class="btn-ghost delete-forever-trigger" (click)="openConfirmDeleteProject(p)">
+            Delete forever
+          </button>
         </div>
-        <button class="btn-ghost" (click)="restoreScript(s)" [disabled]="restoring[s.id]">
-          Restore
-        </button>
-        <button class="btn-ghost delete-forever-trigger" (click)="openConfirmDeleteScript(s)">
-          Delete forever
-        </button>
-      </div>
-    </ng-container>
+      </ng-container>
 
-  </section>
+      <ng-container *ngIf="isProjectTrash">
+        <p class="empty-msg" *ngIf="!error && scripts.length === 0">
+          No deleted scripts.
+        </p>
+
+        <div class="project-card trash-card" *ngFor="let s of scripts">
+          <div class="project-card-main">
+            <div class="project-card-title">{{ s.title }}</div>
+            <div class="project-card-meta">{{ daysLeft(s.deletedAt) }} days left</div>
+          </div>
+          <button class="btn-ghost" (click)="restoreScript(s)" [disabled]="restoring[s.id]">
+            Restore
+          </button>
+          <button class="btn-ghost delete-forever-trigger" (click)="openConfirmDeleteScript(s)">
+            Delete forever
+          </button>
+        </div>
+      </ng-container>
+
+    </section>
+  </ng-container>
 
   <app-modal *ngIf="confirmingDelete" title="Delete forever" (closed)="confirmingDelete = null">
     <div class="find-replace-form">

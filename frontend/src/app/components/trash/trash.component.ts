@@ -28,6 +28,14 @@ export class TrashComponent implements OnInit {
   error = '';
   restoring: Record<string, boolean> = {};
 
+  // Only meaningful for the project-scoped route. listTrash never checks
+  // the project exists (it just returns an empty list), so
+  // projectService.get()'s error path is the only real existence signal —
+  // same pattern as ProjectComponent/EditorComponent/StoryComponent.
+  projectNotFound = false;
+  private projectSettled = false;
+  private trashSettled = false;
+
   constructor(
     private projectService: ProjectService,
     private scriptService: ScriptService,
@@ -39,14 +47,25 @@ export class TrashComponent implements OnInit {
     this.projectId = this.route.snapshot.params['projectId'] ?? null;
 
     if (this.projectId) {
+      this.projectService.get(this.projectId).subscribe({
+        next: () => { this.projectSettled = true; this.checkLoaded(); },
+        error: () => {
+          this.projectNotFound = true;
+          this.projectSettled = true;
+          this.checkLoaded();
+        },
+      });
+
       this.scriptService.listTrash(this.projectId).subscribe({
         next: scripts => {
           this.scripts = scripts ?? [];
-          this.loading = false;
+          this.trashSettled = true;
+          this.checkLoaded();
         },
         error: () => {
           this.error = 'Could not load trash.';
-          this.loading = false;
+          this.trashSettled = true;
+          this.checkLoaded();
         },
       });
     } else {
@@ -61,6 +80,14 @@ export class TrashComponent implements OnInit {
         },
       });
     }
+  }
+
+  private checkLoaded(): void {
+    if (this.projectSettled && this.trashSettled) this.loading = false;
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
   }
 
   get isProjectTrash(): boolean {

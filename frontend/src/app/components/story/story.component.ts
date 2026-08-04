@@ -22,6 +22,13 @@ export class StoryComponent implements OnInit {
   loading = true;
   myRole = '';
 
+  // Set from projectService.get()'s error path — a real 404, unlike
+  // getStory/getMyRole, which both return 200/empty-ish results for a
+  // project that doesn't exist (see checkLoaded below).
+  projectNotFound = false;
+  private projectSettled = false;
+  private storySettled = false;
+
   bible: StoryBible | null = null;
   ideaNotes: IdeaNote[] = [];
   scripts: StoryScriptRow[] = [];
@@ -39,7 +46,18 @@ export class StoryComponent implements OnInit {
   ngOnInit(): void {
     this.projectId = this.route.snapshot.params['projectId'];
 
-    this.projectService.get(this.projectId).subscribe(p => this.project = p);
+    this.projectService.get(this.projectId).subscribe({
+      next: p => {
+        this.project = p;
+        this.projectSettled = true;
+        this.checkLoaded();
+      },
+      error: () => {
+        this.projectNotFound = true;
+        this.projectSettled = true;
+        this.checkLoaded();
+      },
+    });
 
     this.membershipService.getMyRole(this.projectId).subscribe({
       next: ({ role }) => this.myRole = role,
@@ -50,10 +68,25 @@ export class StoryComponent implements OnInit {
         this.bible = res.bible;
         this.ideaNotes = res.ideaNotes;
         this.scripts = res.scripts;
-        this.loading = false;
+        this.storySettled = true;
+        this.checkLoaded();
       },
-      error: () => { this.loading = false; },
+      error: () => {
+        this.storySettled = true;
+        this.checkLoaded();
+      },
     });
+  }
+
+  // getStory returns 200 with empty data for a nonexistent project (it
+  // never checks the project exists), so projectService.get() is the only
+  // signal that tells "not found" apart from "no bible written yet".
+  private checkLoaded(): void {
+    if (this.projectSettled && this.storySettled) this.loading = false;
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
   }
 
   get canEdit(): boolean { return this.myRole === 'owner' || this.myRole === 'editor'; }

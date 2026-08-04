@@ -1,22 +1,37 @@
 <div class="dashboard story-page">
 
-  <header class="dash-header">
-    <button class="btn-ghost back-link" (click)="backToProject()">← {{ project?.title || 'Project' }}</button>
-    <h1 class="logo">Story bible</h1>
-  </header>
-
-  <!-- "Generate from document…" is disabled for now — it calls Claude's
-       API server-side (see internal/anthropic), which costs money per
-       request, and that isn't turned on yet. Everything behind this
-       button (backend endpoint, review modal, apply flow) is intact;
-       uncomment to bring it back once billing is set up. -->
-  <!-- <section class="story-bible-link" *ngIf="canEdit">
-    <button class="btn-ghost" (click)="importDocument()">Generate from document…</button>
-  </section> -->
-
   <p class="loading-msg" *ngIf="loading">Loading…</p>
 
-  <ng-container *ngIf="!loading">
+  <div class="state-message" *ngIf="!loading && projectNotFound">
+    <div class="state-message-card">
+      <div class="state-message-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <path d="M14 2v6h6"></path>
+          <path d="M12 17v.01"></path>
+          <path d="M10.5 13.5a1.5 1.5 0 1 1 2 1.3c-.5.4-1 .8-1 1.4"></path>
+        </svg>
+      </div>
+      <h2>Project not found</h2>
+      <p>This project doesn't exist, or may have been deleted.</p>
+      <button class="btn-save" (click)="goHome()">Go to dashboard</button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading && !projectNotFound">
+    <header class="dash-header">
+      <button class="btn-ghost back-link" (click)="backToProject()">← {{ project?.title || 'Project' }}</button>
+      <h1 class="logo">Story bible</h1>
+    </header>
+
+    <!-- "Generate from document…" is disabled for now — it calls Claude's
+         API server-side (see internal/anthropic), which costs money per
+         request, and that isn't turned on yet. Everything behind this
+         button (backend endpoint, review modal, apply flow) is intact;
+         uncomment to bring it back once billing is set up. -->
+    <!-- <section class="story-bible-link" *ngIf="canEdit">
+      <button class="btn-ghost" (click)="importDocument()">Generate from document…</button>
+    </section> -->
     <section class="story-section" *ngIf="bible">
       <h2 class="section-label">The idea</h2>
       <label class="story-field">
