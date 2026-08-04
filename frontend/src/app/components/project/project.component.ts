@@ -27,6 +27,14 @@ export class ProjectComponent implements OnInit {
   error = '';
   myRole = '';
 
+  // Set from projectService.get()'s error path (a real 404, unlike
+  // getMyRole's 403 — which can't tell "doesn't exist" apart from
+  // "exists but you're not a member") — see the template for how this
+  // takes priority over the normal dashboard content.
+  projectNotFound = false;
+  private projectSettled = false;
+  private scriptsSettled = false;
+
   // Reused for the "Invite collaborator" modal, opened via the
   // collaborator stack's manage ("+") button — this replaced the
   // always-visible invite input that used to live directly in this page.
@@ -45,16 +53,29 @@ export class ProjectComponent implements OnInit {
   ngOnInit(): void {
     this.projectId = this.route.snapshot.params['projectId'];
 
-    this.projectService.get(this.projectId).subscribe(p => this.project = p);
+    this.projectService.get(this.projectId).subscribe({
+      next: p => {
+        this.project = p;
+        this.projectSettled = true;
+        this.checkLoaded();
+      },
+      error: () => {
+        this.projectNotFound = true;
+        this.projectSettled = true;
+        this.checkLoaded();
+      },
+    });
 
     this.scriptService.list(this.projectId).subscribe({
       next: scripts => {
         this.scripts = scripts ?? [];
-        this.loading = false;
+        this.scriptsSettled = true;
+        this.checkLoaded();
       },
       error: err => {
         this.error = 'Could not load scripts.';
-        this.loading = false;
+        this.scriptsSettled = true;
+        this.checkLoaded();
       },
     });
 
@@ -64,6 +85,17 @@ export class ProjectComponent implements OnInit {
         this.myRole = role;
       },
     });
+  }
+
+  // Both requests race independently — wait for both to settle before
+  // dropping the loading state, so the page never flickers through "No
+  // scripts yet" for a project that turns out not to exist a moment later.
+  private checkLoaded(): void {
+    if (this.projectSettled && this.scriptsSettled) this.loading = false;
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
   }
 
   get isOwner(): boolean { return this.myRole === 'owner'; }

@@ -514,6 +514,67 @@ html, body {
 .empty-msg { color: var(--muted); font-size: 14px; text-align: center; padding: 2rem 0; }
 .error-msg  { color: var(--delete-fg); font-size: 14px; text-align: center; padding: 2rem 0; }
 
+/* ── Full-page state messages — "not found" / "access denied" ──
+   ProjectComponent (bad project ID) and EditorComponent (bad project ID,
+   bad script ID, or a real permission denial) all use this same centered
+   card instead of a bare line of text. */
+.state-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+}
+
+.state-message-card {
+  @include surface-panel;
+  max-width: 420px;
+  width: 100%;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .6rem;
+}
+
+.state-message-icon {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--accent-rgb), .12);
+  color: var(--accent);
+  margin-bottom: .5rem;
+
+  svg { width: 28px; height: 28px; }
+}
+
+// A real permission denial (as opposed to "this doesn't exist") reads
+// as more of a stop sign than a shrug — warm gold swapped for the same
+// red the rest of the app already uses for destructive/blocked states.
+.state-message-icon-danger {
+  background: color-mix(in srgb, var(--delete-fg) 14%, transparent);
+  color: var(--delete-fg);
+}
+
+.state-message-card h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.state-message-card p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 .5rem;
+}
+
 /* ── Modal content (keyboard shortcuts, find & replace, PDF export,
       word count / script statistics) — see ModalComponent for the
       shared backdrop/panel chrome these sit inside. ── */
