@@ -186,6 +186,24 @@ export class EditorComponent implements OnInit, OnDestroy {
   myRole = '';
   roleLoaded = false;
 
+  // Set from projectService.get()/scriptService.get()'s error paths — a
+  // real 404, unlike getMyRole's 403 (which can't tell "doesn't exist"
+  // apart from "exists but you're not a member"). Take priority over the
+  // permission-denied state in the template for exactly that reason.
+  projectNotFound = false;
+  scriptNotFound = false;
+  private projectSettled = false;
+  private scriptSettled = false;
+
+  // All three independent requests (project, script, role) need to
+  // settle before the template can tell which state to show — waiting
+  // on just roleLoaded let the page flash "access denied" for a fraction
+  // of a second before a slower project/script 404 flipped it to "not
+  // found" instead.
+  get pageReady(): boolean {
+    return this.projectSettled && this.scriptSettled && this.roleLoaded;
+  }
+
   autoSaveState$ = this.autoSave.state$;
 
   project: Project | null = null;
@@ -208,14 +226,19 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.projectId = this.route.snapshot.params['projectId'];
     this.scriptId  = this.route.snapshot.params['scriptId'];
 
-    this.projectService.get(this.projectId).subscribe(p => this.project = p);
+    this.projectService.get(this.projectId).subscribe({
+      next: p => { this.project = p; this.projectSettled = true; },
+      error: () => { this.projectNotFound = true; this.projectSettled = true; },
+    });
 
-    this.scriptService.get(this.projectId, this.scriptId).subscribe(s => this.script = s);
+    this.scriptService.get(this.projectId, this.scriptId).subscribe({
+      next: s => { this.script = s; this.scriptSettled = true; },
+      error: () => { this.scriptNotFound = true; this.scriptSettled = true; },
+    });
 
     // Fetch the current user's role on this project
     this.membership.getMyRole(this.projectId).subscribe({
       next: ({ role }) => {
-        console.log(role)
         this.myRole = role;
         this.roleLoaded = true;
         if (role === 'viewer') this.makeEditorReadOnly();
@@ -225,6 +248,10 @@ export class EditorComponent implements OnInit, OnDestroy {
         this.roleLoaded = true;
       }
     });
+  }
+
+  goHome(): void {
+    this.router.navigate(['/']);
   }
 
   ngOnDestroy(): void {
