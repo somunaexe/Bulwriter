@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
 import * as Y from 'yjs';
 import {
-  Component, OnDestroy,
+  Component, OnDestroy, inject,
   ViewChild, ElementRef, Input, HostListener
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -50,6 +50,7 @@ import { findAll, selectMatch, replaceMatch, replaceAll } from '../../editor/fin
 import { computeScriptStats, ScriptStats } from '../../editor/script-stats';
 import { exportScreenplayPdf } from '../../editor/fountain-to-pdf';
 import { MembershipService } from '../../services/membership.service';
+import { ClerkService } from '../../services/clerk.service';
 import { AutoSaveService } from '../../services/autosave.service';
 import { ProjectService, Project } from '../../services/project.service';
 import { ScriptService, Script } from '../../services/script.service';
@@ -75,6 +76,8 @@ import { pickFile } from '../../editor/pick-file';
   styleUrls: ['./editor.component.scss'],
 })
 export class EditorComponent implements OnInit, OnDestroy {
+  private clerk = inject(ClerkService);
+
   projectId = '';
   scriptId  = '';
   collaborators:[] = []
@@ -94,11 +97,14 @@ export class EditorComponent implements OnInit, OnDestroy {
       // The callback keeps the toolbar's highlighted button in sync with
       // wherever the cursor is — the element type is already visible
       // there, so there's no separate floating indicator to maintain too.
+      const userId = this.clerk.userId$.value;
+      const userName = this.clerk.user$.value?.name;
       this.sync.startSession(
         this.scriptId,
         el.nativeElement,
         null,
         (element) => { this.activeElement = element; },
+        userId && userName ? { id: userId, name: userName } : undefined,
       );
       // Flags the "unsaved changes" warning (beforeunload below, plus the
       // canDeactivate guard on this route) whenever the doc actually

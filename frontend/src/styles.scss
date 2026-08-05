@@ -902,9 +902,47 @@ ol.stats-list {
   border-radius: 4px;
 }
 
-/* Cursor colours for collaborators */
-.ProseMirror .collaboration-cursor__caret { border-left: 2px solid #ff6b6b; }
-.ProseMirror .collaboration-cursor__label { background: #ff6b6b; color: #fff; font-size: 11px; border-radius: 3px; padding: 0 4px; }
+/* ── Remote collaborator cursors (y-prosemirror) ──
+   The caret is a thin colored line sitting inline in the text; its
+   padding widens the hoverable hit area without changing how it looks.
+   The name label is absolutely positioned and hidden until hovered, so
+   collaborators' names never sit in the reading flow of the script. */
+.pm-mount .ProseMirror .collab-cursor {
+  position: relative;
+  border-left: 2px solid var(--collab-color, var(--accent));
+  padding: 0 3px;
+  margin: 0 -3px;
+}
+
+.pm-mount .ProseMirror .collab-cursor-label {
+  position: absolute;
+  bottom: 100%;
+  left: -2px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: #fff;
+  background: var(--collab-color, var(--accent));
+  border-radius: 3px;
+  padding: 0 5px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition: opacity .12s ease, transform .12s ease;
+  z-index: 5;
+}
+
+.pm-mount .ProseMirror .collab-cursor:hover .collab-cursor-label {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.pm-mount .ProseMirror .ProseMirror-yjs-selection {
+  border-radius: 2px;
+}
 
 /* ── Slide-in side drawers (diff viewer, scene breakdown) — shared
    positioning/chrome; each drawer's own body content is styled
