@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { ySyncPlugin, yUndoPlugin, yCursorPlugin, undoCommand, redoCommand } from 'y-prosemirror';
+import { collabCursorBuilder, colorForUserId } from '../editor/collab-cursor';
 import { EditorState, Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { Node as PMNode } from 'prosemirror-model';
@@ -42,6 +43,7 @@ export class SyncService implements OnDestroy {
     mountEl: HTMLElement,
     indicatorEl?: HTMLElement | null,
     onElementChange?: (element: ScreenplayElement | null) => void,
+    localUser?: { id: string; name: string },
   ): CollabSession {
     this.endSession();
 
@@ -49,9 +51,16 @@ export class SyncService implements OnDestroy {
     const yXmlFragment = ydoc.getXmlFragment('script');
     const provider = new WebsocketProvider(this.WS_URL, scriptId, ydoc);
 
+    if (localUser) {
+      provider.awareness.setLocalStateField('user', {
+        name: localUser.name,
+        color: colorForUserId(localUser.id),
+      });
+    }
+
     const plugins = [
       ySyncPlugin(yXmlFragment),
-      yCursorPlugin(provider.awareness),
+      yCursorPlugin(provider.awareness, { cursorBuilder: collabCursorBuilder }),
       yUndoPlugin(),
       new Plugin({
         view: () => ({
