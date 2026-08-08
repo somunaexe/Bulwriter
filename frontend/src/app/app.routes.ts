@@ -7,11 +7,18 @@ import { TrashComponent } from './components/trash/trash.component';
 import { authGuard } from './guard/auth.guard';
 import { unsavedChangesGuard } from './guard/unsaved-changes.guard';
 import { SignInComponent } from './components/sign-in/sign-in.component';
+import { DonateComponent } from './components/donate/donate.component';
 
 export const routes: Routes = [
   {
     path: 'sign-in',
     component: SignInComponent,
+  },
+  {
+    // Public — no authGuard. Anyone should be able to support the project
+    // without a Bulwriter account.
+    path: 'donate',
+    component: DonateComponent,
   },
   {
     path: '',

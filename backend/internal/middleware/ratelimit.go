@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -77,6 +78,19 @@ func (rl *RateLimiter) StartCleanup(interval time.Duration) {
 		}
 		rl.mu.Unlock()
 	}
+}
+
+// ClientIP is a rate-limit key function for routes with no authenticated
+// user to key on (public endpoints mounted outside RequireAuth) — the
+// leftmost address in X-Forwarded-For when present (Railway/most proxies
+// set this), falling back to the raw connection address.
+func ClientIP(r *http.Request) string {
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+		if ip := strings.TrimSpace(strings.Split(fwd, ",")[0]); ip != "" {
+			return ip
+		}
+	}
+	return r.RemoteAddr
 }
 
 // Middleware rejects requests over the limit with 429 Too Many Requests.

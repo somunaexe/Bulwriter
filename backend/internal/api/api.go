@@ -21,6 +21,7 @@ import (
 	"github.com/somunaexe/bulwriter/backend/internal/credits"
 	"github.com/somunaexe/bulwriter/backend/internal/crew"
 	"github.com/somunaexe/bulwriter/backend/internal/distribution"
+	"github.com/somunaexe/bulwriter/backend/internal/donation"
 	"github.com/somunaexe/bulwriter/backend/internal/hub"
 	"github.com/somunaexe/bulwriter/backend/internal/membership"
 	"github.com/somunaexe/bulwriter/backend/internal/middleware"
@@ -62,6 +63,7 @@ type router struct {
 	continuity      *continuity.Store
 	clerk           *clerkapi.Client
 	anthropic       *anthropic.Client
+	donations       *donation.Client
 	storyGenLimiter *middleware.RateLimiter
 }
 
@@ -90,6 +92,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		continuity:   continuity.NewStore(db),
 		clerk:        clerkapi.NewClient(),
 		anthropic:    anthropic.NewClient(),
+		donations:    donation.NewClient(),
 		// Each call costs real money (Anthropic API) — kept much tighter
 		// than the general API limiter below.
 		storyGenLimiter: middleware.NewRateLimiter(5, time.Hour),
@@ -104,6 +107,11 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	apiLimiter := middleware.NewRateLimiter(120, time.Minute)
 	go apiLimiter.StartCleanup(10 * time.Minute)
 
+	// Keyed by IP rather than user ID — donating doesn't require signing
+	// in, so there's no authenticated user to key on here.
+	donateLimiter := middleware.NewRateLimiter(10, time.Hour)
+	go donateLimiter.StartCleanup(30 * time.Minute)
+
 	mx := mux.NewRouter()
 
 	// Public routes — no auth needed
@@ -113,6 +121,14 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	}).Methods("GET")
+
+	// Donations/sponsorships — deliberately outside the /api subrouter's
+	// RequireAuth below, so anyone can support the project without a
+	// Bulwriter account.
+	mx.Handle(
+		"/api/donate/checkout",
+		donateLimiter.Middleware(middleware.ClientIP)(http.HandlerFunc(r.createDonationCheckout)),
+	).Methods("POST")
 
 	// CORS — allow Angular dev server
 	c := cors.New(cors.Options{
@@ -1226,6 +1242,28 @@ func (r *router) generateStoryBible(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, draft)
+}
+
+// createDonationCheckout starts a Stripe-hosted Checkout session for a
+// one-time or monthly donation and hands back its URL for the browser to
+// redirect to. Public — no signed-in Bulwriter account required.
+func (r *router) createDonationCheckout(w http.ResponseWriter, req *http.Request) {
+	req.Body = http.MaxBytesReader(w, req.Body, 4096)
+	var body struct {
+		AmountCents int    `json:"amountCents"`
+		Interval    string `json:"interval"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	url, err := r.donations.CreateCheckoutSession(body.AmountCents, body.Interval)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"url": url})
 }
 
 func (r *router) setStoryBible(w http.ResponseWriter, req *http.Request) {

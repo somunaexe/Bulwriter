@@ -41,6 +41,8 @@ services:
       CLERK_FRONTEND_API: ${CLERK_FRONTEND_API:-https://wanted-gelding-91.clerk.accounts.dev}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
     volumes:
       - .:/app
       - go_mod_cache:/root/go/pkg/mod
