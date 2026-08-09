@@ -60,6 +60,9 @@ func TestCreateCheckoutSession_OneTime(t *testing.T) {
 	if gotForm.Get("success_url") != "https://example.com/donate?status=success" {
 		t.Errorf("unexpected success_url: %q", gotForm.Get("success_url"))
 	}
+	if gotForm.Get("managed_payments[enabled]") != "false" {
+		t.Errorf("expected managed_payments[enabled]=false (dynamic price_data has no product tax_code), got %q", gotForm.Get("managed_payments[enabled]"))
+	}
 	if gotForm.Get("line_items[0][price_data][recurring][interval]") != "" {
 		t.Error("expected no recurring interval for a one-time donation")
 	}
