@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"{\\\"systemMessage\\\": \\\"Reminder: Railway Postgres (Hobby plan) has no automated backups yet. Upgrade to Pro, or self-deploy Railway's Postgres Daily Backups template (S3/GCS). Until then, export scripts periodically as a safety net.\\\"}\""
+          }
+        ]
+      }
+    ]
+  }
+}
