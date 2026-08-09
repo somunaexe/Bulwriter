@@ -1,0 +1,102 @@
+<div class="dashboard donate-page">
+
+  <header class="dash-header">
+    <h1 class="logo">Support Bulwriter</h1>
+    <p class="tagline">
+      Bulwriter is free and open-source — every feature, for everyone, always.
+      Donations and sponsorships go straight to hosting and development costs;
+      nothing is ever paywalled.
+    </p>
+  </header>
+
+  <div class="state-message" *ngIf="status === 'success'">
+    <div class="state-message-card">
+      <div class="state-message-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>
+      </div>
+      <h2>Thank you!</h2>
+      <p>Your support keeps Bulwriter free and open for every screenwriter who uses it.</p>
+      <button class="btn-save" (click)="goHome()">Back to Bulwriter</button>
+    </div>
+  </div>
+
+  <div class="state-message" *ngIf="status === 'canceled'">
+    <div class="state-message-card">
+      <div class="state-message-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h2>Checkout canceled</h2>
+      <p>No charge was made. You can pick it back up whenever you're ready.</p>
+      <button class="btn-save" (click)="tryAgain()">Try again</button>
+    </div>
+  </div>
+
+  <section class="donate-card" *ngIf="!status">
+    <div class="donate-toggle" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        [class.active]="interval === ''"
+        [attr.aria-selected]="interval === ''"
+        (click)="setInterval('')">
+        One-time
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [class.active]="interval === 'month'"
+        [attr.aria-selected]="interval === 'month'"
+        (click)="setInterval('month')">
+        Monthly
+      </button>
+    </div>
+
+    <div class="donate-amounts">
+      <button
+        type="button"
+        class="amount-btn"
+        *ngFor="let a of presetAmounts"
+        [class.active]="selectedAmount === a"
+        (click)="selectPreset(a)">
+        ${{ a }}
+      </button>
+    </div>
+
+    <label class="donate-custom">
+      <span>Or enter a custom amount</span>
+      <div class="donate-custom-input">
+        <span class="donate-currency">$</span>
+        <input
+          type="number"
+          min="1"
+          max="1000"
+          step="1"
+          class="input-sm"
+          placeholder="Custom amount"
+          [(ngModel)]="customAmount"
+          (input)="onCustomInput()" />
+      </div>
+    </label>
+
+    <p class="error-msg" *ngIf="error">{{ error }}</p>
+
+    <button class="btn-save donate-cta" (click)="donate()" [disabled]="!validAmount || submitting">
+      <ng-container *ngIf="!submitting">
+        Continue to checkout — ${{ amount }}{{ interval === 'month' ? '/mo' : '' }}
+      </ng-container>
+      <ng-container *ngIf="submitting">Redirecting to checkout…</ng-container>
+    </button>
+
+    <p class="donate-note">
+      You'll be redirected to Stripe's secure checkout. Bulwriter never sees
+      or stores your card details.
+    </p>
+  </section>
+
+</div>

@@ -1,0 +1,96 @@
+@use 'mixins' as *;
+
+.donate-card {
+  @include surface-panel;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.donate-toggle {
+  display: flex;
+  align-self: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+
+  button {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: .45rem 1.1rem;
+    border-radius: calc(var(--radius-sm) - 3px);
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+
+    &.active {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+
+    &:not(.active):hover {
+      color: var(--text);
+    }
+  }
+}
+
+.donate-amounts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: .6rem;
+}
+
+.amount-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  padding: .7rem 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color .12s ease, color .12s ease, box-shadow .12s ease;
+
+  &:hover { border-color: var(--accent); }
+
+  &.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+}
+
+.donate-custom {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+
+  span { font-size: 13px; color: var(--muted); }
+}
+
+.donate-custom-input {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+
+  .donate-currency {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  input { flex: 1; }
+}
+
+.donate-cta { align-self: stretch; }
+
+.donate-note {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+}

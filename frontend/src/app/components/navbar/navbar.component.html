@@ -6,6 +6,7 @@
   <!-- Middle: main nav -->
   <div class="nav-links" [class.open]="menuOpen">
     <a routerLink="/" (click)="openProjects()">Projects</a>
+    <a routerLink="/donate" (click)="menuOpen = false">Support</a>
   </div>
 
   <!-- Right: account -->
@@ -77,6 +78,7 @@
     <h2>Bulwriter</h2>
     <p>Collaborative screenwriting with Git-style version control and real-time co-writing.</p>
     <p class="about-meta">Industry-standard Fountain import/export, branch-based drafts, and live collaboration.</p>
+    <p class="about-meta">Free and open-source, always — <a routerLink="/donate" (click)="toggleAbout()">support the project</a>.</p>
     <button class="btn-ghost" (click)="toggleAbout()">Close</button>
   </div>
 </div>
