@@ -79,6 +79,12 @@ func (c *Client) CreateCheckoutSession(amountCents int, interval string) (string
 	form.Set("mode", mode)
 	form.Set("success_url", c.frontendURL+"/donate?status=success")
 	form.Set("cancel_url", c.frontendURL+"/donate?status=canceled")
+	// Stripe's Managed Payments (automatic tax) is on by default for new
+	// accounts and requires a product tax_code on every line item — which
+	// dynamic price_data (no pre-created Product) never has. Opt out
+	// rather than assign a tax code to a donation, which isn't a taxable
+	// sale of goods/services.
+	form.Set("managed_payments[enabled]", "false")
 	form.Set("line_items[0][quantity]", "1")
 	form.Set("line_items[0][price_data][currency]", "usd")
 	form.Set("line_items[0][price_data][product_data][name]", productName)
