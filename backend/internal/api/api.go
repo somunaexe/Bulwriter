@@ -5,11 +5,14 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"database/sql"
+	"github.com/getsentry/sentry-go"
+	sentryhttp "github.com/getsentry/sentry-go/http"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/somunaexe/bulwriter/backend/internal/anthropic"
@@ -64,35 +67,37 @@ type router struct {
 	clerk           *clerkapi.Client
 	anthropic       *anthropic.Client
 	donations       *donation.Client
+	donationsStore  *donation.Store
 	storyGenLimiter *middleware.RateLimiter
 }
 
 func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	r := &router{
-		hub:          h,
-		store:        snapshot.NewStore(db),
-		projects:     project.NewStore(db),
-		scripts:      script.NewStore((db)),
-		trash:        trash.NewStore(db),
-		members:      membership.NewStore(db),
-		breakdown:    breakdown.NewStore(db),
-		schedule:     schedule.NewStore(db),
-		scouting:     scouting.NewStore(db),
-		crew:         crew.NewStore(db),
-		casting:      casting.NewStore(db),
-		budget:       budget.NewStore(db),
-		story:        story.NewStore(db),
-		shots:        shotlist.NewStore(db),
-		musicvfx:     musicvfx.NewStore(db),
-		presskit:     presskit.NewStore(db),
-		milestones:   milestone.NewStore(db),
-		distribution: distribution.NewStore(db),
-		credits:      credits.NewStore(db),
-		rehearsals:   rehearsal.NewStore(db),
-		continuity:   continuity.NewStore(db),
-		clerk:        clerkapi.NewClient(),
-		anthropic:    anthropic.NewClient(),
-		donations:    donation.NewClient(),
+		hub:            h,
+		store:          snapshot.NewStore(db),
+		projects:       project.NewStore(db),
+		scripts:        script.NewStore((db)),
+		trash:          trash.NewStore(db),
+		members:        membership.NewStore(db),
+		breakdown:      breakdown.NewStore(db),
+		schedule:       schedule.NewStore(db),
+		scouting:       scouting.NewStore(db),
+		crew:           crew.NewStore(db),
+		casting:        casting.NewStore(db),
+		budget:         budget.NewStore(db),
+		story:          story.NewStore(db),
+		shots:          shotlist.NewStore(db),
+		musicvfx:       musicvfx.NewStore(db),
+		presskit:       presskit.NewStore(db),
+		milestones:     milestone.NewStore(db),
+		distribution:   distribution.NewStore(db),
+		credits:        credits.NewStore(db),
+		rehearsals:     rehearsal.NewStore(db),
+		continuity:     continuity.NewStore(db),
+		clerk:          clerkapi.NewClient(),
+		anthropic:      anthropic.NewClient(),
+		donations:      donation.NewClient(),
+		donationsStore: donation.NewStore(db),
 		// Each call costs real money (Anthropic API) — kept much tighter
 		// than the general API limiter below.
 		storyGenLimiter: middleware.NewRateLimiter(5, time.Hour),
@@ -129,6 +134,14 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 		"/api/donate/checkout",
 		donateLimiter.Middleware(middleware.ClientIP)(http.HandlerFunc(r.createDonationCheckout)),
 	).Methods("POST")
+
+	// Stripe's server-to-server confirmation that a checkout session
+	// actually completed — the only source of truth for "a donation
+	// succeeded" the backend has. Deliberately not rate-limited: the
+	// signature check is the real gate (see stripeWebhook), and limiting
+	// by IP risks silently dropping legitimate retries during a Stripe
+	// delivery storm.
+	mx.HandleFunc("/api/donate/webhook", r.stripeWebhook).Methods("POST")
 
 	// CORS — allow Angular dev server
 	c := cors.New(cors.Options{
@@ -343,7 +356,13 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/crew/{memberId}", r.updateCrewMember).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/crew/{memberId}", r.removeCrewMember).Methods("DELETE")
 
-	return c.Handler(mx)
+	// Recovers a panic in any handler and reports it to Sentry (a no-op
+	// if SENTRY_DSN isn't set) before returning 500 — net/http's own
+	// per-request recovery already stops one panicking request from
+	// taking the whole process down, but without this the panic just
+	// vanishes into Railway's logs with nothing tracking it.
+	sentryHandler := sentryhttp.New(sentryhttp.Options{Repanic: false})
+	return sentryHandler.Handle(c.Handler(mx))
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -355,6 +374,13 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 func writeErr(w http.ResponseWriter, status int, msg string) {
+	if status >= http.StatusInternalServerError {
+		// A 5xx here is an actual bug or infra failure (a panic is
+		// caught separately by the sentryhttp middleware wrapping the
+		// whole router) — worth alerting on. A no-op if SENTRY_DSN
+		// isn't configured.
+		sentry.CaptureMessage(msg)
+	}
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
@@ -1264,6 +1290,49 @@ func (r *router) createDonationCheckout(w http.ResponseWriter, req *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"url": url})
+}
+
+// maxWebhookBodyBytes bounds a Stripe webhook payload — actual events
+// are a few KB; this is generous headroom, not a real limit.
+const maxWebhookBodyBytes = 64 << 10
+
+// stripeWebhook receives Stripe's server-to-server confirmation that a
+// checkout session actually completed — the client-side success
+// redirect on its own proves nothing (a user can hit that URL by hand
+// without ever paying), so this is the only real source of truth for
+// "a donation succeeded."
+func (r *router) stripeWebhook(w http.ResponseWriter, req *http.Request) {
+	req.Body = http.MaxBytesReader(w, req.Body, maxWebhookBodyBytes)
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "could not read request body")
+		return
+	}
+
+	checkout, err := r.donations.ParseCompletedCheckout(body, req.Header.Get("Stripe-Signature"))
+	if err != nil {
+		// Covers both a bad/forged signature and a malformed payload —
+		// either way this wasn't a legitimate Stripe delivery, so 400
+		// rather than 200 (Stripe won't retry a request it sent
+		// correctly, but there's nothing to retry here either way).
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if checkout == nil {
+		// An event we don't act on (wrong type, or not yet paid) —
+		// not an error, just nothing to record.
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if err := r.donationsStore.RecordCompleted(*checkout); err != nil {
+		// 5xx makes Stripe retry delivery, which is what we want if
+		// this was a transient database error.
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (r *router) setStoryBible(w http.ResponseWriter, req *http.Request) {

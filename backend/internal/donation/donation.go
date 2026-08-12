@@ -19,10 +19,11 @@ const defaultCheckoutURL = "https://api.stripe.com/v1/checkout/sessions"
 const defaultFrontendURL = "https://d1hspb5r4tyd4l.cloudfront.net"
 
 type Client struct {
-	secretKey   string
-	frontendURL string
-	baseURL     string // overridden by tests; always defaultCheckoutURL in production
-	http        *http.Client
+	secretKey     string
+	webhookSecret string
+	frontendURL   string
+	baseURL       string // overridden by tests; always defaultCheckoutURL in production
+	http          *http.Client
 }
 
 func NewClient() *Client {
@@ -31,10 +32,11 @@ func NewClient() *Client {
 		frontendURL = defaultFrontendURL
 	}
 	return &Client{
-		secretKey:   os.Getenv("STRIPE_SECRET_KEY"),
-		frontendURL: strings.TrimRight(frontendURL, "/"),
-		baseURL:     defaultCheckoutURL,
-		http:        &http.Client{Timeout: 20 * time.Second},
+		secretKey:     os.Getenv("STRIPE_SECRET_KEY"),
+		webhookSecret: os.Getenv("STRIPE_WEBHOOK_SECRET"),
+		frontendURL:   strings.TrimRight(frontendURL, "/"),
+		baseURL:       defaultCheckoutURL,
+		http:          &http.Client{Timeout: 20 * time.Second},
 	}
 }
 
