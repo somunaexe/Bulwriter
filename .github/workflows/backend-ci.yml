@@ -7,7 +7,6 @@ on:
   pull_request:
     branches:
       - main
-      - claude/cors-projects-list-qs9vze
 
 jobs:
   build:
@@ -27,3 +26,6 @@ jobs:
 
       - name: Vet
         run: go vet ./...
+
+      - name: Test
+        run: go test ./... -race

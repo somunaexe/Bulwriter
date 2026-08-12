@@ -83,3 +83,14 @@ Open two browser tabs — both connect to the same script room and sync live.
 | Database (production) | Postgres |
 | Object storage (production) | S3 / Cloudflare R2 |
 | Automation & Workflows | Github Actions |
+
+## License
+
+Copyright (C) 2026 Bulwriter
+
+Bulwriter is free software, licensed under the [GNU Affero General Public
+License v3.0](LICENSE) (AGPL-3.0). You're free to use, modify, and
+self-host it — if you run a modified version as a network service, the
+AGPL requires offering its source to that service's users too, which is
+what keeps community improvements from being closed off in a competing
+hosted fork.
