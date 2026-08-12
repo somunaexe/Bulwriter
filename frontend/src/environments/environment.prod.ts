@@ -3,9 +3,5 @@ export const environment = {
   apiUrl: 'https://bulwriter-production.up.railway.app/api',
   wsUrl: 'wss://bulwriter-production.up.railway.app/ws',
   clerkPublishableKey: 'pk_test_d2FudGVkLWdlbGRpbmctOTEuY2xlcmsuYWNjb3VudHMuZGV2JA',
-  // Empty until an Angular/JavaScript Sentry project exists (the DSN
-  // that landed here briefly was actually for the Go project — wrong
-  // platform, would've mangled frontend stack traces). See main.ts,
-  // which only calls Sentry.init() when this is set.
-  sentryDsn: '',
+  sentryDsn: 'https://06a5a1c0fa3c3b236a42c68dfc472cb6@o4511895121821696.ingest.de.sentry.io/4511895156555856',
 };
