@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DonateService } from '../../services/donate.service';
 
 const PRESET_AMOUNTS = [5, 10, 25, 50, 100];
@@ -11,7 +11,7 @@ const MAX_AMOUNT = 1000;
 @Component({
   selector: 'app-donate',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './donate.component.html',
   styleUrl: './donate.component.scss',
 })

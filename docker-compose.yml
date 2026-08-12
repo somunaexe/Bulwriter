@@ -42,7 +42,9 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - .:/app
       - go_mod_cache:/root/go/pkg/mod

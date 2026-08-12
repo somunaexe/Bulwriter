@@ -1375,3 +1375,34 @@ ol.stats-list {
     max-width: 100vw;
   }
 }
+
+/* ── Legal pages (Privacy Policy, Terms of Service) — plain prose,
+   capped at a comfortable reading width rather than the app's usual
+   narrower form-centric .dashboard width. ── */
+.legal-page { max-width: 760px; }
+
+.legal-content {
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 14px;
+
+  h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 2rem 0 .5rem;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 1.25rem 0 .35rem;
+  }
+
+  p {
+    margin: 0 0 .85rem;
+  }
+
+  a {
+    color: var(--accent);
+  }
+}

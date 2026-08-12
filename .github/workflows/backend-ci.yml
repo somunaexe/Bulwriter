@@ -7,11 +7,29 @@ on:
   pull_request:
     branches:
       - main
-      - claude/cors-projects-list-qs9vze
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    # Some store-level tests (internal/donation) run against a real
+    # Postgres rather than mocking the database — this service container
+    # is what DATABASE_URL below points them at. Tests that need it skip
+    # cleanly if it's ever unavailable, but CI always provides it.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bulwriter_ci
+          POSTGRES_PASSWORD: bulwriter_ci
+          POSTGRES_DB: bulwriter_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout
@@ -27,3 +45,8 @@ jobs:
 
       - name: Vet
         run: go vet ./...
+
+      - name: Test
+        env:
+          DATABASE_URL: postgres://bulwriter_ci:bulwriter_ci@localhost:5432/bulwriter_ci?sslmode=disable
+        run: go test ./... -race

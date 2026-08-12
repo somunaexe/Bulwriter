@@ -21,6 +21,7 @@
     "@angular/platform-browser-dynamic": "^17.3.0",
     "@angular/router": "^17.3.0",
     "@clerk/clerk-js": "^6.16.1",
+    "@sentry/angular": "^10.70.0",
     "docx": "^9.7.1",
     "jspdf": "^4.2.1",
     "mammoth": "^1.12.0",
