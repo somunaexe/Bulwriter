@@ -8,6 +8,8 @@ import { authGuard } from './guard/auth.guard';
 import { unsavedChangesGuard } from './guard/unsaved-changes.guard';
 import { SignInComponent } from './components/sign-in/sign-in.component';
 import { DonateComponent } from './components/donate/donate.component';
+import { PrivacyComponent } from './components/privacy/privacy.component';
+import { TermsComponent } from './components/terms/terms.component';
 
 export const routes: Routes = [
   {
@@ -19,6 +21,15 @@ export const routes: Routes = [
     // without a Bulwriter account.
     path: 'donate',
     component: DonateComponent,
+  },
+  {
+    // Public — legal pages need to be readable without signing in.
+    path: 'privacy',
+    component: PrivacyComponent,
+  },
+  {
+    path: 'terms',
+    component: TermsComponent,
   },
   {
     path: '',
