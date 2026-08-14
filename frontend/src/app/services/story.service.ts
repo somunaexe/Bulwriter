@@ -79,6 +79,12 @@ export class StoryService {
     return this.http.delete<void>(`${this.BASE}/projects/${projectId}/story/notes/${noteId}`);
   }
 
+  // Sends the full note order after a drag-and-drop drop, rather than a
+  // series of single-step moves.
+  reorderIdeaNotes(projectId: string, orderedIds: string[]): Observable<void> {
+    return this.http.put<void>(`${this.BASE}/projects/${projectId}/story/notes/reorder`, { orderedIds });
+  }
+
   setScriptStory(projectId: string, scriptId: string, logline: string, synopsis: string): Observable<void> {
     return this.http.put<void>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/story`,

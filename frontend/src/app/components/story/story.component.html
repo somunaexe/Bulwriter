@@ -65,8 +65,14 @@
       <h2 class="section-label">Idea notes</h2>
       <p class="story-hint">Write down every version without filtering — nothing here gets overwritten by a later one.</p>
 
-      <ul class="idea-note-list" *ngIf="ideaNotes.length">
-        <li class="idea-note" *ngFor="let note of ideaNotes">
+      <ul class="idea-note-list" *ngIf="ideaNotes.length" cdkDropList (cdkDropListDropped)="dropNote($event)">
+        <li class="idea-note" *ngFor="let note of ideaNotes" cdkDrag [cdkDragDisabled]="!canEdit">
+          <span
+            *ngIf="canEdit"
+            class="idea-note-handle"
+            cdkDragHandle
+            aria-label="Drag to reorder"
+            title="Drag to reorder">⠿</span>
           <textarea
             class="story-textarea"
             rows="2"

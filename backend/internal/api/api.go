@@ -246,6 +246,10 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/story", r.getStory).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/story", r.setStoryBible).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/story/notes", r.addStoryIdeaNote).Methods("POST")
+	// Registered before the {noteId} wildcard route below — gorilla/mux
+	// matches PUT routes in registration order, and {noteId} would
+	// otherwise greedily match the literal "reorder" segment first.
+	api.HandleFunc("/projects/{projectId}/story/notes/reorder", r.reorderStoryIdeaNotes).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/story/notes/{noteId}", r.updateStoryIdeaNote).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/story/notes/{noteId}", r.removeStoryIdeaNote).Methods("DELETE")
 	// Extra-tight limiter on top of the general one above — each call
@@ -1424,6 +1428,37 @@ func (r *router) updateStoryIdeaNote(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, note)
+}
+
+// reorderStoryIdeaNotes sets the display order of every idea note in one
+// call — meant to be called once per drag-and-drop drop with the note IDs
+// in their new order, not as a series of single-step moves.
+func (r *router) reorderStoryIdeaNotes(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		OrderedIds []string `json:"orderedIds"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "orderedIds is required")
+		return
+	}
+
+	if err := r.story.ReorderIdeaNotes(vars["projectId"], body.OrderedIds); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (r *router) removeStoryIdeaNote(w http.ResponseWriter, req *http.Request) {

@@ -155,6 +155,31 @@ func (s *Store) UpdateIdeaNote(projectID, id, text string) (*IdeaNote, error) {
 	return n, nil
 }
 
+// ReorderIdeaNotes sets each note's position to its index in orderedIds —
+// meant to be called once per drag-and-drop drop with the full resulting
+// order, rather than as a series of single-step moves. Only touches notes
+// that actually belong to projectID, so an ID from another project in the
+// list is silently ignored rather than letting a caller reorder data it
+// doesn't own; an ID that doesn't match any note in this project is
+// likewise just skipped.
+func (s *Store) ReorderIdeaNotes(projectID string, orderedIds []string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	for i, id := range orderedIds {
+		if _, err := tx.Exec(
+			`UPDATE story_idea_notes SET position = $1 WHERE id = $2 AND project_id = $3`,
+			i, id, projectID,
+		); err != nil {
+			return fmt.Errorf("reordering idea note: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
 func (s *Store) RemoveIdeaNote(projectID, id string) error {
 	_, err := s.db.Exec(
 		`DELETE FROM story_idea_notes WHERE id = $1 AND project_id = $2`, id, projectID,

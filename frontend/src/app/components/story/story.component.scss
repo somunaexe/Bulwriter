@@ -108,6 +108,34 @@
     &:focus { background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 4px; }
     &:read-only:focus { background: none; }
   }
+
+  // CDK's own placeholder for the gap left where a dragged note came
+  // from — kept the same size/shape as a real note so the list doesn't
+  // visibly jump while dragging.
+  &.cdk-drag-placeholder {
+    opacity: .4;
+  }
+
+  &.cdk-drag-preview {
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.idea-note-list.cdk-drop-list-dragging .idea-note:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.idea-note-handle {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+
+  &:active { cursor: grabbing; }
 }
 
 .idea-note-add {
