@@ -229,6 +229,17 @@
   }
 }
 
+.page-indicator {
+  font-size: 12px;
+  font-weight: 500;
+  padding: .25rem .7rem;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), .15);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), .3);
+  white-space: nowrap;
+}
+
 .kbd-hint {
   margin-left: auto;
 

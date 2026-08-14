@@ -67,7 +67,12 @@
 
       <ul class="idea-note-list" *ngIf="ideaNotes.length">
         <li class="idea-note" *ngFor="let note of ideaNotes">
-          <p>{{ note.text }}</p>
+          <textarea
+            class="story-textarea"
+            rows="2"
+            [(ngModel)]="note.text"
+            (blur)="updateNote(note)"
+            [readonly]="!canEdit"></textarea>
           <button *ngIf="canEdit" class="btn-icon" (click)="removeNote(note)" aria-label="Remove note">✕</button>
         </li>
       </ul>

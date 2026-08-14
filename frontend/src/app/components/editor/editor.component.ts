@@ -106,6 +106,15 @@ export class EditorComponent implements OnInit, OnDestroy {
         (element) => { this.activeElement = element; },
         userId && userName ? { id: userId, name: userName } : undefined,
       );
+
+      // The toolbar's element highlight only tells you what's at the
+      // cursor, not what's currently on screen while scrolling/reading —
+      // so a writer scrolled down into a long script has no way to tell
+      // whether they've scrolled past the title page or not. This tracks
+      // scroll position against the title page block instead.
+      this.pmMountEl = el.nativeElement.closest('.pm-mount');
+      this.pmMountEl?.addEventListener('scroll', this.onEditorScroll, { passive: true });
+      this.updateViewingTitlePage();
       // Flags the "unsaved changes" warning (beforeunload below, plus the
       // canDeactivate guard on this route) whenever the doc actually
       // changes — cleared again by AutoSaveService on its next successful
@@ -113,6 +122,9 @@ export class EditorComponent implements OnInit, OnDestroy {
       // mirrors remote changes) never trips it.
       this.contentChangedSub = this.sync.contentChanged$.subscribe(() => {
         if (this.canEdit) this.autoSave.markDirty();
+        // A title page inserted/removed (by this user or a collaborator)
+        // needs the badge re-checked even without any scrolling.
+        this.updateViewingTitlePage();
       });
       // Apply read-only if role already loaded by this point
       if (this.myRole === 'viewer') this.makeEditorReadOnly();
@@ -138,6 +150,39 @@ export class EditorComponent implements OnInit, OnDestroy {
           this.autoSave.start();
       }
     }
+  }
+
+  // Whether the title page block is still (at least partly) on screen —
+  // see updateViewingTitlePage(). Drives the small "Title Page" badge
+  // next to the format toolbar.
+  viewingTitlePage = false;
+  private pmMountEl: HTMLElement | null = null;
+  private scrollRafId: number | null = null;
+
+  private onEditorScroll = (): void => {
+    if (this.scrollRafId !== null) return;
+    this.scrollRafId = requestAnimationFrame(() => {
+      this.scrollRafId = null;
+      this.updateViewingTitlePage();
+    });
+  };
+
+  private updateViewingTitlePage(): void {
+    const view = (this.sync as any).session?.view;
+    const mount = this.pmMountEl;
+    if (!view || !mount) { this.viewingTitlePage = false; return; }
+
+    const fields = view.dom.querySelectorAll('[data-element="title_page_field"]');
+    if (fields.length === 0) { this.viewingTitlePage = false; return; }
+
+    const last = fields[fields.length - 1] as HTMLElement;
+    const mountRect = mount.getBoundingClientRect();
+    const lastRect = last.getBoundingClientRect();
+    // Absolute scroll offset at which the title page block's bottom
+    // edge reaches the top of the viewport — past that, we're reading
+    // script content, not the title page.
+    const boundary = lastRect.bottom - mountRect.top + mount.scrollTop;
+    this.viewingTitlePage = mount.scrollTop < boundary;
   }
 
   // latestSnapContent = '';
@@ -264,6 +309,8 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.sync.endSession();
     this.autoSave.stop()
     this.contentChangedSub?.unsubscribe();
+    this.pmMountEl?.removeEventListener('scroll', this.onEditorScroll);
+    if (this.scrollRafId !== null) cancelAnimationFrame(this.scrollRafId);
   }
 
   // Warns on an actual tab close/refresh — in-app navigation (clicking
@@ -444,13 +491,22 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   // ── File menu ────────────────────────────────────────────────────
 
+  // The document is one continuous scroll with no separate "page" for
+  // the title page — this is the only signal the menu button has for
+  // whether one already exists, so it can offer to jump to it instead
+  // of insert a second one.
+  get hasTitlePage(): boolean {
+    const view = (this.sync as any).session?.view;
+    const first = view?.state?.doc?.firstChild;
+    return !!first && first.attrs['element'] === 'title_page_field';
+  }
+
   insertTitlePage(): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
 
-    const first = view.state.doc.firstChild;
-    if (first && first.attrs['element'] === 'title_page_field') {
-      alert('This script already has a title page.');
+    if (this.hasTitlePage) {
+      this.revealTitlePage(view);
       return;
     }
 
@@ -459,6 +515,17 @@ export class EditorComponent implements OnInit, OnDestroy {
       fieldType.create({ element: 'title_page_field', key })
     );
     view.dispatch(view.state.tr.insert(0, nodes));
+    this.revealTitlePage(view);
+  }
+
+  // Scrolls to the top of the document and puts the cursor in the first
+  // title page field — with no separate view for it, this is the only
+  // way a writer can actually see the title page, whether they're
+  // confirming an insert just landed or coming back to edit it later.
+  private revealTitlePage(view: any): void {
+    view.dom.closest('.pm-mount')?.scrollTo({ top: 0, behavior: 'smooth' });
+    const selection = TextSelection.atStart(view.state.doc);
+    view.dispatch(view.state.tr.setSelection(selection));
     view.focus();
   }
 

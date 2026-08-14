@@ -246,6 +246,7 @@ func NewRouter(h *hub.Hub, db *sql.DB) http.Handler {
 	api.HandleFunc("/projects/{projectId}/story", r.getStory).Methods("GET")
 	api.HandleFunc("/projects/{projectId}/story", r.setStoryBible).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/story/notes", r.addStoryIdeaNote).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/story/notes/{noteId}", r.updateStoryIdeaNote).Methods("PUT")
 	api.HandleFunc("/projects/{projectId}/story/notes/{noteId}", r.removeStoryIdeaNote).Methods("DELETE")
 	// Extra-tight limiter on top of the general one above — each call
 	// costs real money (the Anthropic API), unlike everything else here.
@@ -482,19 +483,19 @@ func (r *router) createScript(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Create branch
-	// br, err := r.store.CreateBranch(sc.ID, "main", "")
-	// if err != nil {
-	// 	writeErr(w, http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
-
-	// writeJSON(w, http.StatusCreated, br)
-	// snap, err := r.store.Commit(sc.ID, br.ID, "", "Once upon a time...", userID)
-	// if err != nil {
-	// 	writeErr(w, http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
+	// A brand-new script has no branches until this — the editor auto-
+	// selects branches[0] as the active branch, and autosave silently
+	// does nothing without one, so without this a writer could type for
+	// a while before ever having anywhere for it to actually save.
+	br, err := r.store.CreateBranch(sc.ID, "pilot", "")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := r.store.Commit(sc.ID, br.ID, "", "Initial snapshot", userID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	writeJSON(w, http.StatusCreated, sc)
 }
@@ -1394,6 +1395,35 @@ func (r *router) addStoryIdeaNote(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, note)
+}
+
+func (r *router) updateStoryIdeaNote(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	userID := middleware.UserIDFromContext(req)
+
+	role, err := r.members.GetRole(vars["projectId"], userID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !middleware.RequireRole(w, role, middleware.RoleEditor) {
+		return
+	}
+
+	var body struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Text == "" {
+		writeErr(w, http.StatusBadRequest, "text is required")
+		return
+	}
+
+	note, err := r.story.UpdateIdeaNote(vars["projectId"], vars["noteId"], body.Text)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, note)
 }
 
 func (r *router) removeStoryIdeaNote(w http.ResponseWriter, req *http.Request) {

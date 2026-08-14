@@ -71,6 +71,10 @@ export class StoryService {
     return this.http.post<IdeaNote>(`${this.BASE}/projects/${projectId}/story/notes`, { text });
   }
 
+  updateIdeaNote(projectId: string, noteId: string, text: string): Observable<IdeaNote> {
+    return this.http.put<IdeaNote>(`${this.BASE}/projects/${projectId}/story/notes/${noteId}`, { text });
+  }
+
   removeIdeaNote(projectId: string, noteId: string): Observable<void> {
     return this.http.delete<void>(`${this.BASE}/projects/${projectId}/story/notes/${noteId}`);
   }

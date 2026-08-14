@@ -110,6 +110,13 @@ export class StoryComponent implements OnInit {
     });
   }
 
+  updateNote(note: IdeaNote): void {
+    if (!this.canEdit) return;
+    const text = note.text.trim();
+    if (!text) return;
+    this.storyService.updateIdeaNote(this.projectId, note.id, text).subscribe();
+  }
+
   removeNote(note: IdeaNote): void {
     if (!this.canEdit) return;
     this.ideaNotes = this.ideaNotes.filter(n => n.id !== note.id);
