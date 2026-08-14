@@ -110,6 +110,12 @@
         </button>
         </div>
 
+        <!-- The cursor-based element highlight above only tells you
+             what's at the cursor — this tells you what's currently on
+             screen while scrolling, so it's never ambiguous whether
+             you're looking at the title page or the script itself. -->
+        <span class="page-indicator" *ngIf="viewingTitlePage">Title Page</span>
+
         <span class="kbd-hint">Ctrl/⌘ 1–0/= to set</span>
       </div>
 
@@ -125,7 +131,9 @@
           <app-menu-dropdown label="File">
             <button (click)="saveDraftNow()" [disabled]="!activeBranch || !canEdit">Save draft</button>
             <div class="menu-divider"></div>
-            <button (click)="insertTitlePage()" [disabled]="!canEdit">Insert title page…</button>
+            <button (click)="insertTitlePage()" [disabled]="!canEdit && !hasTitlePage">
+              {{ hasTitlePage ? 'Go to title page' : 'Insert title page…' }}
+            </button>
             <div class="menu-divider"></div>
             <button (click)="openImportModal()" [disabled]="!canEdit">Import…</button>
             <button (click)="openExportModal()">Export…</button>
