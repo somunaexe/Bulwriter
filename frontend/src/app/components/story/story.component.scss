@@ -44,9 +44,19 @@
 .story-field-row {
   display: flex;
   gap: 1rem;
-  flex-wrap: wrap;
 
-  .story-field { flex: 1 1 160px; }
+  // No flex-wrap: with 3 unevenly-divisible items, wrapping lets two land
+  // on one row and strands the third alone on the next — which then
+  // stretches to fill the entire row width by itself (flex-grow with
+  // nothing to share it with), looking like a completely different
+  // shape from its two siblings. A single breakpoint that switches
+  // straight from 3-across to 3-stacked skips that in-between state
+  // entirely.
+  .story-field { flex: 1; min-width: 0; }
+}
+
+@media (max-width: 600px) {
+  .story-field-row { flex-direction: column; }
 }
 
 .story-textarea {

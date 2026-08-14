@@ -131,8 +131,8 @@
           <app-menu-dropdown label="File">
             <button (click)="saveDraftNow()" [disabled]="!activeBranch || !canEdit">Save draft</button>
             <div class="menu-divider"></div>
-            <button (click)="insertTitlePage()" [disabled]="!canEdit && !hasTitlePage">
-              {{ hasTitlePage ? 'Go to title page' : 'Insert title page…' }}
+            <button (click)="onTitlePageButtonClick()" [disabled]="!canEdit && !hasTitlePage">
+              {{ titlePageButtonLabel }}
             </button>
             <div class="menu-divider"></div>
             <button (click)="openImportModal()" [disabled]="!canEdit">Import…</button>
