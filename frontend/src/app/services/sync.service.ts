@@ -100,9 +100,17 @@ export class SyncService implements OnDestroy {
       doc: ydoc,
       provider,
       view,
+      // Order matters: destroying the view first (the old order) leaves
+      // the WebSocket connection open for the brief window it takes to
+      // run, so a remote update that arrives mid-teardown still gets
+      // applied to the Yjs doc and can dispatch into a view that's
+      // already (or about to be) torn down — "Cannot read properties of
+      // null (reading 'matchesNode')" in production was exactly this.
+      // Closing the socket first means no more remote updates can arrive
+      // at all once teardown starts.
       destroy: () => {
-        view.destroy();
         provider.destroy();
+        view.destroy();
         ydoc.destroy();
       },
     };
