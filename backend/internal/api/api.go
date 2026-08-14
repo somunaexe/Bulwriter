@@ -483,19 +483,19 @@ func (r *router) createScript(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Create branch
-	// br, err := r.store.CreateBranch(sc.ID, "main", "")
-	// if err != nil {
-	// 	writeErr(w, http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
-
-	// writeJSON(w, http.StatusCreated, br)
-	// snap, err := r.store.Commit(sc.ID, br.ID, "", "Once upon a time...", userID)
-	// if err != nil {
-	// 	writeErr(w, http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
+	// A brand-new script has no branches until this — the editor auto-
+	// selects branches[0] as the active branch, and autosave silently
+	// does nothing without one, so without this a writer could type for
+	// a while before ever having anywhere for it to actually save.
+	br, err := r.store.CreateBranch(sc.ID, "pilot", "")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := r.store.Commit(sc.ID, br.ID, "", "Initial snapshot", userID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	writeJSON(w, http.StatusCreated, sc)
 }
