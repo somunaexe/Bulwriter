@@ -139,6 +139,22 @@ func (s *Store) AddIdeaNote(projectID, text string) (*IdeaNote, error) {
 	return n, nil
 }
 
+func (s *Store) UpdateIdeaNote(projectID, id, text string) (*IdeaNote, error) {
+	n := &IdeaNote{ID: id, ProjectID: projectID, Text: text}
+	err := s.db.QueryRow(
+		`UPDATE story_idea_notes SET text = $1 WHERE id = $2 AND project_id = $3
+		 RETURNING position, created_at`,
+		text, id, projectID,
+	).Scan(&n.Position, &n.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("idea note not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("updating idea note: %w", err)
+	}
+	return n, nil
+}
+
 func (s *Store) RemoveIdeaNote(projectID, id string) error {
 	_, err := s.db.Exec(
 		`DELETE FROM story_idea_notes WHERE id = $1 AND project_id = $2`, id, projectID,

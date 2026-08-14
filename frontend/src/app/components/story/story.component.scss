@@ -90,6 +90,24 @@
     color: var(--text);
     white-space: pre-wrap;
   }
+
+  // A note's own textarea reads as directly-editable text inside the
+  // card, not a second nested card — only the focus state hints that
+  // it's editable, so the list doesn't look like a form.
+  textarea.story-textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    // Still resizable — a longer note shouldn't be stuck clipped inside
+    // a fixed-height box the way a plain <p> never was.
+    resize: vertical;
+    min-height: 1.6em;
+
+    &:focus { background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 4px; }
+    &:read-only:focus { background: none; }
+  }
 }
 
 .idea-note-add {
