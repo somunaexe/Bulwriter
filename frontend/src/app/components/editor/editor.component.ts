@@ -501,21 +501,34 @@ export class EditorComponent implements OnInit, OnDestroy {
     return !!first && first.attrs['element'] === 'title_page_field';
   }
 
-  insertTitlePage(): void {
+  // One button, three states, driven entirely off hasTitlePage/
+  // viewingTitlePage: nothing to insert yet, a title page exists but
+  // isn't on screen, or it is on screen and the button becomes the way
+  // back out to the script.
+  get titlePageButtonLabel(): string {
+    if (!this.hasTitlePage) return 'Insert title page…';
+    return this.viewingTitlePage ? 'Go to script page' : 'Go to title page';
+  }
+
+  onTitlePageButtonClick(): void {
     const view = (this.sync as any).session?.view;
     if (!view) return;
 
-    if (this.hasTitlePage) {
+    if (!this.hasTitlePage) {
+      const fieldType = screenplaySchema.nodes['title_page_field'];
+      const nodes = TITLE_PAGE_KEYS.slice(0, 3).map(key =>  // Title, Credit, Author
+        fieldType.create({ element: 'title_page_field', key })
+      );
+      view.dispatch(view.state.tr.insert(0, nodes));
       this.revealTitlePage(view);
       return;
     }
 
-    const fieldType = screenplaySchema.nodes['title_page_field'];
-    const nodes = TITLE_PAGE_KEYS.slice(0, 3).map(key =>  // Title, Credit, Author
-      fieldType.create({ element: 'title_page_field', key })
-    );
-    view.dispatch(view.state.tr.insert(0, nodes));
-    this.revealTitlePage(view);
+    if (this.viewingTitlePage) {
+      this.revealScriptContent(view);
+    } else {
+      this.revealTitlePage(view);
+    }
   }
 
   // Scrolls to the top of the document and puts the cursor in the first
@@ -527,6 +540,36 @@ export class EditorComponent implements OnInit, OnDestroy {
     const selection = TextSelection.atStart(view.state.doc);
     view.dispatch(view.state.tr.setSelection(selection));
     view.focus();
+  }
+
+  // The mirror of revealTitlePage() — scrolls past the title page block
+  // to the first line of the script itself and puts the cursor there.
+  // (Named revealScriptContent, not goToScript, which already means
+  // "navigate to a different script" elsewhere in this component.)
+  private revealScriptContent(view: any): void {
+    const pos = this.titlePageEndPos(view);
+    const mount = view.dom.closest('.pm-mount') as HTMLElement | null;
+    if (mount) {
+      const coords = view.coordsAtPos(pos);
+      const mountRect = mount.getBoundingClientRect();
+      mount.scrollTo({ top: mount.scrollTop + (coords.top - mountRect.top) - 12, behavior: 'smooth' });
+    }
+    const selection = TextSelection.near(view.state.doc.resolve(pos));
+    view.dispatch(view.state.tr.setSelection(selection));
+    view.focus();
+  }
+
+  // Doc position right after the last title_page_field node — the start
+  // of the first real script content.
+  private titlePageEndPos(view: any): number {
+    const doc = view.state.doc;
+    let pos = 0;
+    for (let i = 0; i < doc.childCount; i++) {
+      const node = doc.child(i);
+      if (node.attrs?.['element'] !== 'title_page_field') break;
+      pos += node.nodeSize;
+    }
+    return pos;
   }
 
   private get exportFilename(): string {
