@@ -84,6 +84,93 @@ func TestUpdateIdeaNote_NotFound(t *testing.T) {
 	}
 }
 
+func TestReorderIdeaNotes_SetsPositionsToGivenOrder(t *testing.T) {
+	s := testStore(t)
+	projectID := uuid.New().String()
+	t.Cleanup(func() { s.db.Exec(`DELETE FROM story_idea_notes WHERE project_id = $1`, projectID) })
+
+	a, err := s.AddIdeaNote(projectID, "first")
+	if err != nil {
+		t.Fatalf("AddIdeaNote: %v", err)
+	}
+	b, err := s.AddIdeaNote(projectID, "second")
+	if err != nil {
+		t.Fatalf("AddIdeaNote: %v", err)
+	}
+	c, err := s.AddIdeaNote(projectID, "third")
+	if err != nil {
+		t.Fatalf("AddIdeaNote: %v", err)
+	}
+
+	// Starting order: first, second, third.
+	notes, _ := s.ListIdeaNotes(projectID)
+	assertOrder(t, notes, "first", "second", "third")
+
+	// Drag "third" to the front in one drop: third, first, second.
+	if err := s.ReorderIdeaNotes(projectID, []string{c.ID, a.ID, b.ID}); err != nil {
+		t.Fatalf("ReorderIdeaNotes: %v", err)
+	}
+	notes, _ = s.ListIdeaNotes(projectID)
+	assertOrder(t, notes, "third", "first", "second")
+
+	// A second drop, fully reversing the order in one call.
+	if err := s.ReorderIdeaNotes(projectID, []string{b.ID, a.ID, c.ID}); err != nil {
+		t.Fatalf("ReorderIdeaNotes: %v", err)
+	}
+	notes, _ = s.ListIdeaNotes(projectID)
+	assertOrder(t, notes, "second", "first", "third")
+}
+
+func TestReorderIdeaNotes_IgnoresIdsFromAnotherProject(t *testing.T) {
+	s := testStore(t)
+	projectA := uuid.New().String()
+	projectB := uuid.New().String()
+	t.Cleanup(func() {
+		s.db.Exec(`DELETE FROM story_idea_notes WHERE project_id IN ($1, $2)`, projectA, projectB)
+	})
+
+	a, err := s.AddIdeaNote(projectA, "belongs to A")
+	if err != nil {
+		t.Fatalf("AddIdeaNote: %v", err)
+	}
+	foreign, err := s.AddIdeaNote(projectB, "belongs to B")
+	if err != nil {
+		t.Fatalf("AddIdeaNote: %v", err)
+	}
+
+	// Reordering project A with a foreign ID mixed in must not touch B's
+	// note — each UPDATE is scoped by project_id, so the foreign ID is
+	// silently skipped rather than reassigning another project's data.
+	if err := s.ReorderIdeaNotes(projectA, []string{foreign.ID, a.ID}); err != nil {
+		t.Fatalf("ReorderIdeaNotes: %v", err)
+	}
+
+	notesB, _ := s.ListIdeaNotes(projectB)
+	if len(notesB) != 1 || notesB[0].Position != foreign.Position {
+		t.Errorf("expected project B's note to be untouched, got %+v", notesB)
+	}
+}
+
+func assertOrder(t *testing.T, notes []*IdeaNote, wantTexts ...string) {
+	t.Helper()
+	if len(notes) != len(wantTexts) {
+		t.Fatalf("expected %d notes, got %d: %+v", len(wantTexts), len(notes), notes)
+	}
+	for i, want := range wantTexts {
+		if notes[i].Text != want {
+			t.Errorf("position %d: expected %q, got %q (full order: %v)", i, want, notes[i].Text, textsOf(notes))
+		}
+	}
+}
+
+func textsOf(notes []*IdeaNote) []string {
+	out := make([]string, len(notes))
+	for i, n := range notes {
+		out[i] = n.Text
+	}
+	return out
+}
+
 func TestUpdateIdeaNote_ScopedToProject(t *testing.T) {
 	s := testStore(t)
 	projectA := uuid.New().String()

@@ -2,6 +2,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { StoryService, StoryBible, IdeaNote, StoryScriptRow, StoryBibleDraft } from '../../services/story.service';
 import { ProjectService, Project } from '../../services/project.service';
 import { MembershipService } from '../../services/membership.service';
@@ -12,7 +13,7 @@ import { extractDocumentText } from '../../editor/document-text';
 @Component({
   selector: 'app-story',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, DragDropModule],
   templateUrl: './story.component.html',
   styleUrl: './story.component.scss',
 })
@@ -121,6 +122,12 @@ export class StoryComponent implements OnInit {
     if (!this.canEdit) return;
     this.ideaNotes = this.ideaNotes.filter(n => n.id !== note.id);
     this.storyService.removeIdeaNote(this.projectId, note.id).subscribe();
+  }
+
+  dropNote(event: CdkDragDrop<IdeaNote[]>): void {
+    if (!this.canEdit) return;
+    moveItemInArray(this.ideaNotes, event.previousIndex, event.currentIndex);
+    this.storyService.reorderIdeaNotes(this.projectId, this.ideaNotes.map(n => n.id)).subscribe();
   }
 
   saveScriptStory(row: StoryScriptRow): void {
