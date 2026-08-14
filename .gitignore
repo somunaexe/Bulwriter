@@ -32,6 +32,7 @@ go.work.sum
 # .vscode/
 frontend/node_modules
 frontend/.angular
+frontend/dist
 
 SP*
 *.patch
