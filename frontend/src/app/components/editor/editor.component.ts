@@ -33,7 +33,7 @@ import {
   ScreenplayElement,
   ELEMENT_LABELS,
   SHORTCUT_KEYS,
-  TITLE_PAGE_KEYS,
+  // TITLE_PAGE_KEYS, // only used by the title page feature, scrapped for now — see editor.component.html
 } from '../../editor/screenplay-schema';
 import { setBlockType } from 'prosemirror-commands';
 import { Node as PMNode } from 'prosemirror-model';
@@ -107,14 +107,11 @@ export class EditorComponent implements OnInit, OnDestroy {
         userId && userName ? { id: userId, name: userName } : undefined,
       );
 
-      // The toolbar's element highlight only tells you what's at the
-      // cursor, not what's currently on screen while scrolling/reading —
-      // so a writer scrolled down into a long script has no way to tell
-      // whether they've scrolled past the title page or not. This tracks
-      // scroll position against the title page block instead.
-      this.pmMountEl = el.nativeElement.closest('.pm-mount');
-      this.pmMountEl?.addEventListener('scroll', this.onEditorScroll, { passive: true });
-      this.updateViewingTitlePage();
+      // Title page scroll-tracking (viewingTitlePage badge) — scrapped
+      // for now along with the rest of the title page feature, see below.
+      // this.pmMountEl = el.nativeElement.closest('.pm-mount');
+      // this.pmMountEl?.addEventListener('scroll', this.onEditorScroll, { passive: true });
+      // this.updateViewingTitlePage();
       // Flags the "unsaved changes" warning (beforeunload below, plus the
       // canDeactivate guard on this route) whenever the doc actually
       // changes — cleared again by AutoSaveService on its next successful
@@ -122,9 +119,6 @@ export class EditorComponent implements OnInit, OnDestroy {
       // mirrors remote changes) never trips it.
       this.contentChangedSub = this.sync.contentChanged$.subscribe(() => {
         if (this.canEdit) this.autoSave.markDirty();
-        // A title page inserted/removed (by this user or a collaborator)
-        // needs the badge re-checked even without any scrolling.
-        this.updateViewingTitlePage();
       });
       // Apply read-only if role already loaded by this point
       if (this.myRole === 'viewer') this.makeEditorReadOnly();
@@ -152,38 +146,40 @@ export class EditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Whether the title page block is still (at least partly) on screen —
-  // see updateViewingTitlePage(). Drives the small "Title Page" badge
-  // next to the format toolbar.
-  viewingTitlePage = false;
-  private pmMountEl: HTMLElement | null = null;
-  private scrollRafId: number | null = null;
-
-  private onEditorScroll = (): void => {
-    if (this.scrollRafId !== null) return;
-    this.scrollRafId = requestAnimationFrame(() => {
-      this.scrollRafId = null;
-      this.updateViewingTitlePage();
-    });
-  };
-
-  private updateViewingTitlePage(): void {
-    const view = (this.sync as any).session?.view;
-    const mount = this.pmMountEl;
-    if (!view || !mount) { this.viewingTitlePage = false; return; }
-
-    const fields = view.dom.querySelectorAll('[data-element="title_page_field"]');
-    if (fields.length === 0) { this.viewingTitlePage = false; return; }
-
-    const last = fields[fields.length - 1] as HTMLElement;
-    const mountRect = mount.getBoundingClientRect();
-    const lastRect = last.getBoundingClientRect();
-    // Absolute scroll offset at which the title page block's bottom
-    // edge reaches the top of the viewport — past that, we're reading
-    // script content, not the title page.
-    const boundary = lastRect.bottom - mountRect.top + mount.scrollTop;
-    this.viewingTitlePage = mount.scrollTop < boundary;
-  }
+  // Title page feature — scrapped for now (the "Go to script page" nav
+  // never actually left the title page in practice). Commented out
+  // rather than deleted so it's a straightforward re-enable later; the
+  // underlying schema/export support is untouched.
+  //
+  // viewingTitlePage = false;
+  // private pmMountEl: HTMLElement | null = null;
+  // private scrollRafId: number | null = null;
+  //
+  // private onEditorScroll = (): void => {
+  //   if (this.scrollRafId !== null) return;
+  //   this.scrollRafId = requestAnimationFrame(() => {
+  //     this.scrollRafId = null;
+  //     this.updateViewingTitlePage();
+  //   });
+  // };
+  //
+  // private updateViewingTitlePage(): void {
+  //   const view = (this.sync as any).session?.view;
+  //   const mount = this.pmMountEl;
+  //   if (!view || !mount) { this.viewingTitlePage = false; return; }
+  //
+  //   const fields = view.dom.querySelectorAll('[data-element="title_page_field"]');
+  //   if (fields.length === 0) { this.viewingTitlePage = false; return; }
+  //
+  //   const last = fields[fields.length - 1] as HTMLElement;
+  //   const mountRect = mount.getBoundingClientRect();
+  //   const lastRect = last.getBoundingClientRect();
+  //   // Absolute scroll offset at which the title page block's bottom
+  //   // edge reaches the top of the viewport — past that, we're reading
+  //   // script content, not the title page.
+  //   const boundary = lastRect.bottom - mountRect.top + mount.scrollTop;
+  //   this.viewingTitlePage = mount.scrollTop < boundary;
+  // }
 
   // latestSnapContent = '';
   commitMessage = '';
@@ -309,8 +305,8 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.sync.endSession();
     this.autoSave.stop()
     this.contentChangedSub?.unsubscribe();
-    this.pmMountEl?.removeEventListener('scroll', this.onEditorScroll);
-    if (this.scrollRafId !== null) cancelAnimationFrame(this.scrollRafId);
+    // this.pmMountEl?.removeEventListener('scroll', this.onEditorScroll);
+    // if (this.scrollRafId !== null) cancelAnimationFrame(this.scrollRafId);
   }
 
   // Warns on an actual tab close/refresh — in-app navigation (clicking
@@ -490,87 +486,77 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   // ── File menu ────────────────────────────────────────────────────
-
-  // The document is one continuous scroll with no separate "page" for
-  // the title page — this is the only signal the menu button has for
-  // whether one already exists, so it can offer to jump to it instead
-  // of insert a second one.
-  get hasTitlePage(): boolean {
-    const view = (this.sync as any).session?.view;
-    const first = view?.state?.doc?.firstChild;
-    return !!first && first.attrs['element'] === 'title_page_field';
-  }
-
-  // One button, three states, driven entirely off hasTitlePage/
-  // viewingTitlePage: nothing to insert yet, a title page exists but
-  // isn't on screen, or it is on screen and the button becomes the way
-  // back out to the script.
-  get titlePageButtonLabel(): string {
-    if (!this.hasTitlePage) return 'Insert title page…';
-    return this.viewingTitlePage ? 'Go to script page' : 'Go to title page';
-  }
-
-  onTitlePageButtonClick(): void {
-    const view = (this.sync as any).session?.view;
-    if (!view) return;
-
-    if (!this.hasTitlePage) {
-      const fieldType = screenplaySchema.nodes['title_page_field'];
-      const nodes = TITLE_PAGE_KEYS.slice(0, 3).map(key =>  // Title, Credit, Author
-        fieldType.create({ element: 'title_page_field', key })
-      );
-      view.dispatch(view.state.tr.insert(0, nodes));
-      this.revealTitlePage(view);
-      return;
-    }
-
-    if (this.viewingTitlePage) {
-      this.revealScriptContent(view);
-    } else {
-      this.revealTitlePage(view);
-    }
-  }
-
-  // Scrolls to the top of the document and puts the cursor in the first
-  // title page field — with no separate view for it, this is the only
-  // way a writer can actually see the title page, whether they're
-  // confirming an insert just landed or coming back to edit it later.
-  private revealTitlePage(view: any): void {
-    view.dom.closest('.pm-mount')?.scrollTo({ top: 0, behavior: 'smooth' });
-    const selection = TextSelection.atStart(view.state.doc);
-    view.dispatch(view.state.tr.setSelection(selection));
-    view.focus();
-  }
-
-  // The mirror of revealTitlePage() — scrolls past the title page block
-  // to the first line of the script itself and puts the cursor there.
-  // (Named revealScriptContent, not goToScript, which already means
-  // "navigate to a different script" elsewhere in this component.)
-  private revealScriptContent(view: any): void {
-    const pos = this.titlePageEndPos(view);
-    const mount = view.dom.closest('.pm-mount') as HTMLElement | null;
-    if (mount) {
-      const coords = view.coordsAtPos(pos);
-      const mountRect = mount.getBoundingClientRect();
-      mount.scrollTo({ top: mount.scrollTop + (coords.top - mountRect.top) - 12, behavior: 'smooth' });
-    }
-    const selection = TextSelection.near(view.state.doc.resolve(pos));
-    view.dispatch(view.state.tr.setSelection(selection));
-    view.focus();
-  }
-
-  // Doc position right after the last title_page_field node — the start
-  // of the first real script content.
-  private titlePageEndPos(view: any): number {
-    const doc = view.state.doc;
-    let pos = 0;
-    for (let i = 0; i < doc.childCount; i++) {
-      const node = doc.child(i);
-      if (node.attrs?.['element'] !== 'title_page_field') break;
-      pos += node.nodeSize;
-    }
-    return pos;
-  }
+  //
+  // Title page insert/navigate feature — scrapped for now. "Go to script
+  // page" wasn't reliably leaving the title page in practice; commenting
+  // out rather than deleting so it's a straightforward re-enable once
+  // that's sorted out. The button/badge that called into this are
+  // commented out in editor.component.html too. The underlying
+  // title_page_field schema node and its export/import support are left
+  // alone — existing documents may already contain one.
+  //
+  // get hasTitlePage(): boolean {
+  //   const view = (this.sync as any).session?.view;
+  //   const first = view?.state?.doc?.firstChild;
+  //   return !!first && first.attrs['element'] === 'title_page_field';
+  // }
+  //
+  // get titlePageButtonLabel(): string {
+  //   if (!this.hasTitlePage) return 'Insert title page…';
+  //   return this.viewingTitlePage ? 'Go to script page' : 'Go to title page';
+  // }
+  //
+  // onTitlePageButtonClick(): void {
+  //   const view = (this.sync as any).session?.view;
+  //   if (!view) return;
+  //
+  //   if (!this.hasTitlePage) {
+  //     const fieldType = screenplaySchema.nodes['title_page_field'];
+  //     const nodes = TITLE_PAGE_KEYS.slice(0, 3).map(key =>  // Title, Credit, Author
+  //       fieldType.create({ element: 'title_page_field', key })
+  //     );
+  //     view.dispatch(view.state.tr.insert(0, nodes));
+  //     this.revealTitlePage(view);
+  //     return;
+  //   }
+  //
+  //   if (this.viewingTitlePage) {
+  //     this.revealScriptContent(view);
+  //   } else {
+  //     this.revealTitlePage(view);
+  //   }
+  // }
+  //
+  // private revealTitlePage(view: any): void {
+  //   view.dom.closest('.pm-mount')?.scrollTo({ top: 0, behavior: 'smooth' });
+  //   const selection = TextSelection.atStart(view.state.doc);
+  //   view.dispatch(view.state.tr.setSelection(selection));
+  //   view.focus();
+  // }
+  //
+  // private revealScriptContent(view: any): void {
+  //   const pos = this.titlePageEndPos(view);
+  //   const mount = view.dom.closest('.pm-mount') as HTMLElement | null;
+  //   if (mount) {
+  //     const coords = view.coordsAtPos(pos);
+  //     const mountRect = mount.getBoundingClientRect();
+  //     mount.scrollTo({ top: mount.scrollTop + (coords.top - mountRect.top) - 12, behavior: 'smooth' });
+  //   }
+  //   const selection = TextSelection.near(view.state.doc.resolve(pos));
+  //   view.dispatch(view.state.tr.setSelection(selection));
+  //   view.focus();
+  // }
+  //
+  // private titlePageEndPos(view: any): number {
+  //   const doc = view.state.doc;
+  //   let pos = 0;
+  //   for (let i = 0; i < doc.childCount; i++) {
+  //     const node = doc.child(i);
+  //     if (node.attrs?.['element'] !== 'title_page_field') break;
+  //     pos += node.nodeSize;
+  //   }
+  //   return pos;
+  // }
 
   private get exportFilename(): string {
     return scriptExportFilename(this.script?.title, this.scriptId);
