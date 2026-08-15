@@ -745,79 +745,18 @@ ol.stats-list {
   width: 100%;
 }
 
-/* ── Google Docs-style pagination (pagination.plugin.ts) ──
-   The plugin measures real rendered block heights and reparents
-   editorView.dom into this structure once, at plugin-init time:
-
-     .pm-mount                     (existing scrolling flex container)
-       .pm-scale-outer             (JS-sized to the scaled footprint —
-                                     what .pm-mount actually centers/scrolls)
-         .pm-page-frame            (fixed 816×(pages) canonical box,
-                                     transform: scale() for narrow viewports)
-           .pm-page-bg-layer       (one .pm-page-card per page — the
-                                     white "sheet" look, purely decorative)
-           .ProseMirror            (the one real, continuous document —
-                                     page breaks are blank .pm-page-break-
-                                     spacer widgets inserted between
-                                     blocks, never a fixed CSS pattern, so
-                                     a break can never land mid-word) */
-.pm-scale-outer {
-  position: relative;
+.pm-mount .ProseMirror {
+  width: var(--script-width);
+  max-width: 100%;
+  min-height: 11in;
   margin: 0 auto;
-}
-
-.pm-page-frame {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 816px; /* 8.5in @ 96dpi — matches pagination.plugin.ts's PAGE_W */
-  transform-origin: top left;
-}
-
-.pm-page-bg-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.pm-page-card {
-  position: absolute;
-  left: 0;
-  width: 816px;
-  height: 1056px; /* 11in @ 96dpi — PAGE_H */
-  background-color: var(--page-bg);
+  padding: 1in 1in 1in 1.5in; /* top right bottom left — 1in all round, 1.5in left for binding (--script-width is the true 8.5in page width) */
+  /* A real border (not a box-shadow "ring") so it's counted in the
+     border-box width like .page-chrome's border — a box-shadow paints
+     outside the box uncounted, which made the page ~2px wider than
+     the menu bar sheet above it despite both using --script-width. */
   border: 1px solid rgba(0, 0, 0, .15);
   box-shadow: 0 12px 34px rgba(0, 0, 0, .4);
-}
-
-.pm-page-number {
-  position: absolute;
-  right: 96px; /* aligns with the content's own right margin */
-  bottom: 28px;
-  font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-/* The blank space between one page's content and the next — sized in
-   JS (pagination.plugin.ts) to exactly close the gap between where the
-   previous block's content actually ends and where the next page's
-   card begins, so it's never guessing at a fixed page height the way a
-   repeating background pattern would. */
-.pm-page-break-spacer {
-  display: block;
-  width: 100%;
-}
-
-.pm-mount .ProseMirror {
-  position: relative;
-  z-index: 1;
-  width: 816px;
-  /* top/right/left are page 1's margins; bottom is 0 because every
-     later page's top/bottom margins + the visual gap are baked into
-     each .pm-page-break-spacer's computed height instead. */
-  padding: 96px 96px 0 144px; /* 1in 1in 0 1.5in — 1.5in left for binding */
 
   font-family: 'Courier Prime', 'Courier New', Courier, var(--font-mono), monospace;
   font-size: 12pt;
@@ -826,6 +765,19 @@ ol.stats-list {
   color: var(--page-text);
   white-space: pre-wrap;
   overflow-wrap: break-word; /* a long run of characters with no spaces must wrap, not force the page wider */
+
+  /* A single continuous manuscript sheet — no fake per-page seams. An
+     earlier version painted a repeating "page break" pattern onto the
+     background every --page-h, but the document is one continuous
+     ProseMirror node with no actual per-page layout, so those seams (and
+     the page-number labels that went with them) landed at arbitrary
+     points in the running text with no regard for line breaks — a crease
+     or a "2." could end up sitting directly on top of a word. Real,
+     accurate page breaks already exist where they actually matter — PDF
+     export (fountain-to-pdf.ts) lays the script out page-by-page for real
+     — so the editor itself is free to just be a clean, uninterrupted
+     writing surface. */
+  background-color: var(--page-bg);
 }
 
 /* Screenplay element colours */
@@ -1403,14 +1355,19 @@ ol.stats-list {
      selector here, so an override placed in *this* stylesheet
      wouldn't reliably win against the component's own base rule. */
 
-  /* The page itself no longer reflows its margins/indents at narrow
-     widths — pagination.plugin.ts's PageChrome scales the whole 816px
-     canonical page down proportionally instead (see .pm-scale-outer/
-     .pm-page-frame above), the same way a real page shrinks when you
-     zoom out rather than re-wrapping its text into a narrower column.
-     Reflowing margins here would change line-wrapping per viewport,
-     which would make page breaks themselves viewport-dependent. */
+  /* The page itself: keep the white "paper" look and Courier font, but
+     industry margins only make sense on a real printable page — shrink
+     them to something a phone can actually show text in. No horizontal
+     padding here either, for the same reason as the desktop rule above. */
   .pm-mount { padding: 1rem 0; }
+  .pm-mount .ProseMirror {
+    min-height: auto;
+    padding: 1.25rem 1rem;
+  }
+  .pm-mount .ProseMirror [data-element="character"],
+  .pm-mount .ProseMirror [data-element="dual_dialogue"] { margin-left: 8ch; max-width: 100%; }
+  .pm-mount .ProseMirror [data-element="parenthetical"] { margin-left: 5ch; max-width: 100%; }
+  .pm-mount .ProseMirror [data-element="dialogue"]      { margin-left: 3ch; max-width: 100%; }
 
   .diff-drawer,
   .breakdown-drawer {

@@ -17,7 +17,6 @@ import { gapCursor } from 'prosemirror-gapcursor';
 import { screenplaySchema, ScreenplayElement } from '../editor/screenplay-schema';
 import { screenplayKeymap, autoUppercasePlugin } from '../editor/screenplay-keymap';
 import { elementIndicatorPlugin } from '../editor/element-indicator.plugin';
-import { paginationPlugin } from '../editor/pagination.plugin';
 import { environment } from '../../environments/environment';
 
 export interface CollabSession {
@@ -84,7 +83,6 @@ export class SyncService implements OnDestroy {
       keymap(baseKeymap),
       dropCursor(),
       gapCursor(),
-      paginationPlugin(),
     ];
 
     if (indicatorEl || onElementChange) {
