@@ -18,6 +18,9 @@ export interface BudgetLineItem {
   label: string;
   amount: number;
   position: number;
+  // True when added from a highlighted script selection rather than
+  // typed freeform — drives whether the "show in script" jump is shown.
+  linked: boolean;
   createdAt: string;
 }
 
@@ -47,10 +50,10 @@ export class BudgetService {
     return this.http.put<BudgetEstimate>(`${this.BASE}/projects/${projectId}/scripts/${scriptId}/budget`, rates);
   }
 
-  addLineItem(projectId: string, scriptId: string, label: string, amount: number): Observable<BudgetLineItem> {
+  addLineItem(projectId: string, scriptId: string, label: string, amount: number, linked = false): Observable<BudgetLineItem> {
     return this.http.post<BudgetLineItem>(
       `${this.BASE}/projects/${projectId}/scripts/${scriptId}/budget/line-items`,
-      { label, amount }
+      { label, amount, linked }
     );
   }
 

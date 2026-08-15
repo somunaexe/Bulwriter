@@ -1140,13 +1140,14 @@ func (r *router) addBudgetLineItem(w http.ResponseWriter, req *http.Request) {
 	var body struct {
 		Label  string  `json:"label"`
 		Amount float64 `json:"amount"`
+		Linked bool    `json:"linked"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.Label == "" {
 		writeErr(w, http.StatusBadRequest, "label is required")
 		return
 	}
 
-	item, err := r.budget.AddLineItem(vars["scriptId"], body.Label, body.Amount)
+	item, err := r.budget.AddLineItem(vars["scriptId"], body.Label, body.Amount, body.Linked)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

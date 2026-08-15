@@ -193,6 +193,21 @@ const screenplayMarks: Record<string, MarkSpec> = {
     }],
     toDOM: (mark) => ['a', { href: mark.attrs['href'], target: '_blank', rel: 'noopener noreferrer', class: 'pm-link' }, 0],
   },
+
+  // Marks a run of text as tied to a budget line item — see
+  // budget-mark.ts. `id` matches a budget.LineItem's own id (the backend
+  // is the source of truth for label/amount; this mark only anchors
+  // *where* that item lives in the script, same division of labour as
+  // link's href vs. the link text itself).
+  budget_item: {
+    attrs: { id: {} },
+    inclusive: false,
+    parseDOM: [{
+      tag: 'span[data-budget-item]',
+      getAttrs: (dom) => ({ id: (dom as HTMLElement).getAttribute('data-budget-item') }),
+    }],
+    toDOM: (mark) => ['span', { 'data-budget-item': mark.attrs['id'], class: 'pm-budget-item' }, 0],
+  },
 };
 
 export const screenplaySchema = new Schema({

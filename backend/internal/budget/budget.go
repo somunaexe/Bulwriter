@@ -31,6 +31,12 @@ type LineItem struct {
 	Label     string    `json:"label"`
 	Amount    float64   `json:"amount"`
 	Position  int       `json:"position"`
+	// Linked is true when this item was added from a highlighted script
+	// selection rather than typed in freeform — the frontend uses it to
+	// decide whether a "show in script" jump makes sense for the row.
+	// The anchor itself is a budget_item mark in the script's own doc,
+	// keyed by this row's ID; nothing here tracks its live position.
+	Linked    bool      `json:"linked"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
@@ -87,7 +93,7 @@ func (s *Store) SetEstimate(scriptID string, dayRate, locationRate, castRate, pr
 
 func (s *Store) ListLineItems(scriptID string) ([]*LineItem, error) {
 	rows, err := s.db.Query(
-		`SELECT id, script_id, label, amount, position, created_at
+		`SELECT id, script_id, label, amount, position, linked, created_at
 		 FROM budget_line_items WHERE script_id = $1
 		 ORDER BY position ASC, created_at ASC`, scriptID,
 	)
@@ -99,7 +105,7 @@ func (s *Store) ListLineItems(scriptID string) ([]*LineItem, error) {
 	var out []*LineItem
 	for rows.Next() {
 		li := &LineItem{}
-		if err := rows.Scan(&li.ID, &li.ScriptID, &li.Label, &li.Amount, &li.Position, &li.CreatedAt); err != nil {
+		if err := rows.Scan(&li.ID, &li.ScriptID, &li.Label, &li.Amount, &li.Position, &li.Linked, &li.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning line item: %w", err)
 		}
 		out = append(out, li)
@@ -107,7 +113,7 @@ func (s *Store) ListLineItems(scriptID string) ([]*LineItem, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) AddLineItem(scriptID, label string, amount float64) (*LineItem, error) {
+func (s *Store) AddLineItem(scriptID, label string, amount float64, linked bool) (*LineItem, error) {
 	var nextPosition int
 	if err := s.db.QueryRow(
 		`SELECT COALESCE(MAX(position) + 1, 0) FROM budget_line_items WHERE script_id = $1`, scriptID,
@@ -121,12 +127,13 @@ func (s *Store) AddLineItem(scriptID, label string, amount float64) (*LineItem, 
 		Label:     label,
 		Amount:    amount,
 		Position:  nextPosition,
+		Linked:    linked,
 		CreatedAt: time.Now(),
 	}
 	_, err := s.db.Exec(
-		`INSERT INTO budget_line_items (id, script_id, label, amount, position, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		li.ID, li.ScriptID, li.Label, li.Amount, li.Position, li.CreatedAt,
+		`INSERT INTO budget_line_items (id, script_id, label, amount, position, linked, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		li.ID, li.ScriptID, li.Label, li.Amount, li.Position, li.Linked, li.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("inserting line item: %w", err)

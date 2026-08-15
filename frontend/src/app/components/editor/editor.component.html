@@ -161,6 +161,8 @@
             <button (click)="removeLinkAtCursor()" [disabled]="!canEdit">Remove link</button>
             <div class="menu-divider"></div>
             <button (click)="insertImagePrompt()" [disabled]="!canEdit">Insert image…</button>
+            <div class="menu-divider"></div>
+            <button (click)="addSelectionToBudget()" [disabled]="!canEdit">Add selection to budget…</button>
           </app-menu-dropdown>
 
           <app-menu-dropdown label="View">
@@ -292,7 +294,9 @@
       [projectId]="projectId"
       [scriptId]="scriptId"
       [canEdit]="canEdit"
-      (close)="showBudget = false">
+      [pendingSelection]="pendingBudgetSelection"
+      (close)="closeBudget()"
+      (jumpToMark)="jumpToBudgetMark($event)">
     </app-budget-estimator>
 
     <div class="breakdown-backdrop" *ngIf="showShotList" (click)="showShotList = false"></div>
