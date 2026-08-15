@@ -18,7 +18,7 @@ import { BreakdownDrawerComponent } from '../breakdown-drawer/breakdown-drawer.c
 import { LocationScoutingComponent } from '../location-scouting/location-scouting.component';
 import { CastingBoardComponent } from '../casting-board/casting-board.component';
 import { StripboardComponent } from '../stripboard/stripboard.component';
-import { BudgetEstimatorComponent } from '../budget-estimator/budget-estimator.component';
+import { BudgetEstimatorComponent, PendingBudgetSelection } from '../budget-estimator/budget-estimator.component';
 import { ShotListComponent } from '../shot-list/shot-list.component';
 import { MusicVfxComponent } from '../music-vfx/music-vfx.component';
 import { PressKitComponent } from '../press-kit/press-kit.component';
@@ -62,6 +62,7 @@ import { exportScreenplayDocx } from '../../editor/docx-export';
 import { importDocxToText } from '../../editor/docx-import';
 import { importPdfToText } from '../../editor/pdf-import';
 import { applyLink, removeLink, insertImage } from '../../editor/link-image';
+import { findBudgetMarkPos } from '../../editor/budget-mark';
 import { fileToBackgroundDataUri } from '../../editor/background-image';
 import { renameCharacter, listCharacterNames } from '../../editor/rename-character';
 import { computeSceneCards, SceneCard } from '../../editor/card-view';
@@ -1117,6 +1118,49 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   openBudget(): void {
     this.showBudget = true;
+  }
+
+  // Set right before opening the budget modal from a script selection —
+  // see BudgetEstimatorComponent's pendingSelection input.
+  pendingBudgetSelection: PendingBudgetSelection | null = null;
+
+  addSelectionToBudget(): void {
+    const view = (this.sync as any).session?.view;
+    if (!view || !this.canEdit) return;
+
+    const { from, to, empty } = view.state.selection;
+    if (empty) {
+      alert('Select some text in the script first, then add it to the budget.');
+      return;
+    }
+
+    this.pendingBudgetSelection = { from, to, text: view.state.doc.textBetween(from, to, ' ') };
+    this.showBudget = true;
+  }
+
+  closeBudget(): void {
+    this.showBudget = false;
+    this.pendingBudgetSelection = null;
+  }
+
+  // "Show in script" from the budget list — mirrors jumpToScene: switch
+  // out of card view, find the live doc position, scroll the selection
+  // there. The budget_item mark's own position is the only source of
+  // truth for where it is now, unlike jumpToScene's stored card.pos —
+  // an edit anywhere in the doc could have moved this run since the
+  // item was linked, but never the mark's own presence.
+  jumpToBudgetMark(markId: string): void {
+    this.closeBudget();
+    this.viewMode = 'page';
+    const view = (this.sync as any).session?.view;
+    if (!view) return;
+    setTimeout(() => {
+      const pos = findBudgetMarkPos(view, markId);
+      if (pos === null) return; // marked text was deleted since — nothing to jump to
+      const tr = view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(pos)));
+      view.dispatch(tr.scrollIntoView());
+      view.focus();
+    }, 0);
   }
 
   openShotList(): void {

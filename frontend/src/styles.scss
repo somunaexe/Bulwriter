@@ -894,6 +894,16 @@ ol.stats-list {
   text-decoration: underline;
 }
 
+/* Marks text tied to a budget line item (budget-mark.ts) — a background
+   tint rather than a border/underline so it reads as "this word is
+   accounted for" without competing with bold/underline/link, which can
+   all still land on the same run. */
+.pm-mount .ProseMirror .pm-budget-item {
+  background-color: rgba(var(--accent-rgb), .28);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), .28);
+}
+
 .pm-mount .ProseMirror .pm-image {
   display: inline-block;
   max-width: 100%;

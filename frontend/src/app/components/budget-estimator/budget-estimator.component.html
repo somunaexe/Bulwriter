@@ -44,7 +44,16 @@
 
     <ul class="budget-line-items" *ngIf="lineItems.length">
       <li *ngFor="let item of lineItems" class="budget-line-item">
-        <span class="budget-line-item-label">{{ item.label }}</span>
+        <button
+          *ngIf="item.linked; else plainLabel"
+          class="budget-line-item-label budget-line-item-linked"
+          (click)="jumpToItem(item)"
+          title="Show in script">
+          {{ item.label }} <span class="budget-linked-icon">↳</span>
+        </button>
+        <ng-template #plainLabel>
+          <span class="budget-line-item-label">{{ item.label }}</span>
+        </ng-template>
         <span class="budget-line-item-amount">{{ item.amount | currency }}</span>
         <button *ngIf="canEdit" class="breakdown-chip-remove" (click)="removeLineItem(item)" aria-label="Remove line item">×</button>
       </li>

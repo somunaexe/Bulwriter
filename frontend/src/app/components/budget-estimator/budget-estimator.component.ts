@@ -8,6 +8,18 @@ import { BudgetService, BudgetLineItem } from '../../services/budget.service';
 import { ModalComponent } from '../modal/modal.component';
 import { computeSceneList } from '../../editor/scene-breakdown';
 import { autoSuggestDays, normalizeLocation } from '../../editor/stripboard';
+import { applyBudgetMark, removeBudgetMark } from '../../editor/budget-mark';
+
+/** Captured from the editor's selection the moment "Add selection to
+ *  budget…" is clicked — by the time a line item's id comes back from
+ *  the backend, the user's been looking at this modal, not the editor,
+ *  so the original selection may no longer be live. The range itself
+ *  (doc positions) stays valid regardless. */
+export interface PendingBudgetSelection {
+  from: number;
+  to: number;
+  text: string;
+}
 
 @Component({
   selector: 'app-budget-estimator',
@@ -20,7 +32,9 @@ export class BudgetEstimatorComponent implements OnChanges {
   @Input() projectId = '';
   @Input() scriptId = '';
   @Input() canEdit = false;
+  @Input() pendingSelection: PendingBudgetSelection | null = null;
   @Output() close = new EventEmitter<void>();
+  @Output() jumpToMark = new EventEmitter<string>();
 
   loading = true;
 
@@ -40,6 +54,11 @@ export class BudgetEstimatorComponent implements OnChanges {
   newItemLabel = '';
   newItemAmount: number | null = null;
 
+  // Set from pendingSelection when the "add" form is pre-filled from a
+  // script selection rather than typed freeform. addLineItem() marks the
+  // new item's text in the script when this is set, then clears it.
+  private linkingRange: PendingBudgetSelection | null = null;
+
   constructor(
     private sync: SyncService,
     private breakdownService: SceneBreakdownService,
@@ -49,6 +68,12 @@ export class BudgetEstimatorComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['scriptId'] || changes['projectId']) this.load();
+
+    if (changes['pendingSelection'] && this.pendingSelection) {
+      this.linkingRange = this.pendingSelection;
+      this.newItemLabel = this.pendingSelection.text;
+      this.newItemAmount = null;
+    }
   }
 
   private load(): void {
@@ -123,15 +148,34 @@ export class BudgetEstimatorComponent implements OnChanges {
     const amount = this.newItemAmount;
     if (!label || amount === null || Number.isNaN(amount)) return;
 
-    this.budgetService.addLineItem(this.projectId, this.scriptId, label, amount).subscribe(item => {
+    const range = this.linkingRange;
+    this.budgetService.addLineItem(this.projectId, this.scriptId, label, amount, !!range).subscribe(item => {
       this.lineItems.push(item);
       this.newItemLabel = '';
       this.newItemAmount = null;
+      this.linkingRange = null;
+
+      if (range) {
+        const view = (this.sync as any).session?.view;
+        if (view) applyBudgetMark(view, item.id, range.from, range.to);
+      }
     });
   }
 
   removeLineItem(item: BudgetLineItem): void {
     this.lineItems = this.lineItems.filter(li => li.id !== item.id);
     this.budgetService.removeLineItem(this.projectId, this.scriptId, item.id).subscribe();
+
+    if (item.linked) {
+      const view = (this.sync as any).session?.view;
+      if (view) removeBudgetMark(view, item.id);
+    }
+  }
+
+  // "Show in script" — EditorComponent owns navigation (viewMode,
+  // scrolling, closing this modal), same as jumpToScene for card view.
+  jumpToItem(item: BudgetLineItem): void {
+    if (!item.linked) return;
+    this.jumpToMark.emit(item.id);
   }
 }
