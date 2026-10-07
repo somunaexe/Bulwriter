@@ -34,6 +34,10 @@ frontend/node_modules
 frontend/.angular
 frontend/dist
 
+# /brag skill output — a generated launch-video deliverable (MP4, poster,
+# copied fonts/SFX/runtime libs), not application source.
+brag-output/
+
 SP*
 *.patch
 *.diff
