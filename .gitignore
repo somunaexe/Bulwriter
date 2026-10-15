@@ -34,6 +34,10 @@ frontend/node_modules
 frontend/.angular
 frontend/dist
 
+# bulwriter-mcp (mcp-server/) — Node package, build output not committed
+mcp-server/node_modules
+mcp-server/dist
+
 # /brag skill output — a generated launch-video deliverable (MP4, poster,
 # copied fonts/SFX/runtime libs), not application source.
 brag-output/
