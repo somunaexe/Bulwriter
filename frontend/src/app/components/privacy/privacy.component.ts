@@ -8,5 +8,5 @@ import { CommonModule } from '@angular/common';
   templateUrl: './privacy.component.html',
 })
 export class PrivacyComponent {
-  lastUpdated = '12 August 2026';
+  lastUpdated = '16 October 2026';
 }

@@ -8,5 +8,5 @@ import { CommonModule } from '@angular/common';
   templateUrl: './terms.component.html',
 })
 export class TermsComponent {
-  lastUpdated = '12 August 2026';
+  lastUpdated = '16 October 2026';
 }

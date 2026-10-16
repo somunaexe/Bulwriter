@@ -11,9 +11,13 @@
   --surface-2: #efe6d3;
   --border:    #e2d5b8;
   --text:      #2e2a22;
-  --muted:     #8a7f6c;
-  --accent:    #a9762f;   /* warm bronze/gold — screenplay craft */
-  --accent-rgb: 169, 118, 47;
+  /* Both darkened slightly from their original values to clear WCAG AA's
+     4.5:1 contrast minimum for normal text against every background they
+     actually sit on in this theme (--surface, --surface-2, and --bg) —
+     the originals measured as low as 3.17:1. Same hues, just darker. */
+  --muted:     #6f6555;
+  --accent:    #946527;   /* warm bronze/gold — screenplay craft */
+  --accent-rgb: 148, 101, 39;
   /* Readable text set directly on --accent (avatars, badges) — a plain
      dark brown rather than pure black reads warmer against the gold. */
   --on-accent: #241a0a;
