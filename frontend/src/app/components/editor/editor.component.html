@@ -227,7 +227,15 @@
            it, not a second editing surface. -->
       <div class="card-view" *ngIf="viewMode === 'card'">
         <p class="empty-msg" *ngIf="!sceneCards.length">No scenes yet.</p>
-        <div class="scene-card" *ngFor="let card of sceneCards" (click)="jumpToScene(card)">
+        <div
+          class="scene-card"
+          *ngFor="let card of sceneCards"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="'Jump to scene ' + card.number + ': ' + card.heading"
+          (click)="jumpToScene(card)"
+          (keydown.enter)="jumpToScene(card)"
+          (keydown.space)="$event.preventDefault(); jumpToScene(card)">
           <div class="scene-card-header">
             <span class="scene-card-number">{{ card.number }}</span>
             <span class="scene-card-heading">{{ card.heading }}</span>
@@ -478,7 +486,15 @@
       <p class="loading-msg" *ngIf="openProjectsLoading">Loading…</p>
       <p class="empty-msg" *ngIf="!openProjectsLoading && openProjectsList.length === 0">No projects.</p>
       <ul class="stats-list open-picker-list" *ngIf="!openProjectsLoading && openProjectsList.length">
-        <li *ngFor="let p of openProjectsList" (click)="goToProject(p)" class="open-picker-item">
+        <li
+          *ngFor="let p of openProjectsList"
+          class="open-picker-item"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="'Open project ' + p.title"
+          (click)="goToProject(p)"
+          (keydown.enter)="goToProject(p)"
+          (keydown.space)="$event.preventDefault(); goToProject(p)">
           {{ p.title }}
         </li>
       </ul>

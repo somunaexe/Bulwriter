@@ -93,6 +93,13 @@
       <ng-container *ngIf="submitting">Redirecting to checkout…</ng-container>
     </button>
 
+    <p class="donate-note" *ngIf="interval === 'month'">
+      Monthly donations renew automatically until canceled. You can cancel
+      any time, with no penalty, by emailing
+      <a href="mailto:bulfighter.exe@gmail.com">bulfighter.exe&#64;gmail.com</a>
+      — see the Terms of Service for details.
+    </p>
+
     <p class="donate-note">
       You'll be redirected to Stripe's secure checkout. Bulwriter never sees
       or stores your card details. By donating you agree to our
