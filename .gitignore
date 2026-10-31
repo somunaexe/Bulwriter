@@ -39,8 +39,12 @@ mcp-server/node_modules
 mcp-server/dist
 
 # /brag skill output — a generated launch-video deliverable (MP4, poster,
-# copied fonts/SFX/runtime libs), not application source.
+# copied fonts/SFX/runtime libs, and — for scripted/voiceover runs — copies
+# of personal uploaded audio), not application source and not for a public
+# repo. Matches both brag-output/ and the timestamped brag-output-*/
+# variant the skill uses when a previous run already exists.
 brag-output/
+brag-output-*/
 
 SP*
 *.patch
